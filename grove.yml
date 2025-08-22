@@ -1,0 +1,6 @@
+name: grove-gemini
+description: Tools for Google's Gemini API
+type: go
+binary:
+  name: gemapi
+  path: ./bin/gemapi
