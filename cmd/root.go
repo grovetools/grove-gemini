@@ -12,6 +12,10 @@ func init() {
 
 	// Add commands
 	rootCmd.AddCommand(newVersionCmd())
+	rootCmd.AddCommand(newQueryCmd())
+	rootCmd.AddCommand(newCountTokensCmd())
+	rootCmd.AddCommand(newConfigCmd())
+	rootCmd.AddCommand(newRequestCmd())
 }
 
 func Execute() error {
