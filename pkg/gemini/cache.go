@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"time"
 
+	contextmgr "github.com/mattsolo1/grove-context/pkg/context"
 	"google.golang.org/genai"
 )
 
@@ -44,6 +45,19 @@ func NewCacheManager(workingDir string) *CacheManager {
 
 // GetOrCreateCache returns an existing valid cache or creates a new one
 func (m *CacheManager) GetOrCreateCache(ctx context.Context, client *Client, model string, coldContextFilePath string, ttl time.Duration, ignoreChanges bool, disableExpiration bool) (*CacheInfo, error) {
+	// Check if caching is disabled via grove-context directive
+	contextManager := contextmgr.NewManager(m.workingDir)
+	shouldDisableCache, err := contextManager.ShouldDisableCache()
+	if err != nil {
+		// Log warning but continue - don't fail if we can't read the directive
+		fmt.Fprintf(os.Stderr, "⚠️  Warning: Could not check cache directive: %v\n", err)
+	}
+	
+	if shouldDisableCache {
+		fmt.Fprintf(os.Stderr, "🚫 Cache disabled by @disable-cache directive\n")
+		return nil, nil
+	}
+
 	// Check if the cold context file exists
 	if _, err := os.Stat(coldContextFilePath); err != nil {
 		if os.IsNotExist(err) {

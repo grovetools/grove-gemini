@@ -21,3 +21,6 @@ vendor/
 # OS
 .DS_Store
 Thumbs.db
+
+.grove
+.grove-worktrees
