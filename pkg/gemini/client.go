@@ -133,7 +133,6 @@ func (c *Client) GenerateContentWithCacheAndOptions(ctx context.Context, model s
 			GitRepo:     contextInfo.GitRepo,
 			GitBranch:   contextInfo.GitBranch,
 			GitCommit:   contextInfo.GitCommit,
-			Caller:      opts.Caller,
 		}
 		if opts != nil && opts.Caller != "" {
 			logEntry.Caller = opts.Caller
@@ -225,4 +224,17 @@ func (c *Client) GenerateContentWithCacheAndOptions(ctx context.Context, model s
 // GetClient returns the underlying genai client for cache operations
 func (c *Client) GetClient() *genai.Client {
 	return c.client
+}
+
+// VerifyCacheExists checks if a cache exists on the server
+func (c *Client) VerifyCacheExists(ctx context.Context, cacheID string) (bool, error) {
+	_, err := c.client.Caches.Get(ctx, cacheID, nil)
+	if err != nil {
+		// Check if it's a 404 Not Found error
+		if IsNotFoundError(err) {
+			return false, nil
+		}
+		return false, fmt.Errorf("failed to verify cache: %w", err)
+	}
+	return true, nil
 }

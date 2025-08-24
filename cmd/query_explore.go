@@ -158,7 +158,7 @@ func runQueryExplore(cmd *cobra.Command, args []string) error {
 		}
 
 		if count == 0 {
-			fmt.Println("No logs found with this filter.\n")
+			fmt.Println("No logs found with this filter.")
 		} else {
 			fmt.Printf("\nTotal found: %d entries\n", count)
 		}

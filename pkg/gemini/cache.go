@@ -12,6 +12,7 @@ import (
 
 	contextmgr "github.com/mattsolo1/grove-context/pkg/context"
 	"github.com/mattsolo1/grove-gemini/pkg/pretty"
+	"google.golang.org/api/googleapi"
 	"google.golang.org/genai"
 )
 
@@ -44,9 +45,24 @@ func NewCacheManager(workingDir string) *CacheManager {
 	}
 }
 
+// LoadCacheInfo loads cache information from a JSON file
+func LoadCacheInfo(filePath string) (*CacheInfo, error) {
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("reading cache info file: %w", err)
+	}
+	
+	var info CacheInfo
+	if err := json.Unmarshal(data, &info); err != nil {
+		return nil, fmt.Errorf("parsing cache info: %w", err)
+	}
+	
+	return &info, nil
+}
+
 // GetOrCreateCache returns an existing valid cache or creates a new one
 // The second return value indicates whether a new cache was created
-func (m *CacheManager) GetOrCreateCache(ctx context.Context, client *Client, model string, coldContextFilePath string, ttl time.Duration, ignoreChanges bool, disableExpiration bool, skipConfirmation bool) (*CacheInfo, bool, error) {
+func (m *CacheManager) GetOrCreateCache(ctx context.Context, client *Client, model string, coldContextFilePath string, ttl time.Duration, ignoreChanges bool, disableExpiration bool, forceRecache bool, skipConfirmation bool) (*CacheInfo, bool, error) {
 	// Create pretty logger
 	logger := pretty.New()
 	
@@ -77,44 +93,64 @@ func (m *CacheManager) GetOrCreateCache(ctx context.Context, client *Client, mod
 		return nil, false, fmt.Errorf("creating cache directory: %w", err)
 	}
 
-	// Generate cache key based on the cold context file path
-	cacheKey := generateCacheKey([]string{coldContextFilePath})
+	// Generate cache key based on the cold context file content
+	cacheKey, err := generateCacheKey([]string{coldContextFilePath})
+	if err != nil {
+		return nil, false, fmt.Errorf("failed to generate cache key: %w", err)
+	}
 	cacheInfoFile := filepath.Join(m.cacheDir, "hybrid_"+cacheKey+".json")
 
 	// Try to load existing cache info
 	var cacheInfo CacheInfo
-	needNewCache := false
+	needNewCache := forceRecache
 
-	if data, err := os.ReadFile(cacheInfoFile); err == nil {
-		if err := json.Unmarshal(data, &cacheInfo); err == nil {
-			logger.CacheInfo("Found existing cache info")
+	if forceRecache {
+		logger.Info("Forcing cache regeneration due to --recache flag")
+	}
 
-			// Check if cache expired
-			if !disableExpiration && time.Now().After(cacheInfo.ExpiresAt) {
-				logger.CacheExpired(cacheInfo.ExpiresAt)
-				needNewCache = true
-			} else if changed, changedFiles := hasFilesChanged(cacheInfo.CachedFileHashes, []string{coldContextFilePath}); changed {
-				if ignoreChanges {
-					logger.Warning("Cache is frozen - detected file changes but using existing cache")
-					logger.ChangedFiles(changedFiles)
-					return &cacheInfo, false, nil
+	if !needNewCache {
+		if data, err := os.ReadFile(cacheInfoFile); err == nil {
+			if err := json.Unmarshal(data, &cacheInfo); err == nil {
+				logger.CacheInfo("Found existing cache info")
+
+				// Verify cache exists on the server
+				exists, err := client.VerifyCacheExists(ctx, cacheInfo.CacheID)
+				if err != nil {
+					logger.Warning(fmt.Sprintf("Could not verify cache on server: %v", err))
+				} else if !exists {
+					logger.Warning("Cache not found on server - will create new cache")
+					needNewCache = true
 				}
-				logger.ChangedFiles(changedFiles)
-				fmt.Fprintln(os.Stderr)
-				logger.Warning("Cache invalidated due to file changes - new cache required")
-				needNewCache = true
-			} else {
-				if disableExpiration {
-					logger.Success("Cache is valid (expiration disabled by @no-expire)")
-				} else {
-					logger.CacheValid(cacheInfo.ExpiresAt)
+
+				// Check if cache expired
+				if !needNewCache && !disableExpiration && time.Now().After(cacheInfo.ExpiresAt) {
+					logger.CacheExpired(cacheInfo.ExpiresAt)
+					needNewCache = true
+				} else if !needNewCache {
+					if changed, changedFiles := hasFilesChanged(cacheInfo.CachedFileHashes, []string{coldContextFilePath}); changed {
+						if ignoreChanges {
+							logger.Warning("Cache is frozen - detected file changes but using existing cache")
+							logger.ChangedFiles(changedFiles)
+							return &cacheInfo, false, nil
+						}
+						logger.ChangedFiles(changedFiles)
+						fmt.Fprintln(os.Stderr)
+						logger.Warning("Cache invalidated due to file changes - new cache required")
+						needNewCache = true
+					} else {
+						if disableExpiration {
+							logger.Success("Cache is valid (expiration disabled by @no-expire)")
+						} else {
+							logger.CacheValid(cacheInfo.ExpiresAt)
+						}
+						return &cacheInfo, false, nil
+					}
 				}
-				return &cacheInfo, false, nil
 			}
+		} else {
+			logger.NoCache()
+			needNewCache = true
 		}
-	} else {
-		logger.NoCache()
-		needNewCache = true
 	}
 
 	// Create new cache if needed
@@ -194,8 +230,18 @@ func (m *CacheManager) GetOrCreateCache(ctx context.Context, client *Client, mod
 		}
 
 		data, _ := json.MarshalIndent(cacheInfo, "", "  ")
-		if err := os.WriteFile(cacheInfoFile, data, 0644); err != nil {
-			return nil, false, fmt.Errorf("failed to save cache info: %w", err)
+		
+		// Write to temporary file first for atomic operation
+		tempFile := cacheInfoFile + ".tmp"
+		if err := os.WriteFile(tempFile, data, 0644); err != nil {
+			return nil, false, fmt.Errorf("failed to save cache info to temp file: %w", err)
+		}
+		
+		// Rename temporary file to final location (atomic operation)
+		if err := os.Rename(tempFile, cacheInfoFile); err != nil {
+			// Clean up temp file if rename fails
+			os.Remove(tempFile)
+			return nil, false, fmt.Errorf("failed to rename cache info file: %w", err)
 		}
 
 		logger.CacheCreated(cache.Name, cache.ExpireTime)
@@ -214,14 +260,18 @@ func hashFile(filePath string) (string, error) {
 	return hex.EncodeToString(hash[:]), nil
 }
 
-// generateCacheKey creates a unique key for a set of files
-func generateCacheKey(files []string) string {
+// generateCacheKey creates a unique key for a set of files based on their content
+func generateCacheKey(files []string) (string, error) {
 	h := sha256.New()
-	h.Write([]byte("hybrid_v1"))
+	h.Write([]byte("hybrid_v2")) // v2 indicates content-based hashing
 	for _, f := range files {
-		h.Write([]byte(filepath.Clean(f)))
+		content, err := os.ReadFile(f)
+		if err != nil {
+			return "", fmt.Errorf("failed to read file %s: %w", f, err)
+		}
+		h.Write(content)
 	}
-	return hex.EncodeToString(h.Sum(nil))[:16]
+	return hex.EncodeToString(h.Sum(nil))[:16], nil
 }
 
 // estimateTokens provides a rough estimate of token count for a file
@@ -249,5 +299,13 @@ func hasFilesChanged(oldHashes map[string]string, files []string) (bool, []strin
 	}
 
 	return len(changedFiles) > 0, changedFiles
+}
+
+// IsNotFoundError checks if an error is a Google API "Not Found" error
+func IsNotFoundError(err error) bool {
+	if apiErr, ok := err.(*googleapi.Error); ok {
+		return apiErr.Code == 404
+	}
+	return false
 }
 

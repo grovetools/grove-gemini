@@ -22,6 +22,7 @@ var (
 	requestCacheTTL       string
 	requestNoCache        bool
 	requestRegenerateCtx  bool
+	requestRecache        bool
 	requestOutputFile     string
 	requestContextFiles   []string
 	requestYes            bool
@@ -52,6 +53,9 @@ Examples:
   # Regenerate context before request
   gemapi request --regenerate -p "Review the codebase architecture"
   
+  # Force recreation of cache
+  gemapi request --recache -p "Review the codebase architecture"
+  
   # With custom working directory
   gemapi request -w /path/to/project -p "Analyze this project"`,
 		RunE: runRequest,
@@ -64,6 +68,7 @@ Examples:
 	cmd.Flags().StringVar(&requestCacheTTL, "cache-ttl", "1h", "Cache TTL (e.g., 1h, 30m, 24h)")
 	cmd.Flags().BoolVar(&requestNoCache, "no-cache", false, "Disable context caching")
 	cmd.Flags().BoolVar(&requestRegenerateCtx, "regenerate", false, "Regenerate context before request")
+	cmd.Flags().BoolVar(&requestRecache, "recache", false, "Force recreation of the Gemini cache")
 	cmd.Flags().StringVarP(&requestOutputFile, "output", "o", "", "Write response to file instead of stdout")
 	cmd.Flags().StringSliceVar(&requestContextFiles, "context", nil, "Additional context files to include")
 	cmd.Flags().BoolVarP(&requestYes, "yes", "y", false, "Skip cache creation confirmation prompt")
@@ -244,7 +249,7 @@ func runRequest(cmd *cobra.Command, args []string) error {
 	if !requestNoCache {
 		if info, err := os.Stat(coldContextFile); err == nil && info.Size() > 0 {
 			logger.Info(fmt.Sprintf("Cache settings: requestYes=%v, ignoreChanges=%v, disableExpiration=%v", requestYes, ignoreChanges, disableExpiration))
-			cacheInfo, isNewCache, err = cacheManager.GetOrCreateCache(ctx, geminiClient, requestModel, coldContextFile, ttl, ignoreChanges, disableExpiration, requestYes)
+			cacheInfo, isNewCache, err = cacheManager.GetOrCreateCache(ctx, geminiClient, requestModel, coldContextFile, ttl, ignoreChanges, disableExpiration, requestRecache, requestYes)
 			if err != nil {
 				return fmt.Errorf("managing cache: %w", err)
 			}

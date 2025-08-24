@@ -16,6 +16,7 @@ func init() {
 	rootCmd.AddCommand(newCountTokensCmd())
 	rootCmd.AddCommand(newConfigCmd())
 	rootCmd.AddCommand(newRequestCmd())
+	rootCmd.AddCommand(newCacheCmd())
 }
 
 func Execute() error {

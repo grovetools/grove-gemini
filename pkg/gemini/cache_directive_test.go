@@ -52,6 +52,7 @@ func TestCacheManager_DisableCacheDirective(t *testing.T) {
 		time.Hour,
 		false,
 		false,
+		false, // forceRecache
 		true, // skipConfirmation for tests
 	)
 

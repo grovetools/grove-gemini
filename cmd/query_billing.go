@@ -97,7 +97,7 @@ func runQueryBilling(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("error executing query: %w", err)
 	}
 
-	fmt.Println("=== Gemini API Billing Data ===\n")
+	fmt.Println("=== Gemini API Billing Data ===")
 
 	var totalCost float64
 	var currency string
