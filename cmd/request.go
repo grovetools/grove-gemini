@@ -10,6 +10,7 @@ import (
 
 	grovecontext "github.com/mattsolo1/grove-context/pkg/context"
 	"github.com/mattsolo1/grove-gemini/pkg/gemini"
+	"github.com/mattsolo1/grove-gemini/pkg/pretty"
 	"github.com/spf13/cobra"
 )
 
@@ -23,6 +24,7 @@ var (
 	requestRegenerateCtx  bool
 	requestOutputFile     string
 	requestContextFiles   []string
+	requestYes            bool
 )
 
 func newRequestCmd() *cobra.Command {
@@ -64,6 +66,7 @@ Examples:
 	cmd.Flags().BoolVar(&requestRegenerateCtx, "regenerate", false, "Regenerate context before request")
 	cmd.Flags().StringVarP(&requestOutputFile, "output", "o", "", "Write response to file instead of stdout")
 	cmd.Flags().StringSliceVar(&requestContextFiles, "context", nil, "Additional context files to include")
+	cmd.Flags().BoolVarP(&requestYes, "yes", "y", false, "Skip cache creation confirmation prompt")
 
 	return cmd
 }
@@ -107,14 +110,23 @@ func runRequest(cmd *cobra.Command, args []string) error {
 	}
 	workDir = absWorkDir
 
-	fmt.Fprintf(os.Stderr, "🏠 Working directory: %s\n", workDir)
+	// Create pretty logger
+	logger := pretty.New()
+	
+	logger.WorkingDirectory(workDir)
 
 	// Check for .grove/rules file
 	rulesPath := filepath.Join(workDir, ".grove", "rules")
 	hasRules := false
 	if _, err := os.Stat(rulesPath); err == nil {
 		hasRules = true
-		fmt.Fprintf(os.Stderr, "📋 Found rules file: %s\n", rulesPath)
+		logger.FoundRulesFile(rulesPath)
+		
+		// Log the rules file content
+		rulesContent, err := os.ReadFile(rulesPath)
+		if err == nil {
+			logger.RulesFileContent(strings.TrimSpace(string(rulesContent)))
+		}
 	} else if !os.IsNotExist(err) {
 		return fmt.Errorf("checking rules file: %w", err)
 	}
@@ -133,15 +145,16 @@ func runRequest(cmd *cobra.Command, args []string) error {
 			// Check if context files exist
 			if _, err := os.Stat(coldContextFile); os.IsNotExist(err) {
 				needsRegeneration = true
-				fmt.Fprintf(os.Stderr, "⚠️  Cold context not found, will regenerate\n")
+				logger.Warning("Cold context not found, will regenerate")
 			} else if _, err := os.Stat(hotContextFile); os.IsNotExist(err) {
 				needsRegeneration = true
-				fmt.Fprintf(os.Stderr, "⚠️  Hot context not found, will regenerate\n")
+				logger.Warning("Hot context not found, will regenerate")
 			}
 		}
 
 		if needsRegeneration {
-			fmt.Fprintf(os.Stderr, "\n🔄 Regenerating context from rules...\n")
+			fmt.Fprintln(os.Stderr)
+			logger.Info("🔄 Regenerating context from rules...")
 			
 			// Update context from rules
 			if err := ctxMgr.UpdateFromRules(); err != nil {
@@ -157,7 +170,8 @@ func runRequest(cmd *cobra.Command, args []string) error {
 			files, _ := ctxMgr.ReadFilesList(grovecontext.FilesListFile)
 			stats, err := ctxMgr.GetStats("request", files, 10)
 			if err == nil {
-				fmt.Fprintf(os.Stderr, "\n📊 Context Summary:\n")
+				fmt.Fprintln(os.Stderr)
+				logger.Info("📊 Context Summary:")
 				fmt.Fprintf(os.Stderr, "  Total files: %d\n", stats.TotalFiles)
 				fmt.Fprintf(os.Stderr, "  Total tokens: %s\n", grovecontext.FormatTokenCount(stats.TotalTokens))
 				fmt.Fprintf(os.Stderr, "  Total size: %s\n", grovecontext.FormatBytes(int(stats.TotalSize)))
@@ -169,8 +183,9 @@ func runRequest(cmd *cobra.Command, args []string) error {
 			fmt.Fprintln(os.Stderr)
 		}
 	} else {
-		fmt.Fprintf(os.Stderr, "⚠️  No .grove/rules file found - context management disabled\n")
-		fmt.Fprintf(os.Stderr, "💡 Create .grove/rules to enable automatic context inclusion\n\n")
+		logger.Warning("No .grove/rules file found - context management disabled")
+		logger.Tip("Create .grove/rules to enable automatic context inclusion")
+		fmt.Fprintln(os.Stderr)
 	}
 
 	// Initialize Gemini client
@@ -197,39 +212,46 @@ func runRequest(cmd *cobra.Command, args []string) error {
 	}
 
 	// Get cache directives from context manager if available
-	var ignoreChanges, disableExpiration bool
+	var ignoreChanges, disableExpiration, cacheDisabled bool
 	if ctxMgr != nil {
 		// Check for custom expiration time
 		if customTTL, err := ctxMgr.GetExpireTime(); err == nil && customTTL > 0 {
 			ttl = customTTL
-			fmt.Fprintf(os.Stderr, "⏱️  Using cache TTL from @expire-time directive: %s\n", ttl)
+			logger.TTL(ttl.String())
 		}
 
 		// Check for @freeze-cache directive
 		if freeze, err := ctxMgr.ShouldFreezeCache(); err == nil && freeze {
 			ignoreChanges = true
-			fmt.Fprintf(os.Stderr, "❄️  Cache is frozen by @freeze-cache directive\n")
+			logger.CacheFrozen()
 		}
 
 		// Check for @no-expire directive
 		if noExpire, err := ctxMgr.ShouldDisableExpiration(); err == nil && noExpire {
 			disableExpiration = true
-			fmt.Fprintf(os.Stderr, "🚫 Cache expiration disabled by @no-expire directive\n")
+			logger.Info("🚫 Cache expiration disabled by @no-expire directive")
+		}
+		
+		// Check for @disable-cache directive
+		if disabled, err := ctxMgr.ShouldDisableCache(); err == nil && disabled {
+			cacheDisabled = true
 		}
 	}
 
 	// Get or create cache for cold context (if it exists and caching is enabled)
 	var cacheInfo *gemini.CacheInfo
+	var isNewCache bool
 	if !requestNoCache {
 		if info, err := os.Stat(coldContextFile); err == nil && info.Size() > 0 {
-			cacheInfo, err = cacheManager.GetOrCreateCache(ctx, geminiClient, requestModel, coldContextFile, ttl, ignoreChanges, disableExpiration)
+			logger.Info(fmt.Sprintf("Cache settings: requestYes=%v, ignoreChanges=%v, disableExpiration=%v", requestYes, ignoreChanges, disableExpiration))
+			cacheInfo, isNewCache, err = cacheManager.GetOrCreateCache(ctx, geminiClient, requestModel, coldContextFile, ttl, ignoreChanges, disableExpiration, requestYes)
 			if err != nil {
 				return fmt.Errorf("managing cache: %w", err)
 			}
 		} else if err == nil && info.Size() == 0 {
-			fmt.Fprintf(os.Stderr, "⚠️  Cold context file is empty, skipping cache\n")
+			logger.Warning("Cold context file is empty, skipping cache")
 		} else if os.IsNotExist(err) && hasRules {
-			fmt.Fprintf(os.Stderr, "⚠️  No cold context file found\n")
+			logger.Warning("No cold context file found")
 		}
 	}
 
@@ -239,7 +261,15 @@ func runRequest(cmd *cobra.Command, args []string) error {
 	// Add hot context if it exists
 	if _, err := os.Stat(hotContextFile); err == nil {
 		dynamicFiles = append(dynamicFiles, hotContextFile)
-		fmt.Fprintf(os.Stderr, "📁 Including hot context: %s\n", hotContextFile)
+		logger.Info(fmt.Sprintf("Including hot context: %s", hotContextFile))
+	}
+	
+	// If caching is disabled, also include cold context as dynamic file
+	if cacheDisabled && cacheInfo == nil {
+		if _, err := os.Stat(coldContextFile); err == nil {
+			dynamicFiles = append(dynamicFiles, coldContextFile)
+			logger.Info(fmt.Sprintf("Including cold context (cache disabled): %s", coldContextFile))
+		}
 	}
 
 	// Add any additional context files
@@ -252,14 +282,14 @@ func runRequest(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("context file not found: %s", ctxFile)
 		}
 		dynamicFiles = append(dynamicFiles, absPath)
-		fmt.Fprintf(os.Stderr, "📁 Including additional context: %s\n", absPath)
+		logger.Info(fmt.Sprintf("Including additional context: %s", absPath))
 	}
 
 	// Also check for CLAUDE.md in the working directory
 	claudePath := filepath.Join(workDir, "CLAUDE.md")
 	if _, err := os.Stat(claudePath); err == nil {
 		dynamicFiles = append(dynamicFiles, claudePath)
-		fmt.Fprintf(os.Stderr, "📁 Including CLAUDE.md: %s\n", claudePath)
+		logger.Info(fmt.Sprintf("Including CLAUDE.md: %s", claudePath))
 	}
 
 	// Determine cache ID
@@ -269,11 +299,13 @@ func runRequest(cmd *cobra.Command, args []string) error {
 	}
 
 	// Make the API request
-	fmt.Fprintf(os.Stderr, "\n🤖 Calling Gemini API with model: %s\n", requestModel)
+	fmt.Fprintln(os.Stderr)
+	logger.Model(requestModel)
 	
 	opts := &gemini.GenerateContentOptions{
 		WorkingDir: workDir,
 		Caller:     "gemapi-request",
+		IsNewCache: isNewCache,
 	}
 	
 	response, err := geminiClient.GenerateContentWithCacheAndOptions(ctx, requestModel, promptText, cacheID, dynamicFiles, opts)
@@ -287,7 +319,8 @@ func runRequest(cmd *cobra.Command, args []string) error {
 		if err := os.WriteFile(requestOutputFile, []byte(response), 0644); err != nil {
 			return fmt.Errorf("writing output file: %w", err)
 		}
-		fmt.Fprintf(os.Stderr, "\n✅ Response written to: %s\n", requestOutputFile)
+		fmt.Fprintln(os.Stderr)
+		logger.ResponseWritten(requestOutputFile)
 	} else {
 		// Write to stdout (not stderr) for piping
 		fmt.Print(response)

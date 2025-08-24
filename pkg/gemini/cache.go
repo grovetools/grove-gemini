@@ -11,6 +11,7 @@ import (
 	"time"
 
 	contextmgr "github.com/mattsolo1/grove-context/pkg/context"
+	"github.com/mattsolo1/grove-gemini/pkg/pretty"
 	"google.golang.org/genai"
 )
 
@@ -44,32 +45,36 @@ func NewCacheManager(workingDir string) *CacheManager {
 }
 
 // GetOrCreateCache returns an existing valid cache or creates a new one
-func (m *CacheManager) GetOrCreateCache(ctx context.Context, client *Client, model string, coldContextFilePath string, ttl time.Duration, ignoreChanges bool, disableExpiration bool) (*CacheInfo, error) {
+// The second return value indicates whether a new cache was created
+func (m *CacheManager) GetOrCreateCache(ctx context.Context, client *Client, model string, coldContextFilePath string, ttl time.Duration, ignoreChanges bool, disableExpiration bool, skipConfirmation bool) (*CacheInfo, bool, error) {
+	// Create pretty logger
+	logger := pretty.New()
+	
 	// Check if caching is disabled via grove-context directive
 	contextManager := contextmgr.NewManager(m.workingDir)
 	shouldDisableCache, err := contextManager.ShouldDisableCache()
 	if err != nil {
 		// Log warning but continue - don't fail if we can't read the directive
-		fmt.Fprintf(os.Stderr, "⚠️  Warning: Could not check cache directive: %v\n", err)
+		logger.Warning(fmt.Sprintf("Could not check cache directive: %v", err))
 	}
 	
 	if shouldDisableCache {
-		fmt.Fprintf(os.Stderr, "🚫 Cache disabled by @disable-cache directive\n")
-		return nil, nil
+		logger.CacheDisabled()
+		return nil, false, nil
 	}
 
 	// Check if the cold context file exists
 	if _, err := os.Stat(coldContextFilePath); err != nil {
 		if os.IsNotExist(err) {
 			// No cold context file, return nil (no cache to use)
-			return nil, nil
+			return nil, false, nil
 		}
-		return nil, fmt.Errorf("checking cold context file: %w", err)
+		return nil, false, fmt.Errorf("checking cold context file: %w", err)
 	}
 
 	// Ensure cache directory exists
 	if err := os.MkdirAll(m.cacheDir, 0755); err != nil {
-		return nil, fmt.Errorf("creating cache directory: %w", err)
+		return nil, false, fmt.Errorf("creating cache directory: %w", err)
 	}
 
 	// Generate cache key based on the cold context file path
@@ -82,35 +87,33 @@ func (m *CacheManager) GetOrCreateCache(ctx context.Context, client *Client, mod
 
 	if data, err := os.ReadFile(cacheInfoFile); err == nil {
 		if err := json.Unmarshal(data, &cacheInfo); err == nil {
-			fmt.Fprintf(os.Stderr, "📁 Found existing cache info\n")
+			logger.CacheInfo("Found existing cache info")
 
 			// Check if cache expired
 			if !disableExpiration && time.Now().After(cacheInfo.ExpiresAt) {
-				fmt.Fprintf(os.Stderr, "⏰ Cache expired at %s\n", cacheInfo.ExpiresAt.Format(time.RFC3339))
+				logger.CacheExpired(cacheInfo.ExpiresAt)
 				needNewCache = true
 			} else if changed, changedFiles := hasFilesChanged(cacheInfo.CachedFileHashes, []string{coldContextFilePath}); changed {
 				if ignoreChanges {
-					fmt.Fprintf(os.Stderr, "⚠️  Ignoring file changes and using stale cache due to directive\n")
-					return &cacheInfo, nil
+					logger.Warning("Cache is frozen - detected file changes but using existing cache")
+					logger.ChangedFiles(changedFiles)
+					return &cacheInfo, false, nil
 				}
-				fmt.Fprintf(os.Stderr, "🔄 Cached files have changed:\n")
-				for _, file := range changedFiles {
-					fmt.Fprintf(os.Stderr, "   • %s\n", file)
-				}
+				logger.ChangedFiles(changedFiles)
+				fmt.Fprintln(os.Stderr)
+				logger.Warning("Cache invalidated due to file changes - new cache required")
 				needNewCache = true
 			} else {
-				validityMessage := "✅ Cache is valid"
 				if disableExpiration {
-					validityMessage += " (expiration disabled by @no-expire)"
+					logger.Success("Cache is valid (expiration disabled by @no-expire)")
 				} else {
-					validityMessage += fmt.Sprintf(" until %s", cacheInfo.ExpiresAt.Format(time.RFC3339))
+					logger.CacheValid(cacheInfo.ExpiresAt)
 				}
-				fmt.Fprintf(os.Stderr, "%s\n", validityMessage)
-				return &cacheInfo, nil
+				return &cacheInfo, false, nil
 			}
 		}
 	} else {
-		fmt.Fprintf(os.Stderr, "🆕 No existing cache found\n")
+		logger.NoCache()
 		needNewCache = true
 	}
 
@@ -119,22 +122,34 @@ func (m *CacheManager) GetOrCreateCache(ctx context.Context, client *Client, mod
 		// First, check if the file is large enough for caching
 		content, err := os.ReadFile(coldContextFilePath)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read %s: %w", coldContextFilePath, err)
+			return nil, false, fmt.Errorf("failed to read %s: %w", coldContextFilePath, err)
 		}
 
 		estimatedTokens := estimateTokens(content)
 		minTokensForCache := 4096
 
 		if estimatedTokens < minTokensForCache {
-			fmt.Fprintf(os.Stderr, "\n⚠️  Cached context is too small for Gemini caching\n")
+			fmt.Fprintln(os.Stderr)
+			logger.Warning("Cached context is too small for Gemini caching")
 			fmt.Fprintf(os.Stderr, "   Estimated tokens: %d (minimum required: %d)\n", estimatedTokens, minTokensForCache)
-			fmt.Fprintf(os.Stderr, "   Suggestion: Move all content to hot context (.grove/context) for better performance\n")
-			fmt.Fprintf(os.Stderr, "   Proceeding without cache...\n")
-			return nil, nil // Return nil to indicate no cache should be used
+			logger.Info("   Suggestion: Move all content to hot context (.grove/context) for better performance")
+			logger.Info("   Proceeding without cache...")
+			return nil, false, nil // Return nil to indicate no cache should be used
 		}
 
-		fmt.Fprintf(os.Stderr, "\n📤 Uploading files for cache...\n")
-		fmt.Fprintf(os.Stderr, "   Estimated tokens: %d\n", estimatedTokens)
+		// Show confirmation prompt unless skipped
+		if !skipConfirmation {
+			sizeBytes := int64(len(content))
+			logger.Info(fmt.Sprintf("Cache confirmation required (skipConfirmation=%v)", skipConfirmation))
+			if !logger.CacheCreationPrompt(estimatedTokens, sizeBytes, ttl) {
+				logger.Warning("Cache creation cancelled by user")
+				return nil, false, nil
+			}
+		}
+
+		fmt.Fprintln(os.Stderr)
+		logger.UploadProgress("Uploading files for cache...")
+		logger.EstimatedTokens(estimatedTokens)
 
 		fileHashes := make(map[string]string)
 		var parts []*genai.Part
@@ -147,12 +162,13 @@ func (m *CacheManager) GetOrCreateCache(ctx context.Context, client *Client, mod
 		// Upload file
 		f, err := uploadFile(ctx, client.GetClient(), coldContextFilePath)
 		if err != nil {
-			return nil, fmt.Errorf("failed to upload %s: %w", coldContextFilePath, err)
+			return nil, false, fmt.Errorf("failed to upload %s: %w", coldContextFilePath, err)
 		}
 		parts = append(parts, genai.NewPartFromURI(f.URI, f.MIMEType))
 
 		// Create cache
-		fmt.Fprintf(os.Stderr, "\n🔨 Creating cache...\n")
+		fmt.Fprintln(os.Stderr)
+		logger.CreatingCache()
 		contents := []*genai.Content{
 			genai.NewContentFromParts(parts, genai.RoleUser),
 		}
@@ -164,7 +180,7 @@ func (m *CacheManager) GetOrCreateCache(ctx context.Context, client *Client, mod
 
 		cache, err := client.GetClient().Caches.Create(ctx, model, cacheConfig)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create cache: %w", err)
+			return nil, false, fmt.Errorf("failed to create cache: %w", err)
 		}
 
 		// Save cache info
@@ -179,14 +195,13 @@ func (m *CacheManager) GetOrCreateCache(ctx context.Context, client *Client, mod
 
 		data, _ := json.MarshalIndent(cacheInfo, "", "  ")
 		if err := os.WriteFile(cacheInfoFile, data, 0644); err != nil {
-			return nil, fmt.Errorf("failed to save cache info: %w", err)
+			return nil, false, fmt.Errorf("failed to save cache info: %w", err)
 		}
 
-		fmt.Fprintf(os.Stderr, "  ✅ Cache created: %s\n", cache.Name)
-		fmt.Fprintf(os.Stderr, "  📅 Expires: %s\n", cache.ExpireTime.Format(time.RFC3339))
+		logger.CacheCreated(cache.Name, cache.ExpireTime)
 	}
 
-	return &cacheInfo, nil
+	return &cacheInfo, needNewCache, nil
 }
 
 // hashFile calculates SHA256 hash of a file

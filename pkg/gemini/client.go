@@ -8,6 +8,7 @@ import (
 
 	ctxinfo "github.com/mattsolo1/grove-gemini/pkg/context"
 	"github.com/mattsolo1/grove-gemini/pkg/logging"
+	"github.com/mattsolo1/grove-gemini/pkg/pretty"
 	"google.golang.org/genai"
 )
 
@@ -38,6 +39,7 @@ func NewClient(ctx context.Context) (*Client, error) {
 type GenerateContentOptions struct {
 	WorkingDir string
 	Caller     string
+	IsNewCache bool
 }
 
 // GenerateContentWithCache generates content using a cached context and dynamic files
@@ -47,10 +49,14 @@ func (c *Client) GenerateContentWithCache(ctx context.Context, model string, pro
 
 // GenerateContentWithCacheAndOptions generates content with additional context options
 func (c *Client) GenerateContentWithCacheAndOptions(ctx context.Context, model string, prompt string, cacheID string, dynamicFilePaths []string, opts *GenerateContentOptions) (string, error) {
+	// Create pretty logger
+	logger := pretty.New()
+	
 	// Upload dynamic files if any
 	var requestParts []*genai.Part
 	if len(dynamicFilePaths) > 0 {
-		fmt.Fprintf(os.Stderr, "\n📤 Uploading dynamic files for request...\n")
+		fmt.Fprintln(os.Stderr)
+		logger.UploadProgress("Uploading dynamic files for request...")
 		for _, filePath := range dynamicFilePaths {
 			// Upload dynamic file
 			f, err := uploadFile(ctx, c.client, filePath)
@@ -83,7 +89,7 @@ func (c *Client) GenerateContentWithCacheAndOptions(ctx context.Context, model s
 	var err error
 	
 	startTime := time.Now()
-	fmt.Fprintf(os.Stderr, "\n🤖 Generating response...\n")
+	logger.GeneratingResponse()
 	
 	if cacheID != "" {
 		result, err = c.client.Models.GenerateContent(
@@ -144,21 +150,33 @@ func (c *Client) GenerateContentWithCacheAndOptions(ctx context.Context, model s
 
 	// Show token usage and log the query
 	if result.UsageMetadata != nil {
-		fmt.Fprintf(os.Stderr, "\n📊 Token usage:\n")
-		if cacheID != "" && result.UsageMetadata.CachedContentTokenCount > 0 {
-			fmt.Fprintf(os.Stderr, "  Cached: %d tokens\n", result.UsageMetadata.CachedContentTokenCount)
-		}
-		fmt.Fprintf(os.Stderr, "  Dynamic + Prompt: %d tokens\n", result.UsageMetadata.PromptTokenCount)
-		fmt.Fprintf(os.Stderr, "  Total: %d tokens\n", result.UsageMetadata.TotalTokenCount)
+		// Extract all token components
+		cachedTokens := int(result.UsageMetadata.CachedContentTokenCount)
+		totalPromptTokens := int(result.UsageMetadata.PromptTokenCount)
+		completionTokens := int(result.UsageMetadata.CandidatesTokenCount)
 		
+		// Calculate actual dynamic tokens (prompt tokens minus cached tokens)
+		dynamicTokens := totalPromptTokens - cachedTokens
+		
+		// Extract isNewCache flag from options
+		isNewCache := false
+		if opts != nil {
+			isNewCache = opts.IsNewCache
+		}
+		
+		logger.TokenUsage(
+			cachedTokens,
+			dynamicTokens,
+			completionTokens,
+			duration,
+			isNewCache,
+		)
+		
+		// Calculate cache hit rate for logging
 		cacheHitRate := float64(0)
-		if result.UsageMetadata.CachedContentTokenCount > 0 && result.UsageMetadata.PromptTokenCount > 0 {
-			cacheHitRate = float64(result.UsageMetadata.CachedContentTokenCount) / 
-				float64(result.UsageMetadata.CachedContentTokenCount + result.UsageMetadata.PromptTokenCount) * 100
-			fmt.Fprintf(os.Stderr, "  Cache usage: %.1f%%\n", cacheHitRate)
+		if totalPromptTokens > 0 {
+			cacheHitRate = float64(cachedTokens) / float64(totalPromptTokens)
 		}
-		
-		fmt.Fprintf(os.Stderr, "  Response time: %.2fs\n", duration.Seconds())
 		
 		// Gather context information
 		var contextInfo *ctxinfo.Info
@@ -178,9 +196,9 @@ func (c *Client) GenerateContentWithCacheAndOptions(ctx context.Context, model s
 			PromptTokens:    result.UsageMetadata.PromptTokenCount,
 			CompletionTokens: result.UsageMetadata.CandidatesTokenCount,
 			TotalTokens:     result.UsageMetadata.TotalTokenCount,
-			CacheHitRate:    cacheHitRate / 100, // Store as decimal
+			CacheHitRate:    cacheHitRate, // Store as decimal
 			ResponseTime:    duration.Seconds(),
-			EstimatedCost:   logging.EstimateCost(model, result.UsageMetadata.PromptTokenCount, result.UsageMetadata.CandidatesTokenCount),
+			EstimatedCost:   logging.EstimateCostWithCache(model, result.UsageMetadata.PromptTokenCount, result.UsageMetadata.CandidatesTokenCount, result.UsageMetadata.CachedContentTokenCount),
 			CacheID:         cacheID,
 			Success:         true,
 			WorkingDir:      contextInfo.WorkingDir,

@@ -150,9 +150,14 @@ func (ql *QueryLogger) ReadLogs(startTime, endTime time.Time) ([]QueryLog, error
 }
 
 // EstimateCost calculates the estimated cost based on token usage
-// Note: This doesn't account for cached token discounts or context caching storage costs
-// Cached tokens typically get a 75% discount on input pricing
+// Cached tokens get a 75% discount on input pricing
 func EstimateCost(model string, promptTokens, completionTokens int32) float64 {
+	return EstimateCostWithCache(model, promptTokens, completionTokens, 0)
+}
+
+// EstimateCostWithCache calculates the estimated cost accounting for cached token discounts
+// Cached tokens get a 75% discount on input pricing
+func EstimateCostWithCache(model string, promptTokens, completionTokens, cachedTokens int32) float64 {
 	// Pricing as of Dec 2024 (per million tokens)
 	var inputPrice, outputPrice float64
 	
@@ -193,10 +198,18 @@ func EstimateCost(model string, promptTokens, completionTokens int32) float64 {
 		outputPrice = 0.40
 	}
 	
-	inputCost := float64(promptTokens) / 1_000_000 * inputPrice
+	// Calculate costs with cache discount
+	// Cached tokens get 75% discount
+	const cacheDiscount = 0.25 // Pay only 25% of the price for cached tokens
+	
+	// Separate dynamic tokens from cached tokens
+	dynamicTokens := promptTokens - cachedTokens
+	
+	cachedCost := float64(cachedTokens) / 1_000_000 * inputPrice * cacheDiscount
+	dynamicCost := float64(dynamicTokens) / 1_000_000 * inputPrice
 	outputCost := float64(completionTokens) / 1_000_000 * outputPrice
 	
-	return inputCost + outputCost
+	return cachedCost + dynamicCost + outputCost
 }
 
 func contains(s, substr string) bool {

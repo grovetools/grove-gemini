@@ -62,7 +62,7 @@ func TestGetOrCreateCache_WithoutColdContext(t *testing.T) {
 	nonExistentFile := filepath.Join(tmpDir, "non-existent.txt")
 	
 	// This should return nil without error (no cache to use)
-	cacheInfo, err := cm.GetOrCreateCache(ctx, nil, "gemini-pro", nonExistentFile, 24*time.Hour, false, false)
+	cacheInfo, _, err := cm.GetOrCreateCache(ctx, nil, "gemini-pro", nonExistentFile, 24*time.Hour, false, false, true)
 	if err != nil {
 		t.Errorf("Expected no error for non-existent file, got %v", err)
 	}
@@ -85,7 +85,7 @@ func TestGetOrCreateCache_SmallFile(t *testing.T) {
 	ctx := context.Background()
 	
 	// This should return nil (file too small for caching)
-	cacheInfo, err := cm.GetOrCreateCache(ctx, nil, "gemini-pro", smallFile, 24*time.Hour, false, false)
+	cacheInfo, _, err := cm.GetOrCreateCache(ctx, nil, "gemini-pro", smallFile, 24*time.Hour, false, false, true)
 	if err != nil {
 		t.Errorf("Expected no error for small file, got %v", err)
 	}

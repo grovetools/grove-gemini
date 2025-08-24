@@ -2,12 +2,11 @@ package gemini
 
 import (
 	"context"
-	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/mattsolo1/grove-gemini/pkg/pretty"
 	"google.golang.org/genai"
 )
 
@@ -25,7 +24,9 @@ func uploadFile(ctx context.Context, client *genai.Client, filePath string) (*ge
 		return nil, err
 	}
 	
-	fmt.Fprintf(os.Stderr, "  ✅ %s (%.2fs)\n", filepath.Base(filePath), time.Since(uploadStart).Seconds())
+	// Create pretty logger
+	logger := pretty.New()
+	logger.UploadComplete(filepath.Base(filePath), time.Since(uploadStart))
 	return f, nil
 }
 

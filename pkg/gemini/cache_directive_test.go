@@ -44,7 +44,7 @@ func TestCacheManager_DisableCacheDirective(t *testing.T) {
 	var mockClient *Client
 
 	// Try to get or create cache - should return nil due to @disable-cache
-	cacheInfo, err := cacheManager.GetOrCreateCache(
+	cacheInfo, _, err := cacheManager.GetOrCreateCache(
 		context.Background(),
 		mockClient,
 		"gemini-1.5-flash",
@@ -52,6 +52,7 @@ func TestCacheManager_DisableCacheDirective(t *testing.T) {
 		time.Hour,
 		false,
 		false,
+		true, // skipConfirmation for tests
 	)
 
 	if err != nil {
