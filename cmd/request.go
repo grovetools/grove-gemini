@@ -23,6 +23,7 @@ var (
 	requestNoCache        bool
 	requestRegenerateCtx  bool
 	requestRecache        bool
+	requestUseCache       string
 	requestOutputFile     string
 	requestContextFiles   []string
 	requestYes            bool
@@ -56,6 +57,9 @@ Examples:
   # Force recreation of cache
   gemapi request --recache -p "Review the codebase architecture"
   
+  # Use a specific cache
+  gemapi request --use-cache 53f364cda78e82a8 -p "Review using old context"
+  
   # With custom working directory
   gemapi request -w /path/to/project -p "Analyze this project"`,
 		RunE: runRequest,
@@ -69,6 +73,7 @@ Examples:
 	cmd.Flags().BoolVar(&requestNoCache, "no-cache", false, "Disable context caching")
 	cmd.Flags().BoolVar(&requestRegenerateCtx, "regenerate", false, "Regenerate context before request")
 	cmd.Flags().BoolVar(&requestRecache, "recache", false, "Force recreation of the Gemini cache")
+	cmd.Flags().StringVar(&requestUseCache, "use-cache", "", "Specify a cache name (short hash) to use for this request, bypassing automatic selection")
 	cmd.Flags().StringVarP(&requestOutputFile, "output", "o", "", "Write response to file instead of stdout")
 	cmd.Flags().StringSliceVar(&requestContextFiles, "context", nil, "Additional context files to include")
 	cmd.Flags().BoolVarP(&requestYes, "yes", "y", false, "Skip cache creation confirmation prompt")
@@ -82,6 +87,11 @@ func runRequest(cmd *cobra.Command, args []string) error {
 	// Validate inputs
 	if requestPrompt == "" && requestPromptFile == "" && len(args) == 0 {
 		return fmt.Errorf("must provide prompt via -p, -f, or as argument")
+	}
+	
+	// Validate cache flags
+	if requestUseCache != "" && requestRecache {
+		return fmt.Errorf("--use-cache and --recache are mutually exclusive")
 	}
 
 	// Get prompt text
@@ -247,16 +257,28 @@ func runRequest(cmd *cobra.Command, args []string) error {
 	var cacheInfo *gemini.CacheInfo
 	var isNewCache bool
 	if !requestNoCache {
-		if info, err := os.Stat(coldContextFile); err == nil && info.Size() > 0 {
-			logger.Info(fmt.Sprintf("Cache settings: requestYes=%v, ignoreChanges=%v, disableExpiration=%v", requestYes, ignoreChanges, disableExpiration))
-			cacheInfo, isNewCache, err = cacheManager.GetOrCreateCache(ctx, geminiClient, requestModel, coldContextFile, ttl, ignoreChanges, disableExpiration, requestRecache, requestYes)
+		// Check if user specified a cache to use
+		if requestUseCache != "" {
+			logger.Info(fmt.Sprintf("Using specified cache: %s", requestUseCache))
+			var err error
+			cacheInfo, err = cacheManager.FindAndValidateCache(ctx, geminiClient, requestUseCache, disableExpiration)
 			if err != nil {
-				return fmt.Errorf("managing cache: %w", err)
+				return fmt.Errorf("using specified cache: %w", err)
 			}
-		} else if err == nil && info.Size() == 0 {
-			logger.Warning("Cold context file is empty, skipping cache")
-		} else if os.IsNotExist(err) && hasRules {
-			logger.Warning("No cold context file found")
+			isNewCache = false
+		} else {
+			// Normal cache handling - create or find cache based on content
+			if info, err := os.Stat(coldContextFile); err == nil && info.Size() > 0 {
+				logger.Info(fmt.Sprintf("Cache settings: requestYes=%v, ignoreChanges=%v, disableExpiration=%v", requestYes, ignoreChanges, disableExpiration))
+				cacheInfo, isNewCache, err = cacheManager.GetOrCreateCache(ctx, geminiClient, requestModel, coldContextFile, ttl, ignoreChanges, disableExpiration, requestRecache, requestYes)
+				if err != nil {
+					return fmt.Errorf("managing cache: %w", err)
+				}
+			} else if err == nil && info.Size() == 0 {
+				logger.Warning("Cold context file is empty, skipping cache")
+			} else if os.IsNotExist(err) && hasRules {
+				logger.Warning("No cold context file found")
+			}
 		}
 	}
 

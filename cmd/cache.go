@@ -234,8 +234,8 @@ func newCacheInspectCmd() *cobra.Command {
 			fmt.Printf("│ Server Cache ID: %-46s │\n", info.CacheID)
 			fmt.Printf("│ Model:           %-46s │\n", info.Model)
 			fmt.Printf("│ Status:          %-46s │\n", status)
-			fmt.Printf("│ Created:         %-46s │\n", info.CreatedAt.Format("2006-01-02 15:04:05 MST"))
-			fmt.Printf("│ Expires:         %-46s │\n", info.ExpiresAt.Format("2006-01-02 15:04:05 MST"))
+			fmt.Printf("│ Created:         %-46s │\n", info.CreatedAt.Local().Format("2006-01-02 15:04:05 MST"))
+			fmt.Printf("│ Expires:         %-46s │\n", info.ExpiresAt.Local().Format("2006-01-02 15:04:05 MST"))
 			
 			// Print cached files
 			if len(info.CachedFileHashes) > 0 {

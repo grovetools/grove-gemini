@@ -60,6 +60,50 @@ func LoadCacheInfo(filePath string) (*CacheInfo, error) {
 	return &info, nil
 }
 
+// FindAndValidateCache finds and validates a specific cache by name
+// This method does NOT check for file content changes - it's meant to force use of a specific cache
+func (m *CacheManager) FindAndValidateCache(ctx context.Context, client *Client, cacheName string, disableExpiration bool) (*CacheInfo, error) {
+	// Create pretty logger
+	logger := pretty.New()
+	
+	// Construct path to cache info file
+	cacheInfoFile := filepath.Join(m.cacheDir, "hybrid_"+cacheName+".json")
+	
+	// Load cache info
+	info, err := LoadCacheInfo(cacheInfoFile)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, fmt.Errorf("cache '%s' not found", cacheName)
+		}
+		return nil, fmt.Errorf("loading cache info: %w", err)
+	}
+	
+	logger.Info(fmt.Sprintf("Found cache '%s' for model %s", cacheName, info.Model))
+	
+	// Verify cache exists on the server
+	exists, err := client.VerifyCacheExists(ctx, info.CacheID)
+	if err != nil {
+		return nil, fmt.Errorf("verifying cache on server: %w", err)
+	}
+	if !exists {
+		return nil, fmt.Errorf("cache '%s' no longer exists on server", cacheName)
+	}
+	
+	// Check if cache has expired (unless expiration is disabled)
+	if !disableExpiration && time.Now().After(info.ExpiresAt) {
+		return nil, fmt.Errorf("cache '%s' has expired (expired at %s)", cacheName, info.ExpiresAt.Local().Format("2006-01-02 15:04:05 MST"))
+	}
+	
+	// Cache is valid
+	if disableExpiration {
+		logger.Success(fmt.Sprintf("Using specified cache '%s' (expiration check disabled)", cacheName))
+	} else {
+		logger.Success(fmt.Sprintf("Using specified cache '%s' (expires %s)", cacheName, info.ExpiresAt.Local().Format("2006-01-02 15:04:05 MST")))
+	}
+	
+	return info, nil
+}
+
 // GetOrCreateCache returns an existing valid cache or creates a new one
 // The second return value indicates whether a new cache was created
 func (m *CacheManager) GetOrCreateCache(ctx context.Context, client *Client, model string, coldContextFilePath string, ttl time.Duration, ignoreChanges bool, disableExpiration bool, forceRecache bool, skipConfirmation bool) (*CacheInfo, bool, error) {
