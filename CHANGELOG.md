@@ -1,3 +1,20 @@
+## v0.0.3 (2025-08-25)
+
+### Chores
+
+* **deps:** sync Grove dependencies to latest versions
+* bump dependencies
+
+### Features
+
+* expose request functionality as reusable Go package
+
+### Bug Fixes
+
+* disable lefs
+* disable linting
+* disable lfs
+
 ## v0.0.2 (2025-08-25)
 
 ### Bug Fixes
