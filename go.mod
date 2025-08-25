@@ -7,9 +7,9 @@ require (
 	cloud.google.com/go/logging v1.13.0
 	cloud.google.com/go/monitoring v1.24.2
 	github.com/charmbracelet/lipgloss v1.1.0
-	github.com/mattsolo1/grove-context v0.2.14
+	github.com/mattsolo1/grove-context v0.2.16
 	github.com/mattsolo1/grove-core v0.2.12
-	github.com/mattsolo1/grove-tend v0.2.8
+	github.com/mattsolo1/grove-tend v0.2.11
 	github.com/spf13/cobra v1.9.1
 	google.golang.org/api v0.232.0
 	google.golang.org/genai v1.20.0
