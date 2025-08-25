@@ -1,3 +1,10 @@
+## v0.0.5 (2025-08-25)
+
+### Chores
+
+* **deps:** sync Grove dependencies to latest versions
+* **deps:** sync Grove dependencies to latest versions
+
 ## v0.0.4 (2025-08-25)
 
 ### Bug Fixes
