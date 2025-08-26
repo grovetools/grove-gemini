@@ -97,6 +97,26 @@ func (c *Client) GenerateContentWithCacheAndOptions(ctx context.Context, model s
 	// Create contents slice for API
 	contentsForAPI := []*genai.Content{userTurn}
 	
+	// Display files that will be included in the prompt
+	var promptFiles []string
+	if opts != nil && len(opts.PromptFiles) > 0 {
+		promptFiles = opts.PromptFiles
+	}
+	
+	// Create display files list
+	displayFiles := make([]string, len(dynamicFilePaths))
+	copy(displayFiles, dynamicFilePaths)
+	
+	// Add prompt files to display list
+	if len(promptFiles) > 0 {
+		displayFiles = append(displayFiles, promptFiles...)
+	}
+	
+	// Show files before making the request
+	if len(displayFiles) > 0 {
+		logger.FilesIncluded(displayFiles)
+	}
+	
 	// Generate content with optional cache
 	var result *genai.GenerateContentResponse
 	var err error
@@ -172,19 +192,8 @@ func (c *Client) GenerateContentWithCacheAndOptions(ctx context.Context, model s
 		
 		// Extract isNewCache flag from options
 		isNewCache := false
-		var promptFiles []string
 		if opts != nil {
 			isNewCache = opts.IsNewCache
-			promptFiles = opts.PromptFiles
-		}
-		
-		// Create display files list
-		displayFiles := make([]string, len(dynamicFilePaths))
-		copy(displayFiles, dynamicFilePaths)
-		
-		// Add prompt files to display list
-		if len(promptFiles) > 0 {
-			displayFiles = append(displayFiles, promptFiles...)
 		}
 		
 		logger.TokenUsage(
@@ -194,7 +203,6 @@ func (c *Client) GenerateContentWithCacheAndOptions(ctx context.Context, model s
 			promptTokens,
 			duration,
 			isNewCache,
-			displayFiles,
 		)
 		
 		// Calculate cache hit rate for logging

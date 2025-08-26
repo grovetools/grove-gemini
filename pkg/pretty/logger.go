@@ -241,8 +241,40 @@ func (l *Logger) GeneratingResponse() {
 		l.styles.Info.Render("Generating response..."))
 }
 
+// FilesIncluded displays the list of files that will be included in the prompt
+func (l *Logger) FilesIncluded(files []string) {
+	if len(files) == 0 {
+		return
+	}
+	
+	fmt.Fprintf(l.writer, "\n%s %s\n",
+		l.styles.Icon.Render("📁"),
+		l.styles.Section.Render("Files included in prompt:"))
+	
+	for _, file := range files {
+		// Extract just the filename or last part of the path for display
+		displayName := file
+		if idx := strings.LastIndex(file, "/"); idx != -1 {
+			displayName = file[idx+1:]
+		}
+		
+		// Check if this is likely a prompt file (has .md extension and not CLAUDE.md)
+		isPromptFile := strings.HasSuffix(file, ".md") && displayName != "CLAUDE.md" && 
+			displayName != "context" && displayName != "cached-context"
+		
+		// Show full path if it's a special file or prompt file
+		if displayName == "CLAUDE.md" || displayName == "context" || displayName == "cached-context" {
+			fmt.Fprintf(l.writer, "  • %s\n", l.styles.Path.Render(file))
+		} else if isPromptFile {
+			fmt.Fprintf(l.writer, "  • %s (prompt)\n", l.styles.Path.Render(file))
+		} else {
+			fmt.Fprintf(l.writer, "  • %s\n", l.styles.Path.Render(displayName))
+		}
+	}
+}
+
 // TokenUsage displays token usage statistics in a styled box
-func (l *Logger) TokenUsage(cached, dynamic, completion, promptTokens int, responseTime time.Duration, isNewCache bool, dynamicFiles []string) {
+func (l *Logger) TokenUsage(cached, dynamic, completion, promptTokens int, responseTime time.Duration, isNewCache bool) {
 	// Calculate derived metrics
 	totalPrompt := cached + dynamic
 	totalAPIUsage := dynamic + completion
@@ -306,34 +338,6 @@ func (l *Logger) TokenUsage(cached, dynamic, completion, promptTokens int, respo
 		l.styles.Icon.Render("📊"),
 		l.styles.Section.Render("Token usage:"),
 		box)
-	
-	// Display dynamic files if any
-	if len(dynamicFiles) > 0 {
-		fmt.Fprintf(l.writer, "\n%s %s\n",
-			l.styles.Icon.Render("📁"),
-			l.styles.Section.Render("Files included in prompt:"))
-		
-		for _, file := range dynamicFiles {
-			// Extract just the filename or last part of the path for display
-			displayName := file
-			if idx := strings.LastIndex(file, "/"); idx != -1 {
-				displayName = file[idx+1:]
-			}
-			
-			// Check if this is likely a prompt file (has .md extension and not CLAUDE.md)
-			isPromptFile := strings.HasSuffix(file, ".md") && displayName != "CLAUDE.md" && 
-				displayName != "context" && displayName != "cached-context"
-			
-			// Show full path if it's a special file or prompt file
-			if displayName == "CLAUDE.md" || displayName == "context" || displayName == "cached-context" {
-				fmt.Fprintf(l.writer, "  • %s\n", l.styles.Path.Render(file))
-			} else if isPromptFile {
-				fmt.Fprintf(l.writer, "  • %s (prompt)\n", l.styles.Path.Render(file))
-			} else {
-				fmt.Fprintf(l.writer, "  • %s\n", l.styles.Path.Render(displayName))
-			}
-		}
-	}
 }
 
 // CacheInfo logs cache-related information
