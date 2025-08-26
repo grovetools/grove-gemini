@@ -1,3 +1,14 @@
+## v0.0.6 (2025-08-26)
+
+### Bug Fixes
+
+* include prompt file contents in API requests
+
+### Features
+
+* move file list display before API request
+* add prompt file tracking and user token counting
+
 ## v0.0.5 (2025-08-25)
 
 ### Chores
