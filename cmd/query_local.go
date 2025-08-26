@@ -172,10 +172,11 @@ func displaySummary(logs []logging.QueryLog) {
 	fmt.Printf("\n=== Summary (showing %d requests) ===\n", len(logs))
 	
 	var totalCost float64
-	var totalPromptTokens, totalCompletionTokens, totalCachedTokens int64
+	var totalPromptTokens, totalCompletionTokens, totalCachedTokens, totalUserPromptTokens int64
 	var totalResponseTime float64
 	var errorCount int
 	var cacheHits int
+	var requestsWithUserPrompt int
 	
 	modelCosts := make(map[string]float64)
 	modelCounts := make(map[string]int)
@@ -186,6 +187,11 @@ func displaySummary(logs []logging.QueryLog) {
 		totalCompletionTokens += int64(log.CompletionTokens)
 		totalCachedTokens += int64(log.CachedTokens)
 		totalResponseTime += log.ResponseTime
+		
+		if log.UserPromptTokens > 0 {
+			totalUserPromptTokens += int64(log.UserPromptTokens)
+			requestsWithUserPrompt++
+		}
 		
 		if !log.Success {
 			errorCount++
@@ -208,6 +214,10 @@ func displaySummary(logs []logging.QueryLog) {
 	fmt.Printf("Total Cost: $%.6f\n", totalCost)
 	fmt.Printf("Total Tokens: %d (Prompt: %d, Completion: %d, Cached: %d)\n", 
 		totalPromptTokens+totalCompletionTokens, totalPromptTokens, totalCompletionTokens, totalCachedTokens)
+	
+	if requestsWithUserPrompt > 0 {
+		fmt.Printf("User Prompt Tokens: %d (from %d requests with prompts)\n", totalUserPromptTokens, requestsWithUserPrompt)
+	}
 	
 	if errorCount > 0 {
 		fmt.Printf("Error Rate: %.1f%% (%d errors)\n", float64(errorCount)/float64(len(logs))*100, errorCount)

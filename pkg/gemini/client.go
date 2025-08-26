@@ -40,6 +40,7 @@ type GenerateContentOptions struct {
 	WorkingDir string
 	Caller     string
 	IsNewCache bool
+	PromptFiles []string // Paths to prompt files (for display purposes only)
 }
 
 // GenerateContentWithCache generates content using a cached context and dynamic files
@@ -70,8 +71,20 @@ func (c *Client) GenerateContentWithCacheAndOptions(ctx context.Context, model s
 		}
 	}
 
-	// Add the text prompt to requestParts
+	// Count tokens for the user prompt separately
+	var promptTokens int
 	if prompt != "" {
+		// Count tokens for just the prompt text
+		tokenResp, err := c.client.Models.CountTokens(ctx,
+			model,
+			[]*genai.Content{{Parts: []*genai.Part{{Text: prompt}}}},
+			nil,
+		)
+		if err == nil {
+			promptTokens = int(tokenResp.TotalTokens)
+		}
+		// Continue even if token counting fails - it's not critical
+		
 		requestParts = append(requestParts, &genai.Part{Text: prompt})
 	}
 	
@@ -159,16 +172,29 @@ func (c *Client) GenerateContentWithCacheAndOptions(ctx context.Context, model s
 		
 		// Extract isNewCache flag from options
 		isNewCache := false
+		var promptFiles []string
 		if opts != nil {
 			isNewCache = opts.IsNewCache
+			promptFiles = opts.PromptFiles
+		}
+		
+		// Create display files list
+		displayFiles := make([]string, len(dynamicFilePaths))
+		copy(displayFiles, dynamicFilePaths)
+		
+		// Add prompt files to display list
+		if len(promptFiles) > 0 {
+			displayFiles = append(displayFiles, promptFiles...)
 		}
 		
 		logger.TokenUsage(
 			cachedTokens,
 			dynamicTokens,
 			completionTokens,
+			promptTokens,
 			duration,
 			isNewCache,
+			displayFiles,
 		)
 		
 		// Calculate cache hit rate for logging
@@ -193,6 +219,7 @@ func (c *Client) GenerateContentWithCacheAndOptions(ctx context.Context, model s
 			Method:          "GenerateContent",
 			CachedTokens:    result.UsageMetadata.CachedContentTokenCount,
 			PromptTokens:    result.UsageMetadata.PromptTokenCount,
+			UserPromptTokens: int32(promptTokens),
 			CompletionTokens: result.UsageMetadata.CandidatesTokenCount,
 			TotalTokens:     result.UsageMetadata.TotalTokenCount,
 			CacheHitRate:    cacheHitRate, // Store as decimal

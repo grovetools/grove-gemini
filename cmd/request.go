@@ -111,10 +111,17 @@ func runRequest(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	// Create prompt files slice
+	var promptFiles []string
+	if requestPromptFile != "" {
+		promptFiles = []string{requestPromptFile}
+	}
+
 	// Create options
 	options := gemini.RequestOptions{
 		Model:            requestModel,
 		Prompt:           promptText,
+		PromptFiles:      promptFiles,
 		WorkDir:          requestWorkDir,
 		CacheTTL:         ttl,
 		NoCache:          requestNoCache,

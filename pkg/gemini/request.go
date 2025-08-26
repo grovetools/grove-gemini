@@ -16,6 +16,7 @@ import (
 type RequestOptions struct {
 	Model           string
 	Prompt          string
+	PromptFiles     []string // Paths to files containing prompts (for display purposes)
 	WorkDir         string
 	CacheTTL        time.Duration
 	NoCache         bool
@@ -268,6 +269,7 @@ func (r *RequestRunner) Run(ctx context.Context, options RequestOptions) (string
 		WorkingDir: workDir,
 		Caller:     "gemapi-request",
 		IsNewCache: isNewCache,
+		PromptFiles: options.PromptFiles,
 	}
 	
 	response, err := geminiClient.GenerateContentWithCacheAndOptions(ctx, options.Model, options.Prompt, cacheID, dynamicFiles, opts)

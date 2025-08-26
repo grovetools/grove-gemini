@@ -17,6 +17,7 @@ type QueryLog struct {
 	Method          string    `json:"method,omitempty"`
 	CachedTokens    int32     `json:"cached_tokens"`
 	PromptTokens    int32     `json:"prompt_tokens"`
+	UserPromptTokens int32     `json:"user_prompt_tokens,omitempty"` // Tokens from user's text prompt only
 	CompletionTokens int32     `json:"completion_tokens"`
 	TotalTokens     int32     `json:"total_tokens"`
 	CacheHitRate    float64   `json:"cache_hit_rate"`
