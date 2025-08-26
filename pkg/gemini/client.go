@@ -40,7 +40,7 @@ type GenerateContentOptions struct {
 	WorkingDir string
 	Caller     string
 	IsNewCache bool
-	PromptFiles []string // Paths to prompt files (for display purposes only)
+	PromptFiles []string // Paths to prompt files to be included in the request
 }
 
 // GenerateContentWithCache generates content using a cached context and dynamic files
@@ -68,6 +68,17 @@ func (c *Client) GenerateContentWithCacheAndOptions(ctx context.Context, model s
 			// Create part from URI
 			part := genai.NewPartFromURI(f.URI, f.MIMEType)
 			requestParts = append(requestParts, part)
+		}
+	}
+
+	// Read and add content from prompt files
+	if opts != nil && len(opts.PromptFiles) > 0 {
+		for _, pFile := range opts.PromptFiles {
+			content, err := os.ReadFile(pFile)
+			if err != nil {
+				return "", fmt.Errorf("failed to read prompt file %s: %w", pFile, err)
+			}
+			requestParts = append(requestParts, &genai.Part{Text: string(content)})
 		}
 	}
 
