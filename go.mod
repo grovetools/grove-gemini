@@ -7,7 +7,7 @@ require (
 	cloud.google.com/go/logging v1.13.0
 	cloud.google.com/go/monitoring v1.24.2
 	github.com/charmbracelet/lipgloss v1.1.0
-	github.com/mattsolo1/grove-context v0.2.19
+	github.com/mattsolo1/grove-context v0.2.20
 	github.com/mattsolo1/grove-core v0.2.12
 	github.com/mattsolo1/grove-tend v0.2.15
 	github.com/spf13/cobra v1.9.1

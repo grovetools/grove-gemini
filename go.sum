@@ -133,8 +133,8 @@ github.com/mattn/go-isatty v0.0.20 h1:xfD0iDuEKnDkl03q4limB+vH+GxLEtL/jb4xVJSWWE
 github.com/mattn/go-isatty v0.0.20/go.mod h1:W+V8PltTTMOvKvAeJH7IuucS94S2C6jfK/D7dTCTo3Y=
 github.com/mattn/go-runewidth v0.0.16 h1:E5ScNMtiwvlvB5paMFdw9p4kSQzbXFikJ5SQO6TULQc=
 github.com/mattn/go-runewidth v0.0.16/go.mod h1:Jdepj2loyihRzMpdS35Xk/zdY8IAYHsh153qUoGf23w=
-github.com/mattsolo1/grove-context v0.2.19 h1:IDb5B8lyCYgleKTbi77i3Qxe/UkaUz+BQT0UAcxFTeU=
-github.com/mattsolo1/grove-context v0.2.19/go.mod h1:UcNUC9geZ8eOLv6sFPlqW5eBFTTKc5ZmwbzDFZFG07Y=
+github.com/mattsolo1/grove-context v0.2.20 h1:U70pv8QamfeVtT1mtXJVBG7KnUOj+1xmOr0baln/0lE=
+github.com/mattsolo1/grove-context v0.2.20/go.mod h1:lNOMsLusuxpUmhrYJdYzrDADBgxi5pzjwq0rsSPqrF4=
 github.com/mattsolo1/grove-core v0.2.12 h1:vRJS+yeJBRUNErkh66mSbuaBbS4r53tTTdvV6O5Z4Ww=
 github.com/mattsolo1/grove-core v0.2.12/go.mod h1:jCZmYXEo3os2MXGH79K7c5xDtuM+/GooNyD96twXMgM=
 github.com/mattsolo1/grove-tend v0.2.15 h1:ZbwkFGR0UGSHQ+7fEcmL7SO8ZOcn6WhpovHPDr3I5xQ=
