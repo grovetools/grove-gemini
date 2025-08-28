@@ -9,7 +9,7 @@ require (
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/mattsolo1/grove-context v0.2.19
 	github.com/mattsolo1/grove-core v0.2.12
-	github.com/mattsolo1/grove-tend v0.2.14
+	github.com/mattsolo1/grove-tend v0.2.15
 	github.com/spf13/cobra v1.9.1
 	google.golang.org/api v0.232.0
 	google.golang.org/genai v1.20.0
@@ -49,7 +49,7 @@ require (
 	github.com/googleapis/gax-go/v2 v2.14.1 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
-	github.com/klauspost/compress v1.16.7 // indirect
+	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.5 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
