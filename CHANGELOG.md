@@ -1,3 +1,20 @@
+## v0.0.8 (2025-08-28)
+
+### Chores
+
+* **deps:** sync Grove dependencies to latest versions
+* **deps:** sync Grove dependencies to latest versions
+
+### Features
+
+* add debug logging for Gemini API requests
+
+### Bug Fixes
+
+* move debug logging before file upload to ensure logging on failures
+* clarify file attachment logging message
+* implement file deduplication and proper prompt file handling
+
 ## v0.0.7 (2025-08-27)
 
 ### Chores
