@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 
 	ctxinfo "github.com/mattsolo1/grove-gemini/pkg/context"
@@ -53,32 +54,51 @@ func (c *Client) GenerateContentWithCacheAndOptions(ctx context.Context, model s
 	// Create pretty logger
 	logger := pretty.New()
 	
-	// Upload dynamic files if any
+	// Create a map to track uploaded files and prevent duplicates
+	uploadedFiles := make(map[string]bool)
+	allFilesToUpload := []string{}
+	
+	// Collect all files to upload (dynamic files + prompt files)
+	for _, filePath := range dynamicFilePaths {
+		absPath, err := filepath.Abs(filePath)
+		if err != nil {
+			return "", fmt.Errorf("resolving dynamic file path %s: %w", filePath, err)
+		}
+		if !uploadedFiles[absPath] {
+			allFilesToUpload = append(allFilesToUpload, absPath)
+			uploadedFiles[absPath] = true
+		}
+	}
+	
+	// Add prompt files to the upload list (avoiding duplicates)
+	if opts != nil && len(opts.PromptFiles) > 0 {
+		for _, pFile := range opts.PromptFiles {
+			absPath, err := filepath.Abs(pFile)
+			if err != nil {
+				return "", fmt.Errorf("resolving prompt file path %s: %w", pFile, err)
+			}
+			if !uploadedFiles[absPath] {
+				allFilesToUpload = append(allFilesToUpload, absPath)
+				uploadedFiles[absPath] = true
+			}
+		}
+	}
+	
+	// Upload all files
 	var requestParts []*genai.Part
-	if len(dynamicFilePaths) > 0 {
+	if len(allFilesToUpload) > 0 {
 		fmt.Fprintln(os.Stderr)
-		logger.UploadProgress("Uploading dynamic files for request...")
-		for _, filePath := range dynamicFilePaths {
-			// Upload dynamic file
+		logger.UploadProgress(fmt.Sprintf("Uploading %d files for request...", len(allFilesToUpload)))
+		for _, filePath := range allFilesToUpload {
+			// Upload file
 			f, err := uploadFile(ctx, c.client, filePath)
 			if err != nil {
-				return "", fmt.Errorf("failed to upload dynamic file %s: %w", filePath, err)
+				return "", fmt.Errorf("failed to upload file %s: %w", filePath, err)
 			}
 			
 			// Create part from URI
 			part := genai.NewPartFromURI(f.URI, f.MIMEType)
 			requestParts = append(requestParts, part)
-		}
-	}
-
-	// Read and add content from prompt files
-	if opts != nil && len(opts.PromptFiles) > 0 {
-		for _, pFile := range opts.PromptFiles {
-			content, err := os.ReadFile(pFile)
-			if err != nil {
-				return "", fmt.Errorf("failed to read prompt file %s: %w", pFile, err)
-			}
-			requestParts = append(requestParts, &genai.Part{Text: string(content)})
 		}
 	}
 
