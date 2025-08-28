@@ -100,6 +100,55 @@ func (c *Client) GenerateContentWithCacheAndOptions(ctx context.Context, model s
 		}
 	}
 	
+	// Debug logging for Gemini requests (moved before upload to ensure it happens even if upload fails)
+	if os.Getenv("GROVE_DEBUG") != "" && opts != nil && opts.WorkingDir != "" {
+		// Determine log directory
+		var promptLogDir string
+		if opts.PlanName != "" {
+			// Use plan-specific directory if available
+			promptLogDir = filepath.Join(opts.WorkingDir, ".grove", "logs", opts.PlanName, "prompts")
+		} else {
+			// Fallback to generic directory
+			promptLogDir = filepath.Join(opts.WorkingDir, ".grove", "logs", "gemini_prompts")
+		}
+		
+		if err := os.MkdirAll(promptLogDir, 0755); err != nil {
+			fmt.Fprintf(os.Stderr, "[DEBUG] Warning: could not create gemini prompt log directory: %v\n", err)
+		} else {
+			// Create the log entry
+			logEntry := GeminiRequestLog{
+				Timestamp:     time.Now(),
+				Model:         model,
+				CacheID:       cacheID,
+				PromptText:    prompt,
+				AttachedFiles: allFilesToUpload,
+				TotalFiles:    len(allFilesToUpload),
+				WorkingDir:    opts.WorkingDir,
+				JobID:         opts.JobID,
+				PlanName:      opts.PlanName,
+			}
+			
+			logData, err := json.MarshalIndent(logEntry, "", "  ")
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "[DEBUG] Warning: could not marshal gemini log entry: %v\n", err)
+			} else {
+				timestamp := time.Now().Format("20060102150405")
+				jobID := opts.JobID
+				if jobID == "" {
+					jobID = "unknown_job"
+				}
+				logFileName := fmt.Sprintf("%s-%s-gemini-request.json", jobID, timestamp)
+				logFilePath := filepath.Join(promptLogDir, logFileName)
+				
+				if err := os.WriteFile(logFilePath, logData, 0644); err != nil {
+					fmt.Fprintf(os.Stderr, "[DEBUG] Warning: could not write gemini request log file: %v\n", err)
+				} else {
+					fmt.Fprintf(os.Stderr, "[DEBUG] Gemini request details for job '%s' saved to: %s\n", jobID, logFilePath)
+				}
+			}
+		}
+	}
+	
 	// Upload all files
 	var requestParts []*genai.Part
 	if len(allFilesToUpload) > 0 {
@@ -162,55 +211,6 @@ func (c *Client) GenerateContentWithCacheAndOptions(ctx context.Context, model s
 	// Show files before making the request
 	if len(displayFiles) > 0 {
 		logger.FilesIncluded(displayFiles)
-	}
-	
-	// Debug logging for Gemini requests
-	if os.Getenv("GROVE_DEBUG") != "" && opts != nil && opts.WorkingDir != "" {
-		// Determine log directory
-		var promptLogDir string
-		if opts.PlanName != "" {
-			// Use plan-specific directory if available
-			promptLogDir = filepath.Join(opts.WorkingDir, ".grove", "logs", opts.PlanName, "prompts")
-		} else {
-			// Fallback to generic directory
-			promptLogDir = filepath.Join(opts.WorkingDir, ".grove", "logs", "gemini_prompts")
-		}
-		
-		if err := os.MkdirAll(promptLogDir, 0755); err != nil {
-			fmt.Fprintf(os.Stderr, "[DEBUG] Warning: could not create gemini prompt log directory: %v\n", err)
-		} else {
-			// Create the log entry
-			logEntry := GeminiRequestLog{
-				Timestamp:     time.Now(),
-				Model:         model,
-				CacheID:       cacheID,
-				PromptText:    prompt,
-				AttachedFiles: allFilesToUpload,
-				TotalFiles:    len(allFilesToUpload),
-				WorkingDir:    opts.WorkingDir,
-				JobID:         opts.JobID,
-				PlanName:      opts.PlanName,
-			}
-			
-			logData, err := json.MarshalIndent(logEntry, "", "  ")
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "[DEBUG] Warning: could not marshal gemini log entry: %v\n", err)
-			} else {
-				timestamp := time.Now().Format("20060102150405")
-				jobID := opts.JobID
-				if jobID == "" {
-					jobID = "unknown_job"
-				}
-				logFileName := fmt.Sprintf("%s-%s-gemini-request.json", jobID, timestamp)
-				logFilePath := filepath.Join(promptLogDir, logFileName)
-				
-				if err := os.WriteFile(logFilePath, logData, 0644); err != nil {
-					fmt.Fprintf(os.Stderr, "[DEBUG] Warning: could not write gemini request log file: %v\n", err)
-				} else {
-					fmt.Fprintf(os.Stderr, "[DEBUG] Gemini request details for job '%s' saved to: %s\n", jobID, logFilePath)
-				}
-			}
-		}
 	}
 	
 	// Generate content with optional cache

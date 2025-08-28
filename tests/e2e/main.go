@@ -14,6 +14,8 @@ func main() {
 	scenarios := []*harness.Scenario{
 		// Basic Scenarios
 		BasicScenario(),
+		// Debug Logging
+		GeminiDebugLogScenario(),
 	}
 
 	// Execute the custom tend application with our scenarios
