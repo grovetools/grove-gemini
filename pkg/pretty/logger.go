@@ -241,7 +241,7 @@ func (l *Logger) GeneratingResponse() {
 		l.styles.Info.Render("Generating response..."))
 }
 
-// FilesIncluded displays the list of files that will be included in the prompt
+// FilesIncluded displays the list of files that will be included in the request
 func (l *Logger) FilesIncluded(files []string) {
 	if len(files) == 0 {
 		return
@@ -249,7 +249,7 @@ func (l *Logger) FilesIncluded(files []string) {
 	
 	fmt.Fprintf(l.writer, "\n%s %s\n",
 		l.styles.Icon.Render("📁"),
-		l.styles.Section.Render("Files included in prompt:"))
+		l.styles.Section.Render("Files attached to request:"))
 	
 	for _, file := range files {
 		// Extract just the filename or last part of the path for display
