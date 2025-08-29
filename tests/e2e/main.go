@@ -16,6 +16,8 @@ func main() {
 		BasicScenario(),
 		// Debug Logging
 		GeminiDebugLogScenario(),
+		// API Key Configuration
+		APIKeyConfigScenario(),
 	}
 
 	// Execute the custom tend application with our scenarios
