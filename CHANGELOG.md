@@ -1,3 +1,18 @@
+## v0.0.9 (2025-08-29)
+
+### Features
+
+* add flexible API key configuration with explicit passing support
+
+### Chores
+
+* **deps:** sync Grove dependencies to latest versions
+* **deps:** sync Grove dependencies to latest versions
+
+### Bug Fixes
+
+* **tests:** update API key config tests to use request command and isolate environment
+
 ## v0.0.8 (2025-08-28)
 
 ### Chores
