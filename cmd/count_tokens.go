@@ -85,7 +85,7 @@ func runCountTokens(cmd *cobra.Command, args []string) error {
 	}
 
 	// Create client
-	client, err := gemini.NewClient(ctx)
+	client, err := gemini.NewClient(ctx, "")
 	if err != nil {
 		return fmt.Errorf("failed to create Gemini client: %w", err)
 	}

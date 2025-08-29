@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/mattsolo1/grove-gemini/pkg/config"
 	ctxinfo "github.com/mattsolo1/grove-gemini/pkg/context"
 	"github.com/mattsolo1/grove-gemini/pkg/logging"
 	"github.com/mattsolo1/grove-gemini/pkg/pretty"
@@ -20,10 +21,17 @@ type Client struct {
 }
 
 // NewClient creates a new Gemini client
-func NewClient(ctx context.Context) (*Client, error) {
-	apiKey := os.Getenv("GEMINI_API_KEY")
-	if apiKey == "" {
-		return nil, fmt.Errorf("GEMINI_API_KEY environment variable not set")
+func NewClient(ctx context.Context, apiKeyOverride string) (*Client, error) {
+	var apiKey string
+	var err error
+
+	if apiKeyOverride != "" {
+		apiKey = apiKeyOverride
+	} else {
+		apiKey, err = config.ResolveAPIKey()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	client, err := genai.NewClient(ctx, &genai.ClientConfig{

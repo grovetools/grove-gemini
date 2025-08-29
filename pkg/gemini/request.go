@@ -25,6 +25,7 @@ type RequestOptions struct {
 	UseCache        string
 	ContextFiles    []string
 	SkipConfirmation bool
+	APIKey          string // Explicitly pass API key to avoid context issues
 }
 
 // RequestRunner handles the orchestration of Gemini API requests with context management
@@ -144,7 +145,7 @@ func (r *RequestRunner) Run(ctx context.Context, options RequestOptions) (string
 	}
 
 	// Initialize Gemini client
-	geminiClient, err := NewClient(ctx)
+	geminiClient, err := NewClient(ctx, options.APIKey)
 	if err != nil {
 		return "", fmt.Errorf("creating Gemini client: %w", err)
 	}

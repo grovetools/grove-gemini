@@ -11,7 +11,7 @@ func TestNewClient(t *testing.T) {
 	// Test with API key set
 	t.Setenv("GEMINI_API_KEY", "test-key")
 	
-	client, err := NewClient(ctx)
+	client, err := NewClient(ctx, "")
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -21,7 +21,7 @@ func TestNewClient(t *testing.T) {
 	
 	// Test without API key
 	t.Setenv("GEMINI_API_KEY", "")
-	client, err = NewClient(ctx)
+	client, err = NewClient(ctx, "")
 	if err == nil {
 		t.Fatal("Expected error when API key is not set")
 	}
@@ -34,7 +34,7 @@ func TestClient_GetClient(t *testing.T) {
 	ctx := context.Background()
 	t.Setenv("GEMINI_API_KEY", "test-key")
 	
-	client, err := NewClient(ctx)
+	client, err := NewClient(ctx, "")
 	if err != nil {
 		t.Fatalf("Failed to create client: %v", err)
 	}
@@ -49,7 +49,7 @@ func TestGenerateContentWithCache_Validation(t *testing.T) {
 	ctx := context.Background()
 	t.Setenv("GEMINI_API_KEY", "test-key")
 	
-	client, err := NewClient(ctx)
+	client, err := NewClient(ctx, "")
 	if err != nil {
 		t.Fatalf("Failed to create client: %v", err)
 	}
