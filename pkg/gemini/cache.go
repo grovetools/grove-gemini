@@ -7,7 +7,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 
 	contextmgr "github.com/mattsolo1/grove-context/pkg/context"
@@ -18,7 +20,8 @@ import (
 
 // CacheInfo stores information about cached files.
 // It includes the cache ID, name, file hashes for validation,
-// the model used, and creation/expiration timestamps.
+// the model used, creation/expiration timestamps, token count, repo name,
+// clear tracking information, and usage statistics.
 type CacheInfo struct {
 	CacheID          string            `json:"cache_id"`
 	CacheName        string            `json:"cache_name"`
@@ -26,6 +29,32 @@ type CacheInfo struct {
 	Model            string            `json:"model"`
 	CreatedAt        time.Time         `json:"created_at"`
 	ExpiresAt        time.Time         `json:"expires_at"`
+	TokenCount       int               `json:"token_count,omitempty"`
+	RepoName         string            `json:"repo_name,omitempty"`
+	ClearReason      string            `json:"clear_reason,omitempty"`
+	ClearedAt        *time.Time        `json:"cleared_at,omitempty"`
+	
+	// Usage tracking fields
+	UsageStats       *CacheUsageStats  `json:"usage_stats,omitempty"`
+}
+
+// CacheUsageStats tracks usage statistics for a cache
+type CacheUsageStats struct {
+	TotalQueries     int               `json:"total_queries"`
+	LastUsed         time.Time         `json:"last_used"`
+	TotalCacheHits   int64             `json:"total_cache_hits"`   // Total cached tokens served
+	TotalTokensSaved int64             `json:"total_tokens_saved"` // Tokens saved by using cache
+	AverageHitRate   float64           `json:"average_hit_rate"`   // Average cache hit rate across all queries
+	QueryHistory     []CacheQueryStats `json:"query_history,omitempty"` // Optional detailed history
+}
+
+// CacheQueryStats tracks statistics for a single query using the cache
+type CacheQueryStats struct {
+	Timestamp        time.Time `json:"timestamp"`
+	CachedTokens     int32     `json:"cached_tokens"`
+	DynamicTokens    int32     `json:"dynamic_tokens"`
+	CompletionTokens int32     `json:"completion_tokens"`
+	CacheHitRate     float64   `json:"cache_hit_rate"`
 }
 
 // CacheManager manages the cache lifecycle for Gemini API.
@@ -58,6 +87,29 @@ func LoadCacheInfo(filePath string) (*CacheInfo, error) {
 	}
 	
 	return &info, nil
+}
+
+// SaveCacheInfo saves cache information to a JSON file
+func SaveCacheInfo(filePath string, info *CacheInfo) error {
+	data, err := json.MarshalIndent(info, "", "  ")
+	if err != nil {
+		return fmt.Errorf("marshaling cache info: %w", err)
+	}
+	
+	// Write to temporary file first for atomic operation
+	tempFile := filePath + ".tmp"
+	if err := os.WriteFile(tempFile, data, 0644); err != nil {
+		return fmt.Errorf("writing to temp file: %w", err)
+	}
+	
+	// Rename temporary file to final location (atomic operation)
+	if err := os.Rename(tempFile, filePath); err != nil {
+		// Clean up temp file if rename fails
+		os.Remove(tempFile)
+		return fmt.Errorf("renaming temp file: %w", err)
+	}
+	
+	return nil
 }
 
 // FindAndValidateCache finds and validates a specific cache by name
@@ -271,6 +323,8 @@ func (m *CacheManager) GetOrCreateCache(ctx context.Context, client *Client, mod
 			Model:            model,
 			CreatedAt:        time.Now(),
 			ExpiresAt:        cache.ExpireTime,
+			TokenCount:       estimatedTokens,
+			RepoName:         getRepoName(m.workingDir),
 		}
 
 		data, _ := json.MarshalIndent(cacheInfo, "", "  ")
@@ -351,5 +405,100 @@ func IsNotFoundError(err error) bool {
 		return apiErr.Code == 404
 	}
 	return false
+}
+
+// getRepoName returns the name of the git repository for the given working directory
+func getRepoName(workingDir string) string {
+	// Try to get git root directory
+	cmd := exec.Command("git", "rev-parse", "--show-toplevel")
+	cmd.Dir = workingDir
+	output, err := cmd.Output()
+	if err != nil {
+		// Not a git repo or git command failed
+		return ""
+	}
+	
+	// Get the repository root path
+	gitRoot := strings.TrimSpace(string(output))
+	if gitRoot == "" {
+		return ""
+	}
+	
+	// Extract the directory name as the repo name
+	return filepath.Base(gitRoot)
+}
+
+// UpdateCacheUsageStats updates usage statistics for a cache after it's been used
+func (m *CacheManager) UpdateCacheUsageStats(cacheID string, cachedTokens, dynamicTokens, completionTokens int, cacheHitRate float64) error {
+	// Find the cache file by searching for the cache ID
+	files, err := os.ReadDir(m.cacheDir)
+	if err != nil {
+		return fmt.Errorf("reading cache directory: %w", err)
+	}
+	
+	var cacheFile string
+	for _, file := range files {
+		if strings.HasSuffix(file.Name(), ".json") && strings.HasPrefix(file.Name(), "hybrid_") {
+			filePath := filepath.Join(m.cacheDir, file.Name())
+			info, err := LoadCacheInfo(filePath)
+			if err != nil {
+				continue
+			}
+			if info.CacheID == cacheID {
+				cacheFile = filePath
+				break
+			}
+		}
+	}
+	
+	if cacheFile == "" {
+		// Cache file not found, which is OK - it might be in a different project
+		return nil
+	}
+	
+	// Load current cache info
+	info, err := LoadCacheInfo(cacheFile)
+	if err != nil {
+		return fmt.Errorf("loading cache info: %w", err)
+	}
+	
+	// Initialize usage stats if needed
+	if info.UsageStats == nil {
+		info.UsageStats = &CacheUsageStats{
+			QueryHistory: []CacheQueryStats{},
+		}
+	}
+	
+	// Update statistics
+	info.UsageStats.TotalQueries++
+	info.UsageStats.LastUsed = time.Now()
+	info.UsageStats.TotalCacheHits += int64(cachedTokens)
+	info.UsageStats.TotalTokensSaved += int64(cachedTokens) // Tokens saved by not re-processing
+	
+	// Update average hit rate
+	if info.UsageStats.TotalQueries == 1 {
+		info.UsageStats.AverageHitRate = cacheHitRate
+	} else {
+		// Running average
+		info.UsageStats.AverageHitRate = ((info.UsageStats.AverageHitRate * float64(info.UsageStats.TotalQueries-1)) + cacheHitRate) / float64(info.UsageStats.TotalQueries)
+	}
+	
+	// Add to query history (limit to last 100 queries to avoid unbounded growth)
+	queryStats := CacheQueryStats{
+		Timestamp:        time.Now(),
+		CachedTokens:     int32(cachedTokens),
+		DynamicTokens:    int32(dynamicTokens),
+		CompletionTokens: int32(completionTokens),
+		CacheHitRate:     cacheHitRate,
+	}
+	
+	info.UsageStats.QueryHistory = append(info.UsageStats.QueryHistory, queryStats)
+	if len(info.UsageStats.QueryHistory) > 100 {
+		// Keep only the last 100 queries
+		info.UsageStats.QueryHistory = info.UsageStats.QueryHistory[len(info.UsageStats.QueryHistory)-100:]
+	}
+	
+	// Save updated cache info
+	return SaveCacheInfo(cacheFile, info)
 }
 

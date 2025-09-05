@@ -67,7 +67,7 @@ Examples:
 	cmd.Flags().StringVarP(&requestPrompt, "prompt", "p", "", "Prompt text")
 	cmd.Flags().StringVarP(&requestPromptFile, "file", "f", "", "Read prompt from file")
 	cmd.Flags().StringVarP(&requestWorkDir, "workdir", "w", "", "Working directory (defaults to current)")
-	cmd.Flags().StringVar(&requestCacheTTL, "cache-ttl", "1h", "Cache TTL (e.g., 1h, 30m, 24h)")
+	cmd.Flags().StringVar(&requestCacheTTL, "cache-ttl", "5m", "Cache TTL (e.g., 1h, 30m, 24h)")
 	cmd.Flags().BoolVar(&requestNoCache, "no-cache", false, "Disable context caching")
 	cmd.Flags().BoolVar(&requestRegenerateCtx, "regenerate", false, "Regenerate context before request")
 	cmd.Flags().BoolVar(&requestRecache, "recache", false, "Force recreation of the Gemini cache")

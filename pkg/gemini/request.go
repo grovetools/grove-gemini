@@ -26,6 +26,10 @@ type RequestOptions struct {
 	ContextFiles    []string
 	SkipConfirmation bool
 	APIKey          string // Explicitly pass API key to avoid context issues
+	// New fields for better logging context
+	Caller   string
+	JobID    string
+	PlanName string
 }
 
 // RequestRunner handles the orchestration of Gemini API requests with context management
@@ -266,11 +270,18 @@ func (r *RequestRunner) Run(ctx context.Context, options RequestOptions) (string
 	fmt.Fprintln(os.Stderr)
 	r.logger.Model(options.Model)
 	
+	caller := "gemapi-request" // Default caller
+	if options.Caller != "" {
+		caller = options.Caller
+	}
+	
 	opts := &GenerateContentOptions{
 		WorkingDir: workDir,
-		Caller:     "gemapi-request",
+		Caller:     caller,
 		IsNewCache: isNewCache,
 		PromptFiles: options.PromptFiles,
+		JobID:       options.JobID,
+		PlanName:    options.PlanName,
 	}
 	
 	response, err := geminiClient.GenerateContentWithCacheAndOptions(ctx, options.Model, options.Prompt, cacheID, dynamicFiles, opts)

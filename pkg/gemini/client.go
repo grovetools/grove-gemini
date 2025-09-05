@@ -355,6 +355,16 @@ func (c *Client) GenerateContentWithCacheAndOptions(ctx context.Context, model s
 			// Don't fail the request if logging fails
 			fmt.Fprintf(os.Stderr, "Warning: Failed to log query: %v\n", err)
 		}
+		
+		// Update cache usage statistics
+		if cacheID != "" && opts != nil && opts.WorkingDir != "" {
+			// Try to update cache usage stats
+			cacheManager := NewCacheManager(opts.WorkingDir)
+			if err := cacheManager.UpdateCacheUsageStats(cacheID, cachedTokens, dynamicTokens, completionTokens, cacheHitRate); err != nil {
+				// Don't fail the request if updating stats fails
+				fmt.Fprintf(os.Stderr, "Warning: Failed to update cache usage stats: %v\n", err)
+			}
+		}
 	}
 
 	return result.Text(), nil
@@ -376,4 +386,58 @@ func (c *Client) VerifyCacheExists(ctx context.Context, cacheID string) (bool, e
 		return false, fmt.Errorf("failed to verify cache: %w", err)
 	}
 	return true, nil
+}
+
+// CachedContentInfo represents information about a cached content from the API
+type CachedContentInfo struct {
+	Name        string
+	Model       string
+	DisplayName string
+	CreateTime  time.Time
+	UpdateTime  time.Time
+	ExpireTime  time.Time
+	TokenCount  int32
+}
+
+// ListCachesFromAPI lists all cached contents from the Google API
+func (c *Client) ListCachesFromAPI(ctx context.Context) ([]CachedContentInfo, error) {
+	var caches []CachedContentInfo
+	
+	// Iterate through all cached contents using the All method
+	for cache, err := range c.client.Caches.All(ctx) {
+		if err != nil {
+			return nil, fmt.Errorf("failed to list caches from API: %w", err)
+		}
+		
+		tokenCount := int32(0)
+		if cache.UsageMetadata != nil {
+			tokenCount = cache.UsageMetadata.TotalTokenCount
+		}
+		
+		info := CachedContentInfo{
+			Name:        cache.Name,
+			Model:       cache.Model,
+			DisplayName: cache.DisplayName,
+			CreateTime:  cache.CreateTime,
+			UpdateTime:  cache.UpdateTime,
+			ExpireTime:  cache.ExpireTime,
+			TokenCount:  tokenCount,
+		}
+		caches = append(caches, info)
+	}
+	
+	return caches, nil
+}
+
+// DeleteCache deletes a cache from the Google API
+func (c *Client) DeleteCache(ctx context.Context, cacheID string) error {
+	_, err := c.client.Caches.Delete(ctx, cacheID, nil)
+	if err != nil {
+		// If it's already deleted (404), don't return an error
+		if IsNotFoundError(err) {
+			return nil
+		}
+		return fmt.Errorf("failed to delete cache: %w", err)
+	}
+	return nil
 }
