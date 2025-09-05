@@ -433,8 +433,12 @@ func (c *Client) ListCachesFromAPI(ctx context.Context) ([]CachedContentInfo, er
 func (c *Client) DeleteCache(ctx context.Context, cacheID string) error {
 	_, err := c.client.Caches.Delete(ctx, cacheID, nil)
 	if err != nil {
-		// If it's already deleted (404), don't return an error
-		if IsNotFoundError(err) {
+		// Debug: log the error type
+		// fmt.Fprintf(os.Stderr, "DEBUG: DeleteCache error type: %T, error: %v\n", err, err)
+		
+		// If it's already deleted (404) or permission denied (403), don't return an error
+		// 403 often means the cache doesn't exist on GCP
+		if IsNotFoundError(err) || IsPermissionError(err) {
 			return nil
 		}
 		return fmt.Errorf("failed to delete cache: %w", err)

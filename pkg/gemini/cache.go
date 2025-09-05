@@ -401,8 +401,26 @@ func hasFilesChanged(oldHashes map[string]string, files []string) (bool, []strin
 
 // IsNotFoundError checks if an error is a Google API "Not Found" error
 func IsNotFoundError(err error) bool {
+	// Check for googleapi.Error
 	if apiErr, ok := err.(*googleapi.Error); ok {
 		return apiErr.Code == 404
+	}
+	// Check for genai.APIError
+	if apiErr, ok := err.(genai.APIError); ok {
+		return apiErr.Code == 404
+	}
+	return false
+}
+
+// IsPermissionError checks if an error is a Google API permission/forbidden error
+func IsPermissionError(err error) bool {
+	// Check for googleapi.Error
+	if apiErr, ok := err.(*googleapi.Error); ok {
+		return apiErr.Code == 403
+	}
+	// Check for genai.APIError
+	if apiErr, ok := err.(genai.APIError); ok {
+		return apiErr.Code == 403
 	}
 	return false
 }
