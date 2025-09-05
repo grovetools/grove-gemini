@@ -152,6 +152,7 @@ func newCacheTUIModel() (*cacheTUIModel, error) {
 		{Title: "REPO", Width: 15},
 		{Title: "MODEL", Width: 25},
 		{Title: "USES", Width: 6},
+		{Title: "REGEN", Width: 6},
 		{Title: "TOKENS", Width: 8},
 		{Title: "TTL", Width: 10},
 		{Title: "EXPIRES", Width: 8},
@@ -711,6 +712,7 @@ func (m *cacheTUIModel) updateTableRows() {
 		repo := "-"
 		model := "-"
 		uses := "0"
+		regen := "0"
 		tokens := "-"
 		ttl := "-"
 		expires := "-"
@@ -724,6 +726,9 @@ func (m *cacheTUIModel) updateTableRows() {
 			model = cache.LocalInfo.Model
 			if cache.LocalInfo.UsageStats != nil {
 				uses = fmt.Sprintf("%d", cache.LocalInfo.UsageStats.TotalQueries)
+			}
+			if cache.LocalInfo.RegenerationCount > 0 {
+				regen = fmt.Sprintf("%d", cache.LocalInfo.RegenerationCount)
 			}
 		} else if cache.APIInfo != nil {
 			model = cache.APIInfo.Model
@@ -763,6 +768,7 @@ func (m *cacheTUIModel) updateTableRows() {
 			repo,
 			model,
 			uses,
+			regen,
 			tokens,
 			ttl,
 			expires,

@@ -33,6 +33,7 @@ type CacheInfo struct {
 	RepoName         string            `json:"repo_name,omitempty"`
 	ClearReason      string            `json:"clear_reason,omitempty"`
 	ClearedAt        *time.Time        `json:"cleared_at,omitempty"`
+	RegenerationCount int              `json:"regeneration_count,omitempty"`
 	
 	// Usage tracking fields
 	UsageStats       *CacheUsageStats  `json:"usage_stats,omitempty"`
@@ -198,10 +199,19 @@ func (m *CacheManager) GetOrCreateCache(ctx context.Context, client *Client, mod
 
 	// Try to load existing cache info
 	var cacheInfo CacheInfo
+	var existingRegenerationCount int
 	needNewCache := forceRecache
 
 	if forceRecache {
 		logger.Info("Forcing cache regeneration due to --recache flag")
+	}
+
+	// Check for existing cache info to preserve regeneration count
+	if data, err := os.ReadFile(cacheInfoFile); err == nil {
+		var existingInfo CacheInfo
+		if err := json.Unmarshal(data, &existingInfo); err == nil {
+			existingRegenerationCount = existingInfo.RegenerationCount
+		}
 	}
 
 	if !needNewCache {
@@ -325,6 +335,7 @@ func (m *CacheManager) GetOrCreateCache(ctx context.Context, client *Client, mod
 			ExpiresAt:        cache.ExpireTime,
 			TokenCount:       estimatedTokens,
 			RepoName:         getRepoName(m.workingDir),
+			RegenerationCount: existingRegenerationCount + 1,
 		}
 
 		data, _ := json.MarshalIndent(cacheInfo, "", "  ")
