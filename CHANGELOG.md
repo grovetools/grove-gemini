@@ -1,3 +1,16 @@
+## v0.0.10 (2025-09-06)
+
+### Features
+
+* add comprehensive cache analytics and insights
+* add regeneration counter to track cache recreations
+* add interactive TUI for gemapi cache management
+* enhance cache management with API integration and usage tracking
+
+### Chores
+
+* **deps:** sync Grove dependencies to latest versions
+
 ## v0.0.9 (2025-08-29)
 
 ### Features
