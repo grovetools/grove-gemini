@@ -23,6 +23,7 @@ const (
 	listView viewState = iota
 	inspectView
 	helpView
+	analyticsView
 )
 
 // combinedCacheInfo merges local and API cache data for display and sorting.
@@ -63,33 +64,35 @@ type tickMsg time.Time
 
 // Key bindings
 type keyMap struct {
-	Up       string
-	Down     string
-	Filter   string
-	Inspect  string
-	Delete   string
-	Wipe     string
-	Refresh  string
-	Help     string
-	Quit     string
-	Back     string
-	Confirm  string
-	Cancel   string
+	Up        string
+	Down      string
+	Filter    string
+	Inspect   string
+	Delete    string
+	Wipe      string
+	Refresh   string
+	Help      string
+	Analytics string
+	Quit      string
+	Back      string
+	Confirm   string
+	Cancel    string
 }
 
 var keys = keyMap{
-	Up:       "k",
-	Down:     "j",
-	Filter:   "/",
-	Inspect:  "i",
-	Delete:   "d",
-	Wipe:     "w",
-	Refresh:  "r",
-	Help:     "?",
-	Quit:     "q",
-	Back:     "esc",
-	Confirm:  "y",
-	Cancel:   "n",
+	Up:        "k",
+	Down:      "j",
+	Filter:    "/",
+	Inspect:   "i",
+	Delete:    "d",
+	Wipe:      "w",
+	Refresh:   "r",
+	Help:      "?",
+	Analytics: "a",
+	Quit:      "q",
+	Back:      "esc",
+	Confirm:   "y",
+	Cancel:    "n",
 }
 
 // Styles
@@ -153,10 +156,11 @@ func newCacheTUIModel() (*cacheTUIModel, error) {
 		{Title: "MODEL", Width: 25},
 		{Title: "USES", Width: 6},
 		{Title: "REGEN", Width: 6},
+		{Title: "EFF", Width: 5},
 		{Title: "TOKENS", Width: 8},
 		{Title: "TTL", Width: 10},
 		{Title: "EXPIRES", Width: 8},
-		{Title: "COST", Width: 10},
+		{Title: "SAVED", Width: 8},
 	}
 
 	tbl := table.New(
@@ -495,6 +499,10 @@ func (m *cacheTUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case keys.Refresh:
 				m.isLoading = true
 				return m, fetchCachesCmd(m.client, m.workDir)
+			case keys.Analytics:
+				m.currentView = analyticsView
+				m.prepareAnalyticsView()
+				return m, nil
 			case "ctrl+c":
 				return m, tea.Quit
 			}
@@ -516,6 +524,15 @@ func (m *cacheTUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "ctrl+c":
 				return m, tea.Quit
 			}
+			
+		case analyticsView:
+			switch msg.String() {
+			case keys.Back, keys.Quit:
+				m.currentView = listView
+				return m, nil
+			case "ctrl+c":
+				return m, tea.Quit
+			}
 		}
 	}
 	
@@ -524,6 +541,9 @@ func (m *cacheTUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.table, cmd = m.table.Update(msg)
 		cmds = append(cmds, cmd)
 	case inspectView:
+		m.inspectViewport, cmd = m.inspectViewport.Update(msg)
+		cmds = append(cmds, cmd)
+	case analyticsView:
 		m.inspectViewport, cmd = m.inspectViewport.Update(msg)
 		cmds = append(cmds, cmd)
 	}
@@ -553,6 +573,8 @@ func (m *cacheTUIModel) View() string {
 		s.WriteString("\n\n")
 		s.WriteString(m.table.View())
 	case inspectView:
+		s.WriteString(m.inspectViewport.View())
+	case analyticsView:
 		s.WriteString(m.inspectViewport.View())
 	}
 	
@@ -591,14 +613,14 @@ func (m *cacheTUIModel) helpViewRender() string {
 │  Navigation:                        Status Icons:                                       │
 │    j/k or ↑/↓  Move up/down        ✅ Active   Cache is valid and accessible         │
 │    enter or i  Inspect cache        ⏰ Expired  Cache has exceeded TTL                 │
-│    /           Filter caches        🚫 Cleared  Cache was manually deleted             │
-│    esc         Exit view/cancel     ❓ Missing  Local record but not in API           │
-│                                     🔵 Local    Local-only view status                 │
-│  Actions:                                                                               │
-│    d           Delete from GCP      Other:                                              │
-│    w           Wipe local file      r           Refresh cache list                      │
-│    y/n         Confirm/cancel       ?           Show/hide this help                     │
-│                                     q           Quit the application                    │
+│    a           Analytics view       🚫 Cleared  Cache was manually deleted             │
+│    /           Filter caches        ❓ Missing  Local record but not in API           │
+│    esc         Exit view/cancel     🔵 Local    Local-only view status                 │
+│                                                                                         │
+│  Actions:                           Other:                                              │
+│    d           Delete from GCP      r           Refresh cache list                      │
+│    w           Wipe local file      ?           Show/hide this help                     │
+│    y/n         Confirm/cancel       q           Quit the application                    │
 ╰─────────────────────────────────────────────────────────────────────────────────────────╯`
 	
 	// Center the help box
@@ -713,10 +735,11 @@ func (m *cacheTUIModel) updateTableRows() {
 		model := "-"
 		uses := "0"
 		regen := "0"
+		efficiency := "-"
 		tokens := "-"
 		ttl := "-"
 		expires := "-"
-		cost := "-"
+		saved := "-"
 
 		if cache.LocalInfo != nil {
 			repo = cache.LocalInfo.RepoName
@@ -730,6 +753,17 @@ func (m *cacheTUIModel) updateTableRows() {
 			if cache.LocalInfo.RegenerationCount > 0 {
 				regen = fmt.Sprintf("%d", cache.LocalInfo.RegenerationCount)
 			}
+			
+			// Calculate efficiency and savings
+			if cache.LocalInfo.UsageStats != nil && cache.LocalInfo.UsageStats.TotalQueries > 0 {
+				analytics := gemini.CalculateCacheAnalytics(cache.LocalInfo)
+				efficiency = fmt.Sprintf("%.0f", analytics.EfficiencyScore)
+				if analytics.TotalSavings > 0.01 {
+					saved = fmt.Sprintf("$%.2f", analytics.TotalSavings)
+				} else {
+					saved = "$0.00"
+				}
+			}
 		} else if cache.APIInfo != nil {
 			model = cache.APIInfo.Model
 		}
@@ -737,16 +771,13 @@ func (m *cacheTUIModel) updateTableRows() {
 		if cache.IsActive {
 			var tokenCount int32
 			var expireTime time.Time
-			var createTime time.Time
 
 			if cache.APIInfo != nil {
 				tokenCount = cache.APIInfo.TokenCount
 				expireTime = cache.APIInfo.ExpireTime
-				createTime = cache.APIInfo.CreateTime
 			} else if cache.LocalInfo != nil {
 				tokenCount = int32(cache.LocalInfo.TokenCount)
 				expireTime = cache.LocalInfo.ExpiresAt
-				createTime = cache.LocalInfo.CreatedAt
 			}
 
 			if tokenCount > 0 {
@@ -754,7 +785,6 @@ func (m *cacheTUIModel) updateTableRows() {
 			}
 			ttl = formatDuration(time.Until(expireTime))
 			expires = expireTime.Local().Format("15:04")
-			cost = calculateCacheCost(tokenCount, expireTime.Sub(createTime), model)
 		}
 		
 		statusStyle, ok := statusStyles[cache.Status]
@@ -769,15 +799,227 @@ func (m *cacheTUIModel) updateTableRows() {
 			model,
 			uses,
 			regen,
+			efficiency,
 			tokens,
 			ttl,
 			expires,
-			cost,
+			saved,
 		}
 	}
 	m.table.SetRows(rows)
 }
 
+
+func (m *cacheTUIModel) prepareAnalyticsView() {
+	var b strings.Builder
+	b.WriteString(inspectTitleStyle.Render("Cache Analytics Dashboard"))
+	b.WriteString("\n\n")
+	
+	// Calculate total stats across all caches
+	totalSavings := 0.0
+	totalQueries := 0
+	totalCachedTokens := int64(0)
+	avgEfficiency := 0.0
+	cacheCount := 0
+	
+	// Hour usage histogram
+	hourlyUsage := [24]int{}
+	dayUsage := make(map[string]int)
+	
+	for _, cache := range m.allCaches {
+		if cache.LocalInfo != nil && cache.LocalInfo.UsageStats != nil {
+			analytics := gemini.CalculateCacheAnalytics(cache.LocalInfo)
+			totalSavings += analytics.TotalSavings
+			totalQueries += cache.LocalInfo.UsageStats.TotalQueries
+			totalCachedTokens += cache.LocalInfo.UsageStats.TotalCacheHits
+			avgEfficiency += analytics.EfficiencyScore
+			cacheCount++
+			
+			// Aggregate usage patterns
+			for hour, count := range analytics.UsageByHour {
+				hourlyUsage[hour] += count
+			}
+			for day, count := range analytics.UsageByDay {
+				dayUsage[day] += count
+			}
+		}
+	}
+	
+	if cacheCount > 0 {
+		avgEfficiency /= float64(cacheCount)
+	}
+	
+	// Overall Statistics
+	b.WriteString(inspectHeaderStyle.Render("📊 Overall Statistics"))
+	b.WriteString(fmt.Sprintf("\n\nTotal Cost Savings: $%.2f", totalSavings))
+	b.WriteString(fmt.Sprintf("\nTotal Queries: %d", totalQueries))
+	b.WriteString(fmt.Sprintf("\nTotal Cached Tokens: %s", formatTokenCount(totalCachedTokens)))
+	b.WriteString(fmt.Sprintf("\nAverage Efficiency Score: %.1f/100", avgEfficiency))
+	b.WriteString(fmt.Sprintf("\nActive Caches: %d", cacheCount))
+	
+	// Top Performing Caches
+	b.WriteString("\n\n")
+	b.WriteString(inspectHeaderStyle.Render("🏆 Top Performing Caches"))
+	b.WriteString("\n\n")
+	
+	// Sort caches by efficiency
+	type cacheWithScore struct {
+		cache combinedCacheInfo
+		score float64
+		savings float64
+	}
+	
+	var scoredCaches []cacheWithScore
+	for _, cache := range m.allCaches {
+		if cache.LocalInfo != nil && cache.LocalInfo.UsageStats != nil && cache.LocalInfo.UsageStats.TotalQueries > 0 {
+			analytics := gemini.CalculateCacheAnalytics(cache.LocalInfo)
+			scoredCaches = append(scoredCaches, cacheWithScore{
+				cache: cache,
+				score: analytics.EfficiencyScore,
+				savings: analytics.TotalSavings,
+			})
+		}
+	}
+	
+	// Sort by efficiency score
+	sort.Slice(scoredCaches, func(i, j int) bool {
+		return scoredCaches[i].score > scoredCaches[j].score
+	})
+	
+	// Show top 5
+	for i := 0; i < len(scoredCaches) && i < 5; i++ {
+		sc := scoredCaches[i]
+		b.WriteString(fmt.Sprintf("%d. %s (Score: %.1f, Saved: $%.2f)\n",
+			i+1, sc.cache.Name, sc.score, sc.savings))
+	}
+	
+	// Usage Patterns
+	b.WriteString("\n")
+	b.WriteString(inspectHeaderStyle.Render("📈 Usage Patterns"))
+	b.WriteString("\n\n")
+	
+	// Find peak hour
+	maxHour := 0
+	maxHourCount := 0
+	for hour, count := range hourlyUsage {
+		if count > maxHourCount {
+			maxHour = hour
+			maxHourCount = count
+		}
+	}
+	
+	b.WriteString(fmt.Sprintf("Peak Usage Hour: %02d:00 (%d queries)\n", maxHour, maxHourCount))
+	
+	// Find peak day
+	maxDay := ""
+	maxDayCount := 0
+	for day, count := range dayUsage {
+		if count > maxDayCount {
+			maxDay = day
+			maxDayCount = count
+		}
+	}
+	
+	if maxDay != "" {
+		b.WriteString(fmt.Sprintf("Peak Usage Day: %s (%d queries)\n", maxDay, maxDayCount))
+	}
+	
+	// Hourly distribution chart
+	b.WriteString("\nHourly Usage Distribution:\n")
+	for hour := 0; hour < 24; hour++ {
+		count := hourlyUsage[hour]
+		bar := strings.Repeat("█", count/2) // Scale down for display
+		if count > 0 && len(bar) == 0 {
+			bar = "▏" // Show at least a thin bar
+		}
+		b.WriteString(fmt.Sprintf("%02d:00 %s %d\n", hour, bar, count))
+	}
+	
+	// Cache Hit Rate Trends
+	b.WriteString("\n")
+	b.WriteString(inspectHeaderStyle.Render("📉 Cache Hit Rate Trends"))
+	b.WriteString("\n\n")
+	
+	// Collect recent hit rates from all caches
+	var recentHitRates []float64
+	for _, cache := range m.allCaches {
+		if cache.LocalInfo != nil && cache.LocalInfo.UsageStats != nil {
+			analytics := gemini.CalculateCacheAnalytics(cache.LocalInfo)
+			recentHitRates = append(recentHitRates, analytics.HitRateTrend...)
+		}
+	}
+	
+	if len(recentHitRates) > 0 {
+		// Calculate average hit rate trend
+		avgTrend := 0.0
+		for _, rate := range recentHitRates {
+			avgTrend += rate
+		}
+		avgTrend /= float64(len(recentHitRates))
+		
+		b.WriteString(fmt.Sprintf("Average Recent Hit Rate: %.1f%%\n", avgTrend*100))
+		
+		// Show visual trend with sparkline
+		b.WriteString("\nRecent Hit Rate Trend:\n")
+		sparkline := generateSparkline(recentHitRates)
+		b.WriteString(sparkline + "\n")
+	} else {
+		b.WriteString("No hit rate data available yet.\n")
+	}
+	
+	m.inspectViewport.SetContent(b.String())
+	m.inspectViewport.GotoTop()
+}
+
+// generateSparkline creates a simple ASCII sparkline chart
+func generateSparkline(data []float64) string {
+	if len(data) == 0 {
+		return ""
+	}
+	
+	// Sparkline characters from low to high
+	sparks := []string{"▁", "▂", "▃", "▄", "▅", "▆", "▇", "█"}
+	
+	// Find min and max
+	min, max := data[0], data[0]
+	for _, v := range data {
+		if v < min {
+			min = v
+		}
+		if v > max {
+			max = v
+		}
+	}
+	
+	// Handle case where all values are the same
+	if max == min {
+		return strings.Repeat("▄", len(data))
+	}
+	
+	// Build sparkline
+	var result strings.Builder
+	for _, v := range data {
+		// Normalize to 0-7 range
+		normalized := (v - min) / (max - min)
+		index := int(normalized * 7)
+		if index > 7 {
+			index = 7
+		}
+		result.WriteString(sparks[index])
+	}
+	
+	return result.String()
+}
+
+// formatTokenCount formats large token counts for display
+func formatTokenCount(tokens int64) string {
+	if tokens >= 1_000_000 {
+		return fmt.Sprintf("%.1fM", float64(tokens)/1_000_000)
+	} else if tokens >= 1_000 {
+		return fmt.Sprintf("%.1fK", float64(tokens)/1_000)
+	}
+	return fmt.Sprintf("%d", tokens)
+}
 
 // runCacheTUI runs the interactive TUI for cache management
 func runCacheTUI() error {

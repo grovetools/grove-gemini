@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -529,5 +530,117 @@ func (m *CacheManager) UpdateCacheUsageStats(cacheID string, cachedTokens, dynam
 	
 	// Save updated cache info
 	return SaveCacheInfo(cacheFile, info)
+}
+
+// CacheAnalytics represents aggregated analytics for a cache
+type CacheAnalytics struct {
+	EfficiencyScore   float64   // 0-100 score based on hit rate and cost savings
+	TotalSavings      float64   // Total cost savings in USD
+	AverageSavingsPerQuery float64 // Average savings per query
+	PeakUsageHour     int       // Hour of day with most usage (0-23)
+	PeakUsageDay      string    // Day of week with most usage
+	UsageByHour       [24]int   // Usage count by hour
+	UsageByDay        map[string]int // Usage count by day of week
+	HitRateTrend     []float64 // Recent hit rates for trending
+}
+
+// CalculateCacheAnalytics computes analytics for a given cache
+func CalculateCacheAnalytics(info *CacheInfo) *CacheAnalytics {
+	if info.UsageStats == nil || info.UsageStats.TotalQueries == 0 {
+		return &CacheAnalytics{
+			UsageByDay: make(map[string]int),
+		}
+	}
+	
+	analytics := &CacheAnalytics{
+		UsageByDay: make(map[string]int),
+	}
+	
+	// Calculate cost savings based on model and token counts
+	costPerMillion := getCostPerMillionTokens(info.Model)
+	totalCachedTokens := float64(info.UsageStats.TotalCacheHits)
+	
+	// Savings = cached tokens cost - (cached tokens cost * 0.25 for cache discount)
+	// Gemini gives 75% discount on cached tokens
+	analytics.TotalSavings = (totalCachedTokens / 1_000_000) * costPerMillion * 0.75
+	
+	if info.UsageStats.TotalQueries > 0 {
+		analytics.AverageSavingsPerQuery = analytics.TotalSavings / float64(info.UsageStats.TotalQueries)
+	}
+	
+	// Calculate efficiency score (0-100)
+	// Based on: hit rate (50%), usage frequency (25%), cost savings (25%)
+	hitRateScore := info.UsageStats.AverageHitRate * 50
+	
+	// Usage frequency score (normalize to 0-25 based on queries per day)
+	daysSinceCreation := time.Since(info.CreatedAt).Hours() / 24
+	if daysSinceCreation < 1 {
+		daysSinceCreation = 1
+	}
+	queriesPerDay := float64(info.UsageStats.TotalQueries) / daysSinceCreation
+	usageScore := math.Min(queriesPerDay * 2.5, 25) // Cap at 25 points
+	
+	// Cost savings score (normalize to 0-25 based on savings)
+	savingsScore := math.Min(analytics.TotalSavings * 5, 25) // Cap at 25 points
+	
+	analytics.EfficiencyScore = hitRateScore + usageScore + savingsScore
+	
+	// Analyze usage patterns
+	if len(info.UsageStats.QueryHistory) > 0 {
+		// Count usage by hour and day
+		for _, query := range info.UsageStats.QueryHistory {
+			hour := query.Timestamp.Hour()
+			dayName := query.Timestamp.Weekday().String()
+			
+			analytics.UsageByHour[hour]++
+			analytics.UsageByDay[dayName]++
+		}
+		
+		// Find peak usage hour
+		maxHourUsage := 0
+		for hour, count := range analytics.UsageByHour {
+			if count > maxHourUsage {
+				maxHourUsage = count
+				analytics.PeakUsageHour = hour
+			}
+		}
+		
+		// Find peak usage day
+		maxDayUsage := 0
+		for day, count := range analytics.UsageByDay {
+			if count > maxDayUsage {
+				maxDayUsage = count
+				analytics.PeakUsageDay = day
+			}
+		}
+		
+		// Calculate hit rate trend (last 10 queries)
+		startIdx := len(info.UsageStats.QueryHistory) - 10
+		if startIdx < 0 {
+			startIdx = 0
+		}
+		
+		for i := startIdx; i < len(info.UsageStats.QueryHistory); i++ {
+			analytics.HitRateTrend = append(analytics.HitRateTrend, 
+				info.UsageStats.QueryHistory[i].CacheHitRate)
+		}
+	}
+	
+	return analytics
+}
+
+// getCostPerMillionTokens returns the cost per million tokens for a given model
+func getCostPerMillionTokens(model string) float64 {
+	// Gemini pricing as of 2024
+	switch {
+	case strings.Contains(model, "gemini-exp"):
+		return 2.50 // $2.50 per million input tokens
+	case strings.Contains(model, "pro"):
+		return 0.50 // $0.50 per million input tokens  
+	case strings.Contains(model, "flash"):
+		return 0.15 // $0.15 per million input tokens
+	default:
+		return 0.50 // Default to pro pricing
+	}
 }
 
