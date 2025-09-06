@@ -6,10 +6,12 @@ require (
 	cloud.google.com/go/bigquery v1.69.0
 	cloud.google.com/go/logging v1.13.0
 	cloud.google.com/go/monitoring v1.24.2
+	github.com/charmbracelet/bubbles v0.21.0
+	github.com/charmbracelet/bubbletea v1.3.6
 	github.com/charmbracelet/lipgloss v1.1.0
-	github.com/mattsolo1/grove-context v0.2.21
+	github.com/mattsolo1/grove-context v0.2.23
 	github.com/mattsolo1/grove-core v0.2.12
-	github.com/mattsolo1/grove-tend v0.2.16
+	github.com/mattsolo1/grove-tend v0.2.17
 	github.com/spf13/cobra v1.9.1
 	google.golang.org/api v0.232.0
 	google.golang.org/genai v1.20.0
@@ -27,8 +29,6 @@ require (
 	github.com/apache/arrow/go/v15 v15.0.2 // indirect
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
-	github.com/charmbracelet/bubbles v0.21.0 // indirect
-	github.com/charmbracelet/bubbletea v1.3.6 // indirect
 	github.com/charmbracelet/colorprofile v0.2.3-0.20250311203215-f60798e515dc // indirect
 	github.com/charmbracelet/x/ansi v0.9.3 // indirect
 	github.com/charmbracelet/x/cellbuf v0.0.13-0.20250311204145-2c3ea96c31dd // indirect
