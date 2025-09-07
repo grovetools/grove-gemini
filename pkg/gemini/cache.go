@@ -120,6 +120,10 @@ func (m *CacheManager) FindAndValidateCache(ctx context.Context, client *Client,
 	// Create pretty logger
 	logger := pretty.New()
 	
+	// DISABLED: Gemini caching is temporarily disabled to reduce costs
+	logger.Warning("Gemini caching is disabled")
+	return nil, fmt.Errorf("Gemini caching is disabled")
+	
 	// Construct path to cache info file
 	cacheInfoFile := filepath.Join(m.cacheDir, "hybrid_"+cacheName+".json")
 	
@@ -163,6 +167,10 @@ func (m *CacheManager) FindAndValidateCache(ctx context.Context, client *Client,
 func (m *CacheManager) GetOrCreateCache(ctx context.Context, client *Client, model string, coldContextFilePath string, ttl time.Duration, ignoreChanges bool, disableExpiration bool, forceRecache bool, skipConfirmation bool) (*CacheInfo, bool, error) {
 	// Create pretty logger
 	logger := pretty.New()
+	
+	// DISABLED: Gemini caching is temporarily disabled to reduce costs
+	logger.Warning("Gemini caching is disabled")
+	return nil, false, nil
 	
 	// Check if caching is disabled via grove-context directive
 	contextManager := contextmgr.NewManager(m.workingDir)
