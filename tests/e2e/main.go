@@ -19,6 +19,9 @@ func main() {
 		// API Key Configuration
 		APIKeyConfigScenario(),
 	}
+	
+	// Add Cache Safety scenarios
+	scenarios = append(scenarios, CacheSafetyScenarios()...)
 
 	// Execute the custom tend application with our scenarios
 	if err := app.Execute(context.Background(), scenarios); err != nil {

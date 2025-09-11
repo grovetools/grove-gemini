@@ -1,6 +1,7 @@
 package gemini
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"os"
@@ -172,11 +173,20 @@ func (r *RequestRunner) Run(ctx context.Context, options RequestOptions) (string
 	if hasRules && !options.NoCache {
 		rulesContent, err := os.ReadFile(rulesPath)
 		if err == nil {
-			// Caching is enabled only if @enable-cache is present
-			if strings.Contains(string(rulesContent), "@enable-cache") {
-				cachingEnabled = true
-				// Display prominent warning about experimental caching
-				r.logger.CacheWarning()
+			// Parse rules line by line to find non-commented @enable-cache directive
+			scanner := bufio.NewScanner(strings.NewReader(string(rulesContent)))
+			for scanner.Scan() {
+				line := strings.TrimSpace(scanner.Text())
+				// Skip empty lines and comments
+				if line == "" || strings.HasPrefix(line, "#") {
+					continue
+				}
+				if line == "@enable-cache" {
+					cachingEnabled = true
+					// Display prominent warning about experimental caching
+					r.logger.CacheWarning()
+					break
+				}
 			}
 		}
 	}
