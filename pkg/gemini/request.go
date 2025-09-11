@@ -167,9 +167,23 @@ func (r *RequestRunner) Run(ctx context.Context, options RequestOptions) (string
 		ttl = 1 * time.Hour
 	}
 
+	// Check for @enable-cache directive in rules file (opt-in model)
+	cachingEnabled := false
+	if hasRules && !options.NoCache {
+		rulesContent, err := os.ReadFile(rulesPath)
+		if err == nil {
+			// Caching is enabled only if @enable-cache is present
+			if strings.Contains(string(rulesContent), "@enable-cache") {
+				cachingEnabled = true
+				// Display prominent warning about experimental caching
+				r.logger.CacheWarning()
+			}
+		}
+	}
+	
 	// Get cache directives from context manager if available
-	var ignoreChanges, disableExpiration, cacheDisabled bool
-	if ctxMgr != nil {
+	var ignoreChanges, disableExpiration bool
+	if ctxMgr != nil && cachingEnabled {
 		// Check for custom expiration time
 		if customTTL, err := ctxMgr.GetExpireTime(); err == nil && customTTL > 0 {
 			ttl = customTTL
@@ -187,17 +201,12 @@ func (r *RequestRunner) Run(ctx context.Context, options RequestOptions) (string
 			disableExpiration = true
 			r.logger.Info("🚫 Cache expiration disabled by @no-expire directive")
 		}
-		
-		// Check for @disable-cache directive
-		if disabled, err := ctxMgr.ShouldDisableCache(); err == nil && disabled {
-			cacheDisabled = true
-		}
 	}
 
 	// Get or create cache for cold context (if it exists and caching is enabled)
 	var cacheInfo *CacheInfo
 	var isNewCache bool
-	if !options.NoCache {
+	if !options.NoCache && cachingEnabled {
 		// Check if user specified a cache to use
 		if options.UseCache != "" {
 			r.logger.Info(fmt.Sprintf("Using specified cache: %s", options.UseCache))
@@ -221,6 +230,11 @@ func (r *RequestRunner) Run(ctx context.Context, options RequestOptions) (string
 				r.logger.Warning("No cold context file found")
 			}
 		}
+	} else if !options.NoCache && !cachingEnabled && hasRules {
+		// Cache is disabled by default (no @enable-cache directive)
+		if info, err := os.Stat(coldContextFile); err == nil && info.Size() > 0 {
+			r.logger.CacheDisabledByDefault()
+		}
 	}
 
 	// Prepare dynamic files
@@ -232,8 +246,8 @@ func (r *RequestRunner) Run(ctx context.Context, options RequestOptions) (string
 		r.logger.Info(fmt.Sprintf("Including hot context: %s", hotContextFile))
 	}
 	
-	// If caching is disabled, also include cold context as dynamic file
-	if cacheDisabled && cacheInfo == nil {
+	// If caching is not enabled, also include cold context as dynamic file
+	if !cachingEnabled && cacheInfo == nil {
 		if _, err := os.Stat(coldContextFile); err == nil {
 			dynamicFiles = append(dynamicFiles, coldContextFile)
 			r.logger.Info(fmt.Sprintf("Including cold context (cache disabled): %s", coldContextFile))

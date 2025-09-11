@@ -427,6 +427,36 @@ func (l *Logger) TTL(ttl string) {
 		l.styles.Duration.Render(ttl))
 }
 
+// CacheDisabledByDefault logs when cache is disabled by default (opt-in model)
+func (l *Logger) CacheDisabledByDefault() {
+	fmt.Fprintf(l.writer, "%s %s\n",
+		l.styles.Icon.Render("ℹ️"),
+		l.styles.Info.Render("Caching is disabled by default"))
+	fmt.Fprintf(l.writer, "   %s\n",
+		l.styles.Info.Render("To enable caching, add @enable-cache to your .grove/rules file"))
+}
+
+// CacheWarning displays a prominent warning about experimental caching and costs
+func (l *Logger) CacheWarning() {
+	// Create a warning box style
+	warningBox := lipgloss.NewStyle().
+		Border(lipgloss.DoubleBorder()).
+		BorderForeground(lipgloss.Color("#ff9800")).
+		Foreground(lipgloss.Color("#ff9800")).
+		Padding(1, 2).
+		MarginTop(1).
+		MarginBottom(1).
+		Bold(true)
+
+	warningContent := fmt.Sprintf(
+		"⚠️  ALPHA FEATURE WARNING\n\n" +
+		"Gemini Caching is experimental and can incur significant costs.\n" +
+		"Please monitor your Google Cloud billing closely to avoid unexpected charges.\n\n" +
+		"You can disable caching with the --no-cache flag or by removing @enable-cache from your rules.")
+
+	fmt.Fprintln(l.writer, warningBox.Render(warningContent))
+}
+
 // EstimatedTokens logs estimated token count
 func (l *Logger) EstimatedTokens(count int) {
 	fmt.Fprintf(l.writer, "   %s %s\n",
