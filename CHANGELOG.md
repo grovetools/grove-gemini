@@ -1,3 +1,9 @@
+## v0.0.12 (2025-09-12)
+
+### Bug Fixes
+
+* disable Gemini cache to reduce unexpected costs
+
 ## v0.0.11 (2025-09-12)
 
 ### Features
