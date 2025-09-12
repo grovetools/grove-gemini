@@ -1,12 +1,12 @@
-# grove-gemini (`gemapi`)
+# grove-gemini
+
+<img src="https://github.com/user-attachments/assets/00670553-0a00-4f03-9bb1-8e02e1e68a7b" width="60%" />
 
 [![CI](https://github.com/mattsolo1/grove-gemini/actions/workflows/ci.yml/badge.svg)](https://github.com/mattsolo1/grove-gemini/actions/workflows/ci.yml)
 
-A powerful command-line interface for Google's Gemini API, with advanced context management, caching, and observability features.
+A command-line interface for Google's Gemini API, with context management, caching, and observability features.
 
-## What is `gemapi`?
-
-`gemapi` is a CLI tool designed to streamline interactions with the Gemini API, particularly within the [Grove](https://github.com/mattsolo1/grove) ecosystem. It leverages `grove-context` to automatically build and manage large code contexts, intelligently caching them using Gemini's Caching API to reduce latency and cost.
+grove-gemini is a CLI tool designed to streamline interactions with the Gemini API, particularly within the [Grove](https://github.com/mattsolo1/grove) ecosystem. It leverages `grove-context` to automatically build and manage large code contexts, caching them using Gemini's Caching API to reduce latency and cost.
 
 Beyond making requests, `gemapi` provides a rich set of observability tools to query local request logs, Google Cloud metrics, token usage logs, and even billing data, giving you a complete picture of your API usage.
 
