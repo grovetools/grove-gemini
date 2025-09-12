@@ -1,3 +1,20 @@
+## v0.0.11 (2025-09-12)
+
+### Features
+
+* implement opt-in cache safety with @enable-cache directive
+
+### Bug Fixes
+
+* address code review findings for cache-safety
+* disable cache
+
+### Chores
+
+* **deps:** bump dependencies
+* remove indirect deps
+* delete go.work
+
 ## v0.0.10 (2025-09-06)
 
 ### Features
