@@ -9,9 +9,9 @@ require (
 	github.com/charmbracelet/bubbles v0.21.0
 	github.com/charmbracelet/bubbletea v1.3.6
 	github.com/charmbracelet/lipgloss v1.1.0
-	github.com/mattsolo1/grove-context v0.2.27
+	github.com/mattsolo1/grove-context v0.2.28
 	github.com/mattsolo1/grove-core v0.2.13
-	github.com/mattsolo1/grove-tend v0.2.18
+	github.com/mattsolo1/grove-tend v0.2.19
 	github.com/spf13/cobra v1.9.1
 	google.golang.org/api v0.232.0
 	google.golang.org/genai v1.20.0
