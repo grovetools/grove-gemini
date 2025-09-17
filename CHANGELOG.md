@@ -1,3 +1,10 @@
+## v0.0.14 (2025-09-17)
+
+### Chores
+
+* bump dependencies
+* update Grove dependencies to latest versions
+
 ## v0.0.12 (2025-09-12)
 
 ### Bug Fixes
