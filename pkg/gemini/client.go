@@ -53,6 +53,11 @@ type GenerateContentOptions struct {
 	PromptFiles []string // Paths to prompt files to be included in the request
 	JobID       string   // Job ID for logging purposes
 	PlanName    string   // Plan name for logging purposes
+	// Generation parameters
+	Temperature     *float32
+	TopP            *float32
+	TopK            *int32
+	MaxOutputTokens *int32
 }
 
 // GeminiRequestLog holds the details of a request for debugging purposes
@@ -228,24 +233,38 @@ func (c *Client) GenerateContentWithCacheAndOptions(ctx context.Context, model s
 	startTime := time.Now()
 	logger.GeneratingResponse()
 	
+	// Build generation config with parameters
+	config := &genai.GenerateContentConfig{}
+	
+	// Add cache if provided
 	if cacheID != "" {
-		result, err = c.client.Models.GenerateContent(
-			ctx,
-			model,
-			contentsForAPI,
-			&genai.GenerateContentConfig{
-				CachedContent: cacheID,
-			},
-		)
-	} else {
-		// No cache, just dynamic files
-		result, err = c.client.Models.GenerateContent(
-			ctx,
-			model,
-			contentsForAPI,
-			&genai.GenerateContentConfig{},
-		)
+		config.CachedContent = cacheID
 	}
+	
+	// Add generation parameters from options
+	if opts != nil {
+		if opts.Temperature != nil {
+			config.Temperature = opts.Temperature
+		}
+		if opts.TopP != nil {
+			config.TopP = opts.TopP
+		}
+		if opts.TopK != nil {
+			// Convert int32 to float32 for TopK
+			topKFloat := float32(*opts.TopK)
+			config.TopK = &topKFloat
+		}
+		if opts.MaxOutputTokens != nil {
+			config.MaxOutputTokens = int32(*opts.MaxOutputTokens)
+		}
+	}
+	
+	result, err = c.client.Models.GenerateContent(
+		ctx,
+		model,
+		contentsForAPI,
+		config,
+	)
 	
 	if err != nil {
 		// Gather context information

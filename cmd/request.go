@@ -25,6 +25,11 @@ var (
 	requestOutputFile     string
 	requestContextFiles   []string
 	requestYes            bool
+	// Generation parameters
+	requestTemperature     float32
+	requestTopP            float32
+	requestTopK            int32
+	requestMaxOutputTokens int32
 )
 
 func newRequestCmd() *cobra.Command {
@@ -75,6 +80,12 @@ Examples:
 	cmd.Flags().StringVarP(&requestOutputFile, "output", "o", "", "Write response to file instead of stdout")
 	cmd.Flags().StringSliceVar(&requestContextFiles, "context", nil, "Additional context files to include")
 	cmd.Flags().BoolVarP(&requestYes, "yes", "y", false, "Skip cache creation confirmation prompt")
+	
+	// Generation parameters
+	cmd.Flags().Float32Var(&requestTemperature, "temperature", -1, "Temperature for randomness (0.0-2.0, -1 to use default)")
+	cmd.Flags().Float32Var(&requestTopP, "top-p", -1, "Top-p nucleus sampling (0.0-1.0, -1 to use default)")
+	cmd.Flags().Int32Var(&requestTopK, "top-k", -1, "Top-k sampling (-1 to use default)")
+	cmd.Flags().Int32Var(&requestMaxOutputTokens, "max-output-tokens", -1, "Maximum tokens in response (-1 to use default)")
 
 	return cmd
 }
@@ -130,6 +141,20 @@ func runRequest(cmd *cobra.Command, args []string) error {
 		UseCache:         requestUseCache,
 		ContextFiles:     requestContextFiles,
 		SkipConfirmation: requestYes,
+	}
+	
+	// Add generation parameters if specified
+	if cmd.Flags().Changed("temperature") {
+		options.Temperature = &requestTemperature
+	}
+	if cmd.Flags().Changed("top-p") {
+		options.TopP = &requestTopP
+	}
+	if cmd.Flags().Changed("top-k") {
+		options.TopK = &requestTopK
+	}
+	if cmd.Flags().Changed("max-output-tokens") {
+		options.MaxOutputTokens = &requestMaxOutputTokens
 	}
 
 	// Create and run request runner

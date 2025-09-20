@@ -31,6 +31,11 @@ type RequestOptions struct {
 	Caller   string
 	JobID    string
 	PlanName string
+	// Generation parameters
+	Temperature     *float32
+	TopP            *float32
+	TopK            *int32
+	MaxOutputTokens *int32
 }
 
 // RequestRunner handles the orchestration of Gemini API requests with context management
@@ -306,6 +311,10 @@ func (r *RequestRunner) Run(ctx context.Context, options RequestOptions) (string
 		PromptFiles: options.PromptFiles,
 		JobID:       options.JobID,
 		PlanName:    options.PlanName,
+		Temperature:     options.Temperature,
+		TopP:            options.TopP,
+		TopK:            options.TopK,
+		MaxOutputTokens: options.MaxOutputTokens,
 	}
 	
 	response, err := geminiClient.GenerateContentWithCacheAndOptions(ctx, options.Model, options.Prompt, cacheID, dynamicFiles, opts)
