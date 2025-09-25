@@ -9,14 +9,16 @@ import (
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
+	corelogging "github.com/mattsolo1/grove-core/logging"
 	"github.com/sirupsen/logrus"
 )
 
-// Logger provides pretty formatted logging using lipgloss
+// Logger is a wrapper around the grove-core PrettyLogger with Gemini-specific helpers.
 type Logger struct {
+	*corelogging.PrettyLogger
 	writer io.Writer
 	styles Styles
-	log    *logrus.Entry // For structured logging backend (can be nil)
+	log    *logrus.Entry // For structured logging when needed
 }
 
 // Styles contains all the lipgloss styles for different log types
@@ -153,30 +155,33 @@ func DefaultStyles() Styles {
 	}
 }
 
-// New creates a new Logger instance
+// New creates a new Gemini-specific pretty logger.
 func New() *Logger {
 	return &Logger{
-		writer: os.Stderr,
-		styles: DefaultStyles(),
-		log:    nil, // No structured logging backend by default
+		PrettyLogger: corelogging.NewPrettyLogger(),
+		writer:       os.Stderr,
+		styles:       DefaultStyles(),
+		log:          corelogging.NewLogger("grove-gemini"),
 	}
 }
 
-// NewWithLogger creates a new Logger with structured logging backend
+// NewWithLogger creates a new logger with a specific structured logging backend.
 func NewWithLogger(log *logrus.Entry) *Logger {
 	return &Logger{
-		writer: os.Stderr,
-		styles: DefaultStyles(),
-		log:    log,
+		PrettyLogger: corelogging.NewPrettyLogger(),
+		writer:       os.Stderr,
+		styles:       DefaultStyles(),
+		log:          log,
 	}
 }
 
 // NewWithWriter creates a new Logger with a custom writer
 func NewWithWriter(w io.Writer) *Logger {
 	return &Logger{
-		writer: w,
-		styles: DefaultStyles(),
-		log:    nil,
+		PrettyLogger: corelogging.NewPrettyLogger().WithWriter(w),
+		writer:       w,
+		styles:       DefaultStyles(),
+		log:          corelogging.NewLogger("grove-gemini"),
 	}
 }
 
@@ -210,7 +215,7 @@ func (l *Logger) Info(message string) {
 		l.styles.Info.Render(message))
 }
 
-// Success logs a success message
+// Success logs a success message (override to use Gemini style)
 func (l *Logger) Success(message string) {
 	fmt.Fprintf(l.writer, "%s %s\n",
 		l.styles.SuccessIcon.Render("✅"),
@@ -528,55 +533,6 @@ func (l *Logger) RulesFileContent(content string) {
 	fmt.Fprintln(l.writer, box)
 }
 
-// formatRelativeTime formats a time relative to now in a human-friendly way
-func formatRelativeTime(t time.Time) string {
-	now := time.Now()
-	diff := t.Sub(now)
-	
-	// Future time (expires in...)
-	if diff > 0 {
-		hours := int(diff.Hours())
-		if hours < 1 {
-			minutes := int(diff.Minutes())
-			if minutes <= 1 {
-				return "in less than a minute"
-			}
-			return fmt.Sprintf("in %d minutes", minutes)
-		} else if hours == 1 {
-			return "in 1 hour"
-		} else if hours < 24 {
-			return fmt.Sprintf("in %d hours", hours)
-		} else {
-			days := hours / 24
-			if days == 1 {
-				return "in 1 day"
-			}
-			return fmt.Sprintf("in %d days", days)
-		}
-	}
-	
-	// Past time (expired...ago)
-	diff = -diff
-	hours := int(diff.Hours())
-	if hours < 1 {
-		minutes := int(diff.Minutes())
-		if minutes <= 1 {
-			return "less than a minute ago"
-		}
-		return fmt.Sprintf("%d minutes ago", minutes)
-	} else if hours == 1 {
-		return "1 hour ago"
-	} else if hours < 24 {
-		return fmt.Sprintf("%d hours ago", hours)
-	} else {
-		days := hours / 24
-		if days == 1 {
-			return "1 day ago"
-		}
-		return fmt.Sprintf("%d days ago", days)
-	}
-}
-
 // ContextSummary logs a context summary with styled formatting
 func (l *Logger) ContextSummary(cold, hot int) {
 	fmt.Fprintf(l.writer, "%s %s\n",
@@ -637,6 +593,55 @@ func (l *Logger) CacheCreationPrompt(tokens int, sizeBytes int64, ttl time.Durat
 	
 	response = strings.TrimSpace(strings.ToLower(response))
 	return response == "y" || response == "yes"
+}
+
+// formatRelativeTime formats a time relative to now in a human-friendly way
+func formatRelativeTime(t time.Time) string {
+	now := time.Now()
+	diff := t.Sub(now)
+	
+	// Future time (expires in...)
+	if diff > 0 {
+		hours := int(diff.Hours())
+		if hours < 1 {
+			minutes := int(diff.Minutes())
+			if minutes <= 1 {
+				return "in less than a minute"
+			}
+			return fmt.Sprintf("in %d minutes", minutes)
+		} else if hours == 1 {
+			return "in 1 hour"
+		} else if hours < 24 {
+			return fmt.Sprintf("in %d hours", hours)
+		} else {
+			days := hours / 24
+			if days == 1 {
+				return "in 1 day"
+			}
+			return fmt.Sprintf("in %d days", days)
+		}
+	}
+	
+	// Past time (expired...ago)
+	diff = -diff
+	hours := int(diff.Hours())
+	if hours < 1 {
+		minutes := int(diff.Minutes())
+		if minutes <= 1 {
+			return "less than a minute ago"
+		}
+		return fmt.Sprintf("%d minutes ago", minutes)
+	} else if hours == 1 {
+		return "1 hour ago"
+	} else if hours < 24 {
+		return fmt.Sprintf("%d hours ago", hours)
+	} else {
+		days := hours / 24
+		if days == 1 {
+			return "1 day ago"
+		}
+		return fmt.Sprintf("%d days ago", days)
+	}
 }
 
 // formatFileSize formats bytes into human-readable format
