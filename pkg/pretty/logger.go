@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"runtime"
 	"strings"
 	"time"
 
@@ -21,39 +22,55 @@ type Logger struct {
 	log    *logrus.Entry // For structured logging when needed
 }
 
+// TokenFields represents token usage metrics with verbosity levels
+type TokenFields struct {
+	CachedTokens      int   `json:"cached_tokens" verbosity:"0"`       // metrics
+	DynamicTokens     int   `json:"dynamic_tokens" verbosity:"0"`      // metrics
+	CompletionTokens  int   `json:"completion_tokens" verbosity:"0"`   // metrics
+	UserPromptTokens  int   `json:"user_prompt_tokens" verbosity:"0"`  // metrics
+	TotalPromptTokens int   `json:"total_prompt_tokens" verbosity:"0"` // metrics
+	ResponseTimeMs    int64 `json:"response_time_ms" verbosity:"0"`    // metrics
+	IsNewCache        bool  `json:"is_new_cache" verbosity:"0"`        // metrics
+}
+
+// ModelFields represents model information with verbosity level
+type ModelFields struct {
+	Model string `json:"model" verbosity:"3"` // metrics
+}
+
 // Styles contains all the lipgloss styles for different log types
 type Styles struct {
 	// Headers and sections
-	WorkDir      lipgloss.Style
-	Model        lipgloss.Style
-	Section      lipgloss.Style
-	
+	WorkDir lipgloss.Style
+	Model   lipgloss.Style
+	Section lipgloss.Style
+
 	// Status messages
-	Info         lipgloss.Style
-	Success      lipgloss.Style
-	Warning      lipgloss.Style
-	Error        lipgloss.Style
-	
+	Info    lipgloss.Style
+	Success lipgloss.Style
+	Warning lipgloss.Style
+	Error   lipgloss.Style
+
 	// Special elements
-	Path         lipgloss.Style
-	Number       lipgloss.Style
-	Percentage   lipgloss.Style
-	Duration     lipgloss.Style
-	Command      lipgloss.Style
-	
+	Path       lipgloss.Style
+	Number     lipgloss.Style
+	Percentage lipgloss.Style
+	Duration   lipgloss.Style
+	Command    lipgloss.Style
+
 	// Icons
-	Icon         lipgloss.Style
-	SuccessIcon  lipgloss.Style
-	WarningIcon  lipgloss.Style
-	ErrorIcon    lipgloss.Style
-	
+	Icon        lipgloss.Style
+	SuccessIcon lipgloss.Style
+	WarningIcon lipgloss.Style
+	ErrorIcon   lipgloss.Style
+
 	// Progress indicators
-	ProgressBar  lipgloss.Style
-	Spinner      lipgloss.Style
-	
+	ProgressBar lipgloss.Style
+	Spinner     lipgloss.Style
+
 	// Boxes and containers
-	Box          lipgloss.Style
-	TokenBox     lipgloss.Style
+	Box      lipgloss.Style
+	TokenBox lipgloss.Style
 }
 
 // DefaultStyles returns the default styling configuration
@@ -67,85 +84,85 @@ func DefaultStyles() Styles {
 	cyan := lipgloss.Color("#1abc9c")
 	gray := lipgloss.Color("#95a5a6")
 	darkGray := lipgloss.Color("#7f8c8d")
-	
+
 	return Styles{
 		// Headers and sections
 		WorkDir: lipgloss.NewStyle().
 			Foreground(blue).
 			Bold(true),
-		
+
 		Model: lipgloss.NewStyle().
 			Foreground(purple).
 			Bold(true),
-		
+
 		Section: lipgloss.NewStyle().
 			Foreground(cyan).
 			Bold(true).
 			MarginTop(1),
-		
+
 		// Status messages
 		Info: lipgloss.NewStyle().
 			Foreground(blue),
-		
+
 		Success: lipgloss.NewStyle().
 			Foreground(green),
-		
+
 		Warning: lipgloss.NewStyle().
 			Foreground(yellow),
-		
+
 		Error: lipgloss.NewStyle().
 			Foreground(red).
 			Bold(true),
-		
+
 		// Special elements
 		Path: lipgloss.NewStyle().
 			Foreground(cyan).
 			Italic(true),
-		
+
 		Number: lipgloss.NewStyle().
 			Foreground(purple).
 			Bold(true),
-		
+
 		Percentage: lipgloss.NewStyle().
 			Foreground(green).
 			Bold(true),
-		
+
 		Duration: lipgloss.NewStyle().
 			Foreground(gray),
-		
+
 		Command: lipgloss.NewStyle().
 			Foreground(yellow).
 			Bold(true),
-		
+
 		// Icons
 		Icon: lipgloss.NewStyle().
 			MarginRight(1),
-		
+
 		SuccessIcon: lipgloss.NewStyle().
 			Foreground(green).
 			MarginRight(1),
-		
+
 		WarningIcon: lipgloss.NewStyle().
 			Foreground(yellow).
 			MarginRight(1),
-		
+
 		ErrorIcon: lipgloss.NewStyle().
 			Foreground(red).
 			MarginRight(1),
-		
+
 		// Progress indicators
 		ProgressBar: lipgloss.NewStyle().
 			Foreground(green),
-		
+
 		Spinner: lipgloss.NewStyle().
 			Foreground(blue),
-		
+
 		// Boxes and containers
 		Box: lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
 			BorderForeground(darkGray).
 			Padding(1, 2),
-		
+
 		TokenBox: lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
 			BorderForeground(purple).
@@ -233,7 +250,22 @@ func (l *Logger) Error(message string) {
 func (l *Logger) Model(model string) {
 	// Log structured data if backend available
 	if l.log != nil {
-		l.log.WithField("model", model).Info("Calling Gemini API")
+		modelFields := ModelFields{
+			Model: model,
+		}
+		fields := corelogging.StructToLogrusFields(modelFields)
+		
+		// Get caller information manually to point to the actual caller
+		if pc, file, line, ok := runtime.Caller(1); ok {
+			fields["file"] = fmt.Sprintf("%s:%d", file, line)
+			if fn := runtime.FuncForPC(pc); fn != nil {
+				fields["func"] = fn.Name()
+			}
+		}
+		
+		// Create entry without logrus's automatic caller reporting to avoid duplication
+		entry := l.log.WithFields(fields)
+		entry.Info("Calling Gemini API")
 	}
 	// Display pretty UI
 	fmt.Fprintf(l.writer, "\n%s %s %s\n\n",
@@ -269,22 +301,22 @@ func (l *Logger) FilesIncluded(files []string) {
 	if len(files) == 0 {
 		return
 	}
-	
+
 	fmt.Fprintf(l.writer, "\n%s %s\n",
 		l.styles.Icon.Render("📁"),
 		l.styles.Section.Render("Files attached to request:"))
-	
+
 	for _, file := range files {
 		// Extract just the filename or last part of the path for display
 		displayName := file
 		if idx := strings.LastIndex(file, "/"); idx != -1 {
 			displayName = file[idx+1:]
 		}
-		
+
 		// Check if this is likely a prompt file (has .md extension and not CLAUDE.md)
-		isPromptFile := strings.HasSuffix(file, ".md") && displayName != "CLAUDE.md" && 
+		isPromptFile := strings.HasSuffix(file, ".md") && displayName != "CLAUDE.md" &&
 			displayName != "context" && displayName != "cached-context"
-		
+
 		// Show full path if it's a special file or prompt file
 		if displayName == "CLAUDE.md" || displayName == "context" || displayName == "cached-context" {
 			fmt.Fprintf(l.writer, "  • %s\n", l.styles.Path.Render(file))
@@ -300,17 +332,30 @@ func (l *Logger) FilesIncluded(files []string) {
 func (l *Logger) TokenUsage(cached, dynamic, completion, promptTokens int, responseTime time.Duration, isNewCache bool) {
 	// First, log structured data to backend if available
 	if l.log != nil {
-		l.log.WithFields(logrus.Fields{
-			"cached_tokens":       cached,
-			"dynamic_tokens":      dynamic,
-			"completion_tokens":   completion,
-			"user_prompt_tokens":  promptTokens,
-			"total_prompt_tokens": cached + dynamic,
-			"response_time_ms":    responseTime.Milliseconds(),
-			"is_new_cache":        isNewCache,
-		}).Info("Token usage summary")
+		tokenFields := TokenFields{
+			CachedTokens:      cached,
+			DynamicTokens:     dynamic,
+			CompletionTokens:  completion,
+			UserPromptTokens:  promptTokens,
+			TotalPromptTokens: cached + dynamic,
+			ResponseTimeMs:    responseTime.Milliseconds(),
+			IsNewCache:        isNewCache,
+		}
+		fields := corelogging.StructToLogrusFields(tokenFields)
+		
+		// Get caller information manually to point to the actual caller
+		if pc, file, line, ok := runtime.Caller(1); ok {
+			fields["file"] = fmt.Sprintf("%s:%d", file, line)
+			if fn := runtime.FuncForPC(pc); fn != nil {
+				fields["func"] = fn.Name()
+			}
+		}
+		
+		// Create entry without logrus's automatic caller reporting to avoid duplication  
+		entry := l.log.WithFields(fields)
+		entry.Info("Token usage summary")
 	}
-	
+
 	// Calculate derived metrics for UI display
 	totalPrompt := cached + dynamic
 	totalAPIUsage := dynamic + completion
@@ -318,18 +363,18 @@ func (l *Logger) TokenUsage(cached, dynamic, completion, promptTokens int, respo
 	if totalPrompt > 0 {
 		cacheHitRate = float64(cached) / float64(totalPrompt) * 100
 	}
-	
+
 	// Conditional labels and styles
 	cachedLabel := "Cold (Cached):"
 	cacheHitRateLabel := "Cache Hit Rate:"
 	cachedStyle := l.styles.Number
-	
+
 	if isNewCache {
 		cachedLabel = "New Cache Tokens:"
 		cacheHitRateLabel = "Cache Hit Rate (fresh):"
 		cachedStyle = l.styles.Warning // Use warning style for new cache tokens
 	}
-	
+
 	// Create the content with proper formatting
 	content := []string{
 		fmt.Sprintf("%s %s",
@@ -339,14 +384,14 @@ func (l *Logger) TokenUsage(cached, dynamic, completion, promptTokens int, respo
 			l.styles.Info.Render("Hot (Dynamic):"),
 			l.styles.Number.Render(fmt.Sprintf("%d tokens", dynamic))),
 	}
-	
+
 	// Add user prompt tokens if available
 	if promptTokens > 0 {
 		content = append(content, fmt.Sprintf("%s %s",
 			l.styles.Info.Render("User Prompt:"),
 			l.styles.Number.Render(fmt.Sprintf("%d tokens", promptTokens))))
 	}
-	
+
 	content = append(content, []string{
 		"--------------------------------",
 		fmt.Sprintf("%s %s",
@@ -366,10 +411,10 @@ func (l *Logger) TokenUsage(cached, dynamic, completion, promptTokens int, respo
 			l.styles.Info.Render("Response Time:"),
 			l.styles.Duration.Render(fmt.Sprintf("%.2fs", responseTime.Seconds()))),
 	}...)
-	
+
 	// Join with newlines and apply box styling
 	box := l.styles.TokenBox.Render(strings.Join(content, "\n"))
-	
+
 	fmt.Fprintf(l.writer, "\n%s %s\n%s\n",
 		l.styles.Icon.Render("📊"),
 		l.styles.Section.Render("Token usage:"),
@@ -486,9 +531,9 @@ func (l *Logger) CacheWarning() {
 
 	warningContent := fmt.Sprintf(
 		"⚠️  ALPHA FEATURE WARNING\n\n" +
-		"Gemini Caching is experimental and can incur significant costs.\n" +
-		"Please monitor your Google Cloud billing closely to avoid unexpected charges.\n\n" +
-		"You can disable caching with the --no-cache flag or by removing @enable-cache from your rules.")
+			"Gemini Caching is experimental and can incur significant costs.\n" +
+			"Please monitor your Google Cloud billing closely to avoid unexpected charges.\n\n" +
+			"You can disable caching with the --no-cache flag or by removing @enable-cache from your rules.")
 
 	fmt.Fprintln(l.writer, warningBox.Render(warningContent))
 }
@@ -523,11 +568,11 @@ func (l *Logger) RulesFileContent(content string) {
 		Padding(1, 2).
 		MarginTop(1).
 		MarginBottom(1)
-	
+
 	fmt.Fprintf(l.writer, "%s %s\n",
 		l.styles.Icon.Render("📋"),
 		l.styles.Section.Render("Rules file content:"))
-	
+
 	// Apply box styling to the content
 	box := rulesBox.Render(content)
 	fmt.Fprintln(l.writer, box)
@@ -556,11 +601,11 @@ func (l *Logger) CacheCreationPrompt(tokens int, sizeBytes int64, ttl time.Durat
 		Padding(1, 2).
 		MarginTop(1).
 		MarginBottom(1)
-	
+
 	// Format size
 	sizeStr := formatFileSize(sizeBytes)
 	relativeTime := formatRelativeTime(time.Now().Add(ttl))
-	
+
 	content := []string{
 		l.styles.Warning.Bold(true).Render("NEW CACHE CREATION REQUIRED"),
 		"",
@@ -574,23 +619,23 @@ func (l *Logger) CacheCreationPrompt(tokens int, sizeBytes int64, ttl time.Durat
 		l.styles.Info.Render("Creating a cache will upload context to Gemini's servers."),
 		l.styles.Info.Render("This is a one-time operation that may incur costs."),
 	}
-	
+
 	box := warningBox.Render(strings.Join(content, "\n"))
 	fmt.Fprintln(l.writer)
 	fmt.Fprintln(l.writer, box)
-	
+
 	// Prompt for confirmation
 	fmt.Fprintf(l.writer, "\n%s %s",
 		l.styles.Icon.Render("❓"),
 		l.styles.Warning.Render("Do you want to create this cache? [y/N]: "))
-	
+
 	// Read user input
 	reader := bufio.NewReader(os.Stdin)
 	response, err := reader.ReadString('\n')
 	if err != nil {
 		return false
 	}
-	
+
 	response = strings.TrimSpace(strings.ToLower(response))
 	return response == "y" || response == "yes"
 }
@@ -599,7 +644,7 @@ func (l *Logger) CacheCreationPrompt(tokens int, sizeBytes int64, ttl time.Durat
 func formatRelativeTime(t time.Time) string {
 	now := time.Now()
 	diff := t.Sub(now)
-	
+
 	// Future time (expires in...)
 	if diff > 0 {
 		hours := int(diff.Hours())
@@ -621,7 +666,7 @@ func formatRelativeTime(t time.Time) string {
 			return fmt.Sprintf("in %d days", days)
 		}
 	}
-	
+
 	// Past time (expired...ago)
 	diff = -diff
 	hours := int(diff.Hours())
