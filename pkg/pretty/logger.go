@@ -9,12 +9,14 @@ import (
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/sirupsen/logrus"
 )
 
 // Logger provides pretty formatted logging using lipgloss
 type Logger struct {
 	writer io.Writer
 	styles Styles
+	log    *logrus.Entry // For structured logging backend (can be nil)
 }
 
 // Styles contains all the lipgloss styles for different log types
@@ -156,6 +158,16 @@ func New() *Logger {
 	return &Logger{
 		writer: os.Stderr,
 		styles: DefaultStyles(),
+		log:    nil, // No structured logging backend by default
+	}
+}
+
+// NewWithLogger creates a new Logger with structured logging backend
+func NewWithLogger(log *logrus.Entry) *Logger {
+	return &Logger{
+		writer: os.Stderr,
+		styles: DefaultStyles(),
+		log:    log,
 	}
 }
 
@@ -164,6 +176,7 @@ func NewWithWriter(w io.Writer) *Logger {
 	return &Logger{
 		writer: w,
 		styles: DefaultStyles(),
+		log:    nil,
 	}
 }
 
@@ -213,7 +226,12 @@ func (l *Logger) Error(message string) {
 
 // Model logs the model being used
 func (l *Logger) Model(model string) {
-	fmt.Fprintf(l.writer, "%s %s %s\n",
+	// Log structured data if backend available
+	if l.log != nil {
+		l.log.WithField("model", model).Info("Calling Gemini API")
+	}
+	// Display pretty UI
+	fmt.Fprintf(l.writer, "\n%s %s %s\n\n",
 		l.styles.Icon.Render("🤖"),
 		l.styles.Info.Render("Calling Gemini API with model:"),
 		l.styles.Model.Render(model))
@@ -275,7 +293,20 @@ func (l *Logger) FilesIncluded(files []string) {
 
 // TokenUsage displays token usage statistics in a styled box
 func (l *Logger) TokenUsage(cached, dynamic, completion, promptTokens int, responseTime time.Duration, isNewCache bool) {
-	// Calculate derived metrics
+	// First, log structured data to backend if available
+	if l.log != nil {
+		l.log.WithFields(logrus.Fields{
+			"cached_tokens":       cached,
+			"dynamic_tokens":      dynamic,
+			"completion_tokens":   completion,
+			"user_prompt_tokens":  promptTokens,
+			"total_prompt_tokens": cached + dynamic,
+			"response_time_ms":    responseTime.Milliseconds(),
+			"is_new_cache":        isNewCache,
+		}).Info("Token usage summary")
+	}
+	
+	// Calculate derived metrics for UI display
 	totalPrompt := cached + dynamic
 	totalAPIUsage := dynamic + completion
 	cacheHitRate := 0.0

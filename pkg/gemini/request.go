@@ -45,8 +45,9 @@ type RequestRunner struct {
 
 // NewRequestRunner creates a new RequestRunner instance
 func NewRequestRunner() *RequestRunner {
+	// Create a pretty logger with structured backend from our package logger
 	return &RequestRunner{
-		logger: pretty.New(),
+		logger: pretty.NewWithLogger(log),
 	}
 }
 

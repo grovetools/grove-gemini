@@ -25,7 +25,7 @@ func uploadFile(ctx context.Context, client *genai.Client, filePath string) (*ge
 	}
 	
 	// Create pretty logger
-	logger := pretty.New()
+	logger := pretty.NewWithLogger(log)
 	logger.UploadComplete(filepath.Base(filePath), time.Since(uploadStart))
 	return f, nil
 }

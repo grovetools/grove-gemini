@@ -80,8 +80,8 @@ func (c *Client) GenerateContentWithCache(ctx context.Context, model string, pro
 
 // GenerateContentWithCacheAndOptions generates content with additional context options
 func (c *Client) GenerateContentWithCacheAndOptions(ctx context.Context, model string, prompt string, cacheID string, dynamicFilePaths []string, opts *GenerateContentOptions) (string, error) {
-	// Create pretty logger
-	logger := pretty.New()
+	// Create pretty logger for UI output
+	logger := pretty.NewWithLogger(log)
 	
 	// Create a map to track uploaded files and prevent duplicates
 	uploadedFiles := make(map[string]bool)
@@ -276,7 +276,7 @@ func (c *Client) GenerateContentWithCacheAndOptions(ctx context.Context, model s
 		}
 		
 		// Log the failed query
-		logger := logging.GetLogger()
+		geminiLogger := logging.GetLogger()
 		logEntry := logging.QueryLog{
 			Timestamp:    startTime,
 			Model:       model,
@@ -295,7 +295,10 @@ func (c *Client) GenerateContentWithCacheAndOptions(ctx context.Context, model s
 		} else {
 			logEntry.Caller = ctxinfo.GetCaller()
 		}
-		logger.Log(logEntry)
+		if err := geminiLogger.Log(logEntry); err != nil {
+			// Don't fail the request if logging fails
+			fmt.Fprintf(os.Stderr, "Warning: Failed to log query: %v\n", err)
+		}
 		
 		return "", fmt.Errorf("failed to generate content: %w", err)
 	}
@@ -319,6 +322,12 @@ func (c *Client) GenerateContentWithCacheAndOptions(ctx context.Context, model s
 			isNewCache = opts.IsNewCache
 		}
 		
+		// Calculate cache hit rate for logging
+		cacheHitRate := float64(0)
+		if totalPromptTokens > 0 {
+			cacheHitRate = float64(cachedTokens) / float64(totalPromptTokens)
+		}
+		
 		logger.TokenUsage(
 			cachedTokens,
 			dynamicTokens,
@@ -327,12 +336,6 @@ func (c *Client) GenerateContentWithCacheAndOptions(ctx context.Context, model s
 			duration,
 			isNewCache,
 		)
-		
-		// Calculate cache hit rate for logging
-		cacheHitRate := float64(0)
-		if totalPromptTokens > 0 {
-			cacheHitRate = float64(cachedTokens) / float64(totalPromptTokens)
-		}
 		
 		// Gather context information
 		var contextInfo *ctxinfo.Info
@@ -343,7 +346,7 @@ func (c *Client) GenerateContentWithCacheAndOptions(ctx context.Context, model s
 		}
 		
 		// Log the query
-		logger := logging.GetLogger()
+		geminiLogger := logging.GetLogger()
 		logEntry := logging.QueryLog{
 			Timestamp:        startTime,
 			Model:           model,
@@ -370,7 +373,7 @@ func (c *Client) GenerateContentWithCacheAndOptions(ctx context.Context, model s
 			logEntry.Caller = ctxinfo.GetCaller()
 		}
 		
-		if err := logger.Log(logEntry); err != nil {
+		if err := geminiLogger.Log(logEntry); err != nil {
 			// Don't fail the request if logging fails
 			fmt.Fprintf(os.Stderr, "Warning: Failed to log query: %v\n", err)
 		}
