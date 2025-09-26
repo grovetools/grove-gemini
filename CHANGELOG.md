@@ -1,3 +1,73 @@
+## v0.1.0 (2025-09-26)
+
+This release introduces new features for controlling API output and standardizes the logging system. The `gemapi request` command now supports generation parameters, allowing for fine-grained control over the Gemini API's output. Users can specify temperature, top-p, top-k, and maximum output tokens via new command-line flags to influence the creativity and length of responses (9c2fc0d).
+
+The logging infrastructure has been refactored to align with the `grove-core` ecosystem (3c6b23d). The custom pretty logger has been replaced with a wrapper around the `grove-core` logger, enabling a dual-logging system that provides both human-readable UI feedback and structured data logs (185c115, 7c99199). This change preserves all Gemini-specific logging functionality while standardizing log output across Grove tools. Housekeeping updates include improvements to the `.gitignore` file (50e3fff).
+
+### Features
+
+- Add generation parameters to control output length and style (9c2fc0d)
+- Use new grove core logging (3c6b23d)
+
+### Refactoring
+
+- Replace custom pretty logger with grove-core wrapper (185c115)
+- Restore pretty logging with grove-core integration (7c99199)
+
+### Chores
+
+- update .gitignore rules (50e3fff)
+
+### File Changes
+
+```
+ .gitignore            |   7 ++
+ CLAUDE.md             |  30 +++++
+ cmd/request.go        |  25 ++++
+ pkg/gemini/cache.go   |   6 +-
+ pkg/gemini/client.go  |  78 +++++++-----
+ pkg/gemini/logger.go  |   8 ++
+ pkg/gemini/request.go |  12 +-
+ pkg/gemini/upload.go  |   2 +-
+ pkg/pretty/logger.go  | 335 +++++++++++++++++++++++++++++++-------------------
+ 9 files changed, 343 insertions(+), 160 deletions(-)
+```
+
+## v0.1.0 (2025-09-26)
+
+This release introduces new features for controlling API output and standardizes the logging system. The `gemapi request` command now supports generation parameters, allowing for fine-grained control over the Gemini API's output. Users can specify temperature, top-p, top-k, and maximum output tokens via new command-line flags to influence the creativity and length of responses (9c2fc0d).
+
+The logging infrastructure has been refactored to align with the `grove-core` ecosystem (3c6b23d). The custom pretty logger has been replaced with a wrapper around the `grove-core` logger, enabling a dual-logging system that provides both human-readable UI feedback and structured data logs (185c115, 7c99199). This change preserves all Gemini-specific logging functionality while standardizing log output across Grove tools. Housekeeping updates include improvements to the `.gitignore` file (50e3fff).
+
+### Features
+
+- Add generation parameters to control output length and style (9c2fc0d)
+- Use new grove core logging (3c6b23d)
+
+### Refactoring
+
+- Replace custom pretty logger with grove-core wrapper (185c115)
+- Restore pretty logging with grove-core integration (7c99199)
+
+### Chores
+
+- update .gitignore rules (50e3fff)
+
+### File Changes
+
+```
+ .gitignore            |   7 ++
+ CLAUDE.md             |  30 +++++
+ cmd/request.go        |  25 ++++
+ pkg/gemini/cache.go   |   6 +-
+ pkg/gemini/client.go  |  78 +++++++-----
+ pkg/gemini/logger.go  |   8 ++
+ pkg/gemini/request.go |  12 +-
+ pkg/gemini/upload.go  |   2 +-
+ pkg/pretty/logger.go  | 335 +++++++++++++++++++++++++++++++-------------------
+ 9 files changed, 343 insertions(+), 160 deletions(-)
+```
+
 ## v0.0.14 (2025-09-17)
 
 ### Chores
