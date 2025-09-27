@@ -1,0 +1,58 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/mattsolo1/grove-docgen/main/schema/docgen.config.schema.json
+category: Developer Tools
+description: A command-line interface for Google's Gemini API, with context management, caching, and observability features.
+enabled: true
+sections:
+  - name: introduction
+    order: 1
+    output: introduction.md
+    prompt: prompts/introduction.md
+    title: Introduction
+  - name: installation-and-configuration
+    order: 2
+    output: installation-and-configuration.md
+    prompt: prompts/installation-and-configuration.md
+    title: Installation & Configuration
+  - name: getting-started
+    order: 3
+    output: getting-started.md
+    prompt: prompts/getting-started.md
+    title: Getting Started
+  - name: command-reference
+    order: 4
+    output: command-reference.md
+    prompt: prompts/command-reference.md
+    title: Command Reference
+  - name: core-concepts
+    order: 5
+    output: core-concepts.md
+    prompt: prompts/core-concepts.md
+    title: Core Concepts
+  - name: caching-deep-dive
+    order: 6
+    output: caching-deep-dive.md
+    prompt: prompts/caching-deep-dive.md
+    title: Caching Deep Dive
+  - name: observability-guide
+    order: 7
+    output: observability-guide.md
+    prompt: prompts/observability-guide.md
+    title: Observability Guide
+  - name: usage-patterns
+    order: 8
+    output: usage-patterns.md
+    prompt: prompts/usage-patterns.md
+    title: Usage Patterns
+  - name: best-practices
+    order: 9
+    output: best-practices.md
+    prompt: prompts/best-practices.md
+    title: Best Practices
+settings:
+  model: gemini-2.5-pro
+  output_dir: docs
+  regeneration_mode: reference
+  rules_file: docs.rules
+  structured_output_file: pkg/docs/docs.json
+  system_prompt: default
+title: "Grove Gemini"
