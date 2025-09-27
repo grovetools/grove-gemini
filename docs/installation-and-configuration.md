@@ -4,13 +4,31 @@ This guide covers the installation and essential configuration steps required to
 
 ## Installation
 
-`gemapi` is installed as a Grove tool. If you have the `grove` meta-tool installed, you can add `gemapi` to your toolkit with a single command:
+The recommended way to install `grove-gemini` is by using the `grove` meta-CLI, which manages all tools within the Grove ecosystem.
+
+### Prerequisites
+
+You must have the `grove` meta-CLI installed. If you don't, please follow the **[Grove Ecosystem Installation Guide](https://github.com/mattsolo1/grove-meta/blob/main/docs/02-installation.md)** first. This guide also covers essential setup like configuring your `PATH`.
+
+### Install Command
+
+Once the `grove` CLI is set up, you can install `grove-gemini` with a single command:
 
 ```bash
 grove install gemapi
 ```
 
-This command will download the appropriate binary for your system and make it available through the Grove ecosystem.
+### Verifying the Installation
+
+To confirm that the tool was installed correctly, you can run its `version` command:
+
+```bash
+gemapi version
+```
+
+### Building from Source
+
+For contributors, the recommended way to work with the source code is to clone the entire Grove ecosystem monorepo. Please refer to the **[Building from Source](https://github.com/mattsolo1/grove-meta/blob/main/docs/02-installation.md#3-building-from-source-for-contributors)** section in the main installation guide for details.
 
 ## API Key Configuration
 
