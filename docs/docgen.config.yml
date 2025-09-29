@@ -13,40 +13,20 @@ sections:
     output: 02-examples.md
     prompt: prompts/02-examples.md
     title: Examples
-  - name: core-concepts
+  - name: configuration
     order: 3
-    output: 03-core-concepts.md
-    prompt: prompts/03-core-concepts.md
-    title: Core Concepts
-  - name: caching-deep-dive
-    order: 4
-    output: 04-caching-deep-dive.md
-    prompt: prompts/04-caching-deep-dive.md
-    title: Caching Deep Dive
-  - name: observability-guide
-    order: 5
-    output: 05-observability-guide.md
-    prompt: prompts/05-observability-guide.md
-    title: Observability Guide
-  - name: usage-patterns
-    order: 6
-    output: 06-usage-patterns.md
-    prompt: prompts/06-usage-patterns.md
-    title: Usage Patterns
-  - name: best-practices
-    order: 7
-    output: 07-best-practices.md
-    prompt: prompts/07-best-practices.md
-    title: Best Practices
+    output: 03-configuration.md
+    prompt: prompts/03-configuration.md
+    title: Configuration
   - name: command-reference
-    order: 8
-    output: 08-command-reference.md
-    prompt: prompts/08-command-reference.md
+    order: 4
+    output: 04-command-reference.md
+    prompt: prompts/04-command-reference.md
     title: Command Reference
 settings:
   model: gemini-2.5-pro
   output_dir: docs
-  regeneration_mode: reference
+  regeneration_mode: scratch
   rules_file: docs.rules
   structured_output_file: pkg/docs/docs.json
   system_prompt: default
