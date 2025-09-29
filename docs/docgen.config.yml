@@ -13,20 +13,25 @@ sections:
     output: 02-examples.md
     prompt: prompts/02-examples.md
     title: Examples
-  - name: configuration
+  - name: experimental
     order: 3
-    output: 03-configuration.md
-    prompt: prompts/03-configuration.md
+    output: 03-experimental.md
+    prompt: prompts/03-experimental.md
+    title: Experimental
+  - name: configuration
+    order: 4
+    output: 04-configuration.md
+    prompt: prompts/04-configuration.md
     title: Configuration
   - name: command-reference
-    order: 4
-    output: 04-command-reference.md
-    prompt: prompts/04-command-reference.md
+    order: 5
+    output: 05-command-reference.md
+    prompt: prompts/05-command-reference.md
     title: Command Reference
 settings:
   model: gemini-2.5-pro
   output_dir: docs
-  regeneration_mode: scratch
+  regeneration_mode: reference
   rules_file: docs.rules
   structured_output_file: pkg/docs/docs.json
   system_prompt: default
