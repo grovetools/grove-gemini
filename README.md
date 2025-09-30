@@ -1,189 +1,68 @@
-# grove-gemini
+<!-- DOCGEN:OVERVIEW:START -->
 
-<img src="https://github.com/user-attachments/assets/00670553-0a00-4f03-9bb1-8e02e1e68a7b" width="60%" />
+<img src="docs/images/grove-gemini-readme.svg" width="60%" />
 
-[![CI](https://github.com/mattsolo1/grove-gemini/actions/workflows/ci.yml/badge.svg)](https://github.com/mattsolo1/grove-gemini/actions/workflows/ci.yml)
+Grove Gemini (`gemapi`) is a command-line interface for Google's Gemini API, designed to support development workflows. It integrates with the Grove ecosystem to provide automatic codebase context management, caching to reduce latency and cost, and a suite of observability tools for monitoring API usage.
 
-A command-line interface for Google's Gemini API, with context management, caching, and observability features.
+The tool is built to handle large code contexts by leveraging the Gemini Caching API and provides (experimental) commands to query local request logs, Google Cloud metrics, and billing data.
 
-grove-gemini is a CLI tool designed to streamline interactions with the Gemini API, particularly within the [Grove](https://github.com/mattsolo1/grove) ecosystem. It leverages `grove-context` to automatically build and manage large code contexts, caching them using Gemini's Caching API to reduce latency and cost.
-
-Beyond making requests, `gemapi` provides a rich set of observability tools to query local request logs, Google Cloud metrics, token usage logs, and even billing data, giving you a complete picture of your API usage.
+<!-- placeholder for animated gif -->
 
 ## Key Features
 
--   **Smart Context Management**: Automatically builds and includes context from your codebase using a `.grove/rules` file, just like `grove-flow`.
--   **Advanced Caching**: Caches large "cold context" files using the Gemini Caching API. Features include:
-    -   Automatic invalidation when source files change.
-    -   Support for TTLs and directives like `@freeze-cache` and `@no-expire` in your rules file.
-    -   Confirmation prompts for potentially costly cache creation operations.
--   **Rich Observability**: A comprehensive `query` command to inspect usage from multiple sources:
-    -   `query local`: View detailed local logs of all `gemapi` requests.
-    -   `query metrics`: Fetch request counts and error rates from Google Cloud Monitoring.
-    -   `query tokens`: Analyze token usage from Google Cloud Logging.
-    -   `query billing`: Pull cost data directly from BigQuery billing exports.
--   **Token Utilities**: A `count-tokens` command to estimate costs and check if your prompt fits within model limits before making an API call.
--   **Configuration Management**: A simple `config` command to set defaults, such as your GCP project ID.
+*   **Smart Context Management**: Automatically builds context from your codebase using a `.grove/rules` file, powered by `grove-context`. This ensures that prompts sent to the Gemini API are informed by relevant source code without manual file gathering.
 
+*   **Advanced Caching (experimental)**: Caches large "cold context" files using the Gemini Caching API to reduce costs and improve response times on repeated queries. Caching is an opt-in feature that includes automatic invalidation when source files change and support for TTLs. An interactive terminal UI (`gemapi cache tui`) is available for managing caches.
 
-## Dependencies
+*   **Rich Observability (experimental)**: A comprehensive `query` command allows you to inspect API usage from multiple data sources:
+    *   `query local`: View detailed local logs of all `gemapi` requests.
+    *   `query metrics`: Fetch request counts and error rates from Google Cloud Monitoring.
+    *   `query tokens`: Analyze token usage from Google Cloud Logging.
+    *   `query billing`: Pull cost data directly from BigQuery billing exports.
 
-`grove-context`
+*   **Token Utilities**: The `count-tokens` command can estimate costs and verify that a prompt fits within a model's context window before making an API call.
+
+## Ecosystem Integration
+
+Grove Gemini is a component of the Grove ecosystem and is designed to work with other tools in the suite.
+
+*   **Grove Meta-CLI (`grove`)**: The central tool for managing the entire ecosystem. `grove` handles the installation, updating, and version management of all Grove binaries, including `grove-gemini`.
+
+*   **Grove Context (`cx`)**: Manages the context provided to LLMs. `gemapi` uses `grove-context` to automatically gather relevant source code based on predefined `.grove/rules`. This provides the Gemini models with the necessary information to perform their tasks accurately.
 
 ## Installation
 
+Install via the Grove meta-CLI:
 ```bash
-grove install gemapi
+grove install gemini
 ```
 
-## Configuration
-
-Before first use, you must configure your environment:
-
-1.  **Set your Gemini API Key:**
-
-    ```bash
-    export GEMINI_API_KEY="your-api-key-here"
-    ```
-
-2.  **(Optional) Set a default GCP Project:** For the `query` commands that interact with Google Cloud, you can set a default project to avoid passing the `--project-id` flag every time.
-
-    ```bash
-    gemapi config set project your-gcp-project-id
-    ```
-
-    You can always check the resolution order with `gemapi config get project`.
-
-## Usage
-
-### Making Requests (`gemapi request`)
-
-The `request` command is the core of `gemapi`. It intelligently assembles context, manages caching, and sends your prompt to the Gemini API.
-
-**Basic Request:**
+Verify installation:
 ```bash
-gemapi request "Explain the main function in main.go"
+gemapi version
 ```
 
-**Using a Prompt File:**
-```bash
-gemapi request -f prompt.md
-```
+Requires the `grove` meta-CLI. See the [Grove Installation Guide](https://github.com/mattsolo1/grove-meta/blob/main/docs/02-installation.md) if you don't have it installed.
 
-**Specifying a Model and Output File:**
-```bash
-gemapi request -m gemini-1.5-pro-latest -f prompt.md -o response.md
-```
+<!-- DOCGEN:OVERVIEW:END -->
 
-**Forcing Context Regeneration:**
-If you've updated your `.grove/rules`, force a regeneration of the context files before the request.
-```bash
-gemapi request --regenerate "Review the codebase architecture based on the new rules."
-```
+## Documentation
 
-**Forcing a Cache Rebuild:**
-To ignore the existing cache and create a new one from the current cold context.
-```bash
-gemapi request --recache "Analyze the latest version of the code."
-```
+See the [documentation](docs/) for detailed usage instructions:
+- [Overview](docs/01-overview.md) - Introduction and core concepts
+- [Examples](docs/02-examples.md) - Common usage patterns
+- [Experimental Features](docs/03-experimental.md) - Beta features
+- [Configuration](docs/04-configuration.md) - Configuration reference
+- [Command Reference](docs/05-command-reference.md) - Complete CLI reference
 
-### Observing Usage (`gemapi query`)
 
-The `query` command is a powerful tool for understanding your API usage and costs.
+<!-- DOCGEN:TOC:START -->
 
-**Query Local Request Logs:**
-Get a detailed, table-formatted view of recent requests made from your machine, including token counts, cost, latency, and git context.
-```bash
-# View requests from the last 24 hours
-gemapi query local
+See the [documentation](docs/) for detailed usage instructions:
+- [Overview](docs/01-overview.md) - <img src="./images/grove-gemini-readme.svg" width="60%" />
+- [Examples](docs/02-examples.md) - This document provides a series of practical examples to demonstrate the capa...
+- [Experimental](docs/03-experimental.md) - This section covers features in `grove-gemini` that are currently experimenta...
+- [Configuration](docs/04-configuration.md) - `grove-gemini` is configured through a combination of environment variables, ...
+- [Command Reference](docs/05-command-reference.md) - This document provides a comprehensive reference for the `gemapi` command-lin...
 
-# View only failed requests from the last 3 days
-gemapi query local --hours 72 --errors
-```
-
-**Query Cloud Metrics:**
-Fetch request counts and error rates from Google Cloud Monitoring.
-```bash
-gemapi query metrics --project-id your-project --hours 48
-```
-
-**Query Billing Data:**
-*Requires a BigQuery billing export to be configured.*
-```bash
-gemapi query billing \
-  --project-id your-project \
-  --dataset-id your_billing_dataset \
-  --table-id your_billing_table
-```
-
-### Managing the Cache (`gemapi cache`)
-
-Interact with the local records of your Gemini caches.
-
-**List Caches:**
-```bash
-gemapi cache list
-```
-
-**Inspect a Specific Cache:**
-```bash
-gemapi cache inspect <cache-name>
-```
-
-**Clear Caches:**
-Removes local cache records. Does not delete the cache on Google's servers.
-```bash
-# Clear a specific cache
-gemapi cache clear <cache-name>
-
-# Clear all caches for the current project
-gemapi cache clear --all
-```
-
-**Prune Expired Caches:**
-```bash
-gemapi cache prune
-```
-
-### Counting Tokens (`gemapi count-tokens`)
-
-Estimate the token count and input cost for a given text.
-
-**From an Argument:**
-```bash
-gemapi count-tokens "How many tokens is this string?"
-```
-
-**From Standard Input:**
-```bash
-cat my_file.txt | gemapi count-tokens
-```
-
-## Development
-
-### Building
-
-To build the `gemapi` binary:
-```bash
-make build
-```
-
-### Testing
-
-Run unit tests:
-```bash
-make test
-```
-
-Run end-to-end tests:
-```bash
-make test-e2e
-```
-
-### Linting
-
-To run the linter:
-```bash
-make lint
-```
-```
+<!-- DOCGEN:TOC:END -->

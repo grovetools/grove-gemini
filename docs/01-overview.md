@@ -1,4 +1,6 @@
-# Grove Gemini: A CLI for the Gemini API
+# Grove Gemini
+
+<img src="./images/grove-gemini-readme.svg" width="60%" />
 
 Grove Gemini (`gemapi`) is a command-line interface for Google's Gemini API, designed to support development workflows. It integrates with the Grove ecosystem to provide automatic codebase context management, caching to reduce latency and cost, and a suite of observability tools for monitoring API usage.
 
