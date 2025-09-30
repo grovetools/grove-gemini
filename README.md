@@ -59,10 +59,10 @@ See the [documentation](docs/) for detailed usage instructions:
 <!-- DOCGEN:TOC:START -->
 
 See the [documentation](docs/) for detailed usage instructions:
-- [Overview](docs/01-overview.md) - <img src="./images/grove-gemini-readme.svg" width="60%" />
-- [Examples](docs/02-examples.md) - This document provides a series of practical examples to demonstrate the capa...
-- [Experimental](docs/03-experimental.md) - This section covers features in `grove-gemini` that are currently experimenta...
-- [Configuration](docs/04-configuration.md) - `grove-gemini` is configured through a combination of environment variables, ...
-- [Command Reference](docs/05-command-reference.md) - This document provides a comprehensive reference for the `gemapi` command-lin...
+- [Overview](docs/01-overview.md)
+- [Examples](docs/02-examples.md)
+- [Experimental](docs/03-experimental.md)
+- [Configuration](docs/04-configuration.md)
+- [Command Reference](docs/05-command-reference.md)
 
 <!-- DOCGEN:TOC:END -->
