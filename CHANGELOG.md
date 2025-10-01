@@ -1,3 +1,61 @@
+## v0.2.0 (2025-10-01)
+
+This release introduces a comprehensive documentation overhaul, establishing a standardized structure with new sections for an overview, examples, experimental features, configuration, and a complete command reference (d8fd7ac, b56e0f0, e557c21). The documentation content has been refined to be more succinct and aligned with the Grove ecosystem's philosophy (03b38be, c3a426e).
+
+Tooling for documentation has been significantly improved by integrating `grove-docgen` to automate the generation of the `README.md` file, which now includes a Table of Contents (887ed39). The configuration for `docgen` has also been standardized for consistency (ff6a667).
+
+The release process is now more robust, with the release workflow updated to extract release notes directly from `CHANGELOG.md` (be1ef9f). Additionally, the CI workflow has been refined to prevent unnecessary executions while maintaining valid syntax (7848336) and to remove redundant test runs from the release process (cf478ac).
+
+### Features
+
+- Add comprehensive project documentation (c3a426e)
+- Add automated Table of Contents generation to README (887ed39)
+- Update release workflow to extract notes from CHANGELOG.md (be1ef9f)
+
+### Bug Fixes
+
+- Update CI workflow to use 'branches: [ none ]' to prevent execution (7848336)
+- Clean up README.md.tpl template format (1655f65)
+- Remove old documentation files (1dcf74d)
+
+### Build
+
+- Remove redundant tests from release workflow (cf478ac)
+
+### Refactoring
+
+- Standardize docgen.config.yml key order and settings (ff6a667)
+
+### Chores
+
+- Temporarily disable CI workflow (0253f6d)
+- Standardize documentation filenames to DD-name.md convention (94f2902)
+
+### File Changes
+
+```
+ .github/workflows/ci.yml             |   4 +-
+ .github/workflows/release.yml        |  13 +-
+ Makefile                             |   8 +-
+ README.md                            | 190 ++---------
+ docs/01-overview.md                  |  47 +++
+ docs/02-examples.md                  | 161 ++++++++++
+ docs/03-experimental.md              |  21 ++
+ docs/04-configuration.md             |  96 ++++++
+ docs/05-command-reference.md         | 246 +++++++++++++++
+ docs/README.md.tpl                   |   7 +
+ docs/docgen.config.yml               |  45 +++
+ docs/docs.rules                      |   1 +
+ docs/images/grove-gemini-readme.svg  | 592 +++++++++++++++++++++++++++++++++++
+ docs/prompts/01-overview.md          |  31 ++
+ docs/prompts/02-examples.md          |  24 ++
+ docs/prompts/03-experimental.md      |  18 ++
+ docs/prompts/04-configuration.md     |  23 ++
+ docs/prompts/05-command-reference.md |  27 ++
+ pkg/docs/docs.json                   | 159 ++++++++++
+ 19 files changed, 1548 insertions(+), 165 deletions(-)
+```
+
 ## v0.1.0 (2025-09-26)
 
 This release introduces new features for controlling API output and standardizes the logging system. The `gemapi request` command now supports generation parameters, allowing for fine-grained control over the Gemini API's output. Users can specify temperature, top-p, top-k, and maximum output tokens via new command-line flags to influence the creativity and length of responses (9c2fc0d).
