@@ -1,10 +1,10 @@
 # Experimental Features
 
-This section covers features in `grove-gemini` that are currently experimental. They are subject to change, may have limitations, and should be used with caution.
+This section covers features that are under active development. Their behavior and interfaces are subject to change.
 
 ## Context Caching
 
-The context caching feature leverages the Gemini Caching API to reduce costs and latency on subsequent requests with large, unchanging "cold context" files. While this can be effective, it is an experimental feature with significant risks.
+The context caching feature uses the Gemini Caching API to store "cold context" files between requests.
 
 > **⚠️ CRITICAL WARNING: Risk of Substantial Unexpected Charges**
 >
@@ -18,4 +18,4 @@ The caching functionality is enabled by adding an `@enable-cache` directive to y
 
 ## Observability Integration
 
-Integration with the broader Grove ecosystem for observability, such as emitting detailed events to `grove-hooks` for session tracking and performance monitoring, is currently under development. The event schemas and integration points are subject to change in future releases.
+Integration with other tools for observability, such as emitting events to `grove-hooks` for session tracking and performance monitoring, is currently under development. The event schemas and integration points are subject to change in future releases.

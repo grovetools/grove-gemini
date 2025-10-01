@@ -1,8 +1,10 @@
-This document provides a comprehensive reference for the `gemapi` command-line interface, covering all subcommands and their options.
+# Command Reference
+
+This document provides a reference for the `gemapi` command-line interface, covering all subcommands and their options.
 
 ## `gemapi request`
 
-The `request` command is the primary interface for making requests to the Gemini API. It integrates with `grove-context` to automatically manage and include relevant code context from your project.
+Sends a request to the Gemini API. It can use `.grove/rules` to generate and attach file-based context.
 
 | Flag | Shorthand | Description |
 | --- | --- | --- |
@@ -26,7 +28,7 @@ The `request` command is the primary interface for making requests to the Gemini
 **Examples**
 
 ```bash
-# Make a simple request with an inline prompt
+# Make a request with an inline prompt
 gemapi request -p "Explain this Go function."
 
 # Use a prompt from a file and save the response to another file
@@ -38,11 +40,11 @@ gemapi request --recache "Analyze the latest version of the code."
 
 ## `gemapi cache`
 
-Manages the local records and remote state of Gemini API context caches.
+Manages local records and remote state of Gemini API context caches.
 
 ### `gemapi cache tui`
 
-Launches a full-screen, interactive terminal user interface (TUI) for browsing, inspecting, and managing caches.
+Launches an interactive terminal user interface (TUI) for browsing, inspecting, and managing caches.
 
 **Example**
 
@@ -52,7 +54,7 @@ gemapi cache tui
 
 ### `gemapi cache list`
 
-Lists all cached contexts, showing both local records and their status on Google's servers.
+Lists cached contexts, showing both local records and their status on Google's servers.
 
 | Flag | Description |
 | --- | --- |
@@ -119,7 +121,7 @@ Provides a suite of commands to inspect Gemini API usage and costs from various 
 
 ### `gemapi query local`
 
-Queries the detailed request logs stored on your local machine.
+Queries the detailed request logs stored on the local machine.
 
 | Flag | Shorthand | Description |
 | --- | --- | --- |
@@ -189,7 +191,7 @@ gemapi query billing \
 
 ## `gemapi count-tokens`
 
-Counts the number of tokens in a given text using the Gemini API tokenizer. This is useful for estimating costs and checking if a prompt fits within a model's context window. Input can be provided as an argument or via stdin.
+Counts the number of tokens in a given text using the Gemini API tokenizer. Input can be provided as an argument or via stdin.
 
 | Flag | Shorthand | Description |
 | --- | --- | --- |
@@ -221,7 +223,7 @@ gemapi config get project
 
 ### `gemapi config set project`
 
-Sets a default GCP project ID in the local configuration file to avoid passing the `--project-id` flag repeatedly.
+Sets a default GCP project ID in the local configuration file.
 
 **Example**
 

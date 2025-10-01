@@ -1,45 +1,39 @@
 # Configuration
 
-`grove-gemini` is configured through a combination of environment variables, project-level configuration files, and user-specific settings. This guide covers the primary configuration options for setting up API access and default behavior.
+`gemapi` is configured through environment variables, a project-level `grove.yml` file, and user-specific settings.
 
 ## API Key Configuration
 
-The Gemini API key is required for all requests. `gemapi` resolves the key from the following sources, in order of precedence:
+The Gemini API key is required for requests. `gemapi` resolves the key from the following sources in order of precedence:
 
-1.  **Environment Variable (Recommended)**: The `GEMINI_API_KEY` environment variable. This is the most direct and secure method for providing your API key.
+1.  **Environment Variable**: The `GEMINI_API_KEY` environment variable.
     ```bash
     export GEMINI_API_KEY="your-api-key-here"
     ```
 
-2.  **`api_key_command` in `grove.yml`**: A command specified in your project's `grove.yml` file that, when executed, prints the API key to standard output. This is useful for retrieving keys from a secure vault or keychain.
-
-    **Example `grove.yml`:**
+2.  **`api_key_command` in `grove.yml`**: A command in the project's `grove.yml` file that prints the API key to standard output when executed.
     ```yaml
-    name: my-project
-    # ...
+    # grove.yml
     gemini:
       api_key_command: "gcloud secrets versions access latest --secret=gemini-api-key"
     ```
 
-3.  **`api_key` in `grove.yml`**: The API key can be set directly in `grove.yml`. This method is convenient but not recommended for repositories that are shared or public.
-
-    **Example `grove.yml`:**
+3.  **`api_key` in `grove.yml`**: The API key set directly in `grove.yml`.
     ```yaml
-    name: my-project
-    # ...
+    # grove.yml
     gemini:
-      api_key: "your-api-key-here" # Use with caution
+      api_key: "your-api-key-here"
     ```
 
-If no API key is found in any of these sources, `gemapi` will return an error.
+If an API key is not found in any of these sources, `gemapi` will return an error.
 
 ## GCP Project Configuration
 
-For observability commands like `gemapi query metrics` that interact with Google Cloud services, a GCP Project ID must be specified. You can set a default project to avoid passing the `--project-id` flag with every command.
+Commands such as `gemapi query metrics` require a Google Cloud Project ID. A default project can be set to avoid passing the `--project-id` flag with each command.
 
 ### Setting the Default Project
 
-Use the `gemapi config set project` command to save a default project ID. This setting is stored locally on your machine and applies to all `gemapi` commands.
+The `gemapi config set project` command saves a default project ID to a local configuration file.
 
 ```bash
 gemapi config set project your-gcp-project-id
@@ -47,7 +41,7 @@ gemapi config set project your-gcp-project-id
 
 ### Viewing the Default Project
 
-To see the current default project and the order in which it's resolved, use `gemapi config get project`.
+The `gemapi config get project` command shows the current default project and the order in which it is resolved.
 
 ```bash
 gemapi config get project
@@ -65,7 +59,7 @@ Current default project: your-gcp-project-id
 
 ## Model Selection
 
-The Gemini model is typically specified on a per-request basis using the `--model` (or `-m`) flag.
+The Gemini model is specified per-request using the `--model` (or `-m`) flag.
 
 ```bash
 gemapi request -m gemini-1.5-pro-latest "Explain this code."
@@ -75,28 +69,28 @@ If the `--model` flag is not provided, the `request` command defaults to `gemini
 
 ## Context Configuration
 
-`grove-gemini` integrates with `grove-context` to automatically include relevant files from your codebase in API requests. This feature is enabled by creating a `.grove/rules` file in your project's root directory. No additional configuration within `gemapi` is required.
+`gemapi` uses `grove-context` to include files from the codebase in API requests. This is enabled by creating a `.grove/rules` file in the project's root directory. No additional `gemapi` configuration is required.
 
 If a `.grove/rules` file is present, `gemapi` will:
-1.  Generate a `.grove/context` file containing "hot" (frequently changing) context.
-2.  Generate a `.grove/cached-context` file for "cold" (static) context.
-3.  Automatically attach these context files to your `gemapi request`.
+1.  Generate a `.grove/context` file for "hot" context.
+2.  Generate a `.grove/cached-context` file for "cold" context.
+3.  Attach these context files to the `gemapi request`.
 
-To disable this behavior for a specific request, you can run the command from a directory that does not contain a `.grove` subdirectory.
+This behavior can be disabled for a specific request by running the command from a directory that does not contain a `.grove` subdirectory.
 
 ## Environment Variables
 
 `gemapi` recognizes the following environment variables:
 
-| Variable           | Description                                                                                              |
-| ------------------ | -------------------------------------------------------------------------------------------------------- |
-| `GEMINI_API_KEY`   | **(Required)** Your Google Gemini API key.                                                               |
-| `GCP_PROJECT_ID`   | Your default Google Cloud Project ID, used by `query` subcommands.                                       |
-| `GROVE_DEBUG`      | If set to `1` or `true`, enables debug logging, which saves detailed request payloads to local files.      |
+| Variable | Description |
+| --- | --- |
+| `GEMINI_API_KEY` | Your Google Gemini API key. |
+| `GCP_PROJECT_ID` | Your default Google Cloud Project ID, used by `query` subcommands. |
+| `GROVE_DEBUG` | If set to `1` or `true`, enables logging that saves request payloads to local files. |
 
 ## Configuration Files
 
 `gemapi` uses two primary types of configuration files:
 
--   **`grove.yml`**: The project-level configuration file located in your repository root. It can contain `gemini`-specific settings for the API key.
--   **`~/.grove/gemini-cache/gcp-config.json`**: A user-specific file that stores the default GCP Project ID set by the `gemapi config set project` command. This file should not be committed to version control.
+-   **`grove.yml`**: The project-level configuration file in the repository root. It can contain `gemini`-specific settings for the API key.
+-   **`~/.grove/gemini-cache/gcp-config.json`**: A user-specific file that stores the default GCP Project ID set by `gemapi config set project`. This file should not be committed to version control.

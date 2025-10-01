@@ -2,33 +2,35 @@
 
 <img src="docs/images/grove-gemini-readme.svg" width="60%" />
 
-Grove Gemini (`gemapi`) is a command-line interface for Google's Gemini API, designed to support development workflows. It integrates with the Grove ecosystem to provide automatic codebase context management, caching to reduce latency and cost, and a suite of observability tools for monitoring API usage.
-
-The tool is built to handle large code contexts by leveraging the Gemini Caching API and provides (experimental) commands to query local request logs, Google Cloud metrics, and billing data.
+Grove Gemini (`gemapi`) is a command-line interface for Google's Gemini API that supports development workflows by managing codebase context and API interactions. The tool can use the Gemini Caching API for large contexts and includes commands to query local logs and Google Cloud for usage metrics and billing data.
 
 <!-- placeholder for animated gif -->
 
 ## Key Features
 
-*   **Smart Context Management**: Automatically builds context from your codebase using a `.grove/rules` file, powered by `grove-context`. This ensures that prompts sent to the Gemini API are informed by relevant source code without manual file gathering.
+*   **Context Management**: Builds prompt context by reading a `.grove/rules` file and passing matching files to the API. This process is handled by `grove-context`.
 
-*   **Advanced Caching (experimental)**: Caches large "cold context" files using the Gemini Caching API to reduce costs and improve response times on repeated queries. Caching is an opt-in feature that includes automatic invalidation when source files change and support for TTLs. An interactive terminal UI (`gemapi cache tui`) is available for managing caches.
+*   **Caching (experimental)**: Caches "cold context" files using the Gemini Caching API via an `@enable-cache` directive. Provides a terminal interface (`gemapi cache tui`) for cache management.
 
-*   **Rich Observability (experimental)**: A comprehensive `query` command allows you to inspect API usage from multiple data sources:
-    *   `query local`: View detailed local logs of all `gemapi` requests.
-    *   `query metrics`: Fetch request counts and error rates from Google Cloud Monitoring.
-    *   `query tokens`: Analyze token usage from Google Cloud Logging.
-    *   `query billing`: Pull cost data directly from BigQuery billing exports.
+*   **Observability (experimental)**: Includes a `query` command to inspect API usage from multiple sources: `query local` for local logs, `query metrics` for Google Cloud Monitoring, `query tokens` for Google Cloud Logging, and `query billing` for BigQuery exports.
 
-*   **Token Utilities**: The `count-tokens` command can estimate costs and verify that a prompt fits within a model's context window before making an API call.
+*   **Token Utilities**: Provides a `count-tokens` command to estimate token count and cost for a given text before making an API call.
+
+## How It Works
+
+When `gemapi request` is executed, it first checks for a `.grove/rules` file in the current project. If found, it uses `grove-context` to generate context files based on the defined patterns.
+
+If caching is enabled via an `@enable-cache` directive, the tool attempts to find a valid cache for static "cold context" files. If none is found or if files have changed, it creates a new cache via the Gemini Caching API.
+
+The final request to the Gemini API includes the user's prompt, any "hot context" files, and a reference to the cached content. The tool logs request metrics locally and prints the API response to standard output.
 
 ## Ecosystem Integration
 
-Grove Gemini is a component of the Grove ecosystem and is designed to work with other tools in the suite.
+Grove Gemini functions as a component of the Grove tool suite and executes other tools in the ecosystem as subprocesses.
 
-*   **Grove Meta-CLI (`grove`)**: The central tool for managing the entire ecosystem. `grove` handles the installation, updating, and version management of all Grove binaries, including `grove-gemini`.
+*   **Grove Meta-CLI (`grove`)**: Handles installation, updates, and version management of `grove-gemini` and other tools.
 
-*   **Grove Context (`cx`)**: Manages the context provided to LLMs. `gemapi` uses `grove-context` to automatically gather relevant source code based on predefined `.grove/rules`. This provides the Gemini models with the necessary information to perform their tasks accurately.
+*   **Grove Context (`cx`)**: Before executing a request, `gemapi` calls `grove-context` to read `.grove/rules` files and generate file-based context, which is then provided to the Gemini API.
 
 ## Installation
 
