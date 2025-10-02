@@ -82,30 +82,54 @@ func (r *RequestRunner) Run(ctx context.Context, options RequestOptions) (string
 
 	r.logger.WorkingDirectory(workDir)
 
-	// Check for .grove/rules file
+	// Check for .grove/rules file or existing context files
+	// (context files may exist from a custom rules file used by grove-flow)
 	rulesPath := filepath.Join(workDir, ".grove", "rules")
+	hotContextFile := filepath.Join(workDir, ".grove", "context")
+	coldContextFile := filepath.Join(workDir, ".grove", "cached-context")
+
 	hasRules := false
-	if _, err := os.Stat(rulesPath); err == nil {
-		hasRules = true
-		r.logger.FoundRulesFile(rulesPath)
-		
-		// Log the rules file content
-		rulesContent, err := os.ReadFile(rulesPath)
-		if err == nil {
-			r.logger.RulesFileContent(strings.TrimSpace(string(rulesContent)))
+	hasContextFiles := false
+	contextGeneratedFromCustomRules := false
+
+	// Check if context files exist
+	hotStat, hotExists := os.Stat(hotContextFile)
+	coldStat, coldExists := os.Stat(coldContextFile)
+	if hotExists == nil || coldExists == nil {
+		hasContextFiles = true
+
+		// Check if .grove/rules exists
+		if rulesStat, err := os.Stat(rulesPath); err == nil {
+			// Compare modification times to see if context was generated from a different source
+			// If context files are newer than .grove/rules, they were likely generated from a custom rules file
+			if hotExists == nil && hotStat.ModTime().After(rulesStat.ModTime()) {
+				contextGeneratedFromCustomRules = true
+			} else if coldExists == nil && coldStat.ModTime().After(rulesStat.ModTime()) {
+				contextGeneratedFromCustomRules = true
+			}
 		}
-	} else if !os.IsNotExist(err) {
-		return "", fmt.Errorf("checking rules file: %w", err)
+	}
+
+	// Only show rules file info if it exists AND context wasn't generated from a custom rules file
+	if !contextGeneratedFromCustomRules {
+		if _, err := os.Stat(rulesPath); err == nil {
+			hasRules = true
+			r.logger.FoundRulesFile(rulesPath)
+
+			// Log the rules file content
+			rulesContent, err := os.ReadFile(rulesPath)
+			if err == nil {
+				r.logger.RulesFileContent(strings.TrimSpace(string(rulesContent)))
+			}
+		} else if !os.IsNotExist(err) {
+			return "", fmt.Errorf("checking rules file: %w", err)
+		}
 	}
 
 	// Initialize context manager
 	var ctxMgr *grovecontext.Manager
 	if hasRules {
 		ctxMgr = grovecontext.NewManager(workDir)
-		
-		// Regenerate context if requested or if context files don't exist
-		coldContextFile := filepath.Join(workDir, ".grove", "cached-context")
-		hotContextFile := filepath.Join(workDir, ".grove", "context")
 		
 		needsRegeneration := options.RegenerateCtx
 		if !needsRegeneration {
@@ -149,7 +173,8 @@ func (r *RequestRunner) Run(ctx context.Context, options RequestOptions) (string
 			}
 			fmt.Fprintln(os.Stderr)
 		}
-	} else {
+	} else if !hasContextFiles {
+		// Only show warning if neither rules file nor context files exist
 		r.logger.Warning("No .grove/rules file found - context management disabled")
 		r.logger.Tip("Create .grove/rules to enable automatic context inclusion")
 		fmt.Fprintln(os.Stderr)
@@ -160,10 +185,6 @@ func (r *RequestRunner) Run(ctx context.Context, options RequestOptions) (string
 	if err != nil {
 		return "", fmt.Errorf("creating Gemini client: %w", err)
 	}
-
-	// Prepare context files
-	coldContextFile := filepath.Join(workDir, ".grove", "cached-context")
-	hotContextFile := filepath.Join(workDir, ".grove", "context")
 
 	// Initialize cache manager
 	cacheManager := NewCacheManager(workDir)
