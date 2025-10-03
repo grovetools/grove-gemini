@@ -1,3 +1,5 @@
+## v0.2.1-nightly.655550b (2025-10-03)
+
 ## v0.2.0 (2025-10-01)
 
 This release introduces a comprehensive documentation overhaul, establishing a standardized structure with new sections for an overview, examples, experimental features, configuration, and a complete command reference (d8fd7ac, b56e0f0, e557c21). The documentation content has been refined to be more succinct and aligned with the Grove ecosystem's philosophy (03b38be, c3a426e).
