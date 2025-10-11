@@ -103,7 +103,7 @@ test-e2e-build:
 # Pass arguments via ARGS, e.g., make test-e2e ARGS="run -i"
 test-e2e: build test-e2e-build
 	@echo "Running E2E tests..."
-	@GEMAPI_BINARY=$(abspath $(BIN_DIR)/$(BINARY_NAME)) $(BIN_DIR)/$(E2E_BINARY_NAME) run
+	@GEMAPI_BINARY=$(abspath $(BIN_DIR)/$(BINARY_NAME)) $(BIN_DIR)/$(E2E_BINARY_NAME) run $(ARGS)
 
 # Show available targets
 help:
