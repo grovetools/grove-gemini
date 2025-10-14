@@ -4,3 +4,6 @@ type: go
 binary:
   name: gemapi
   path: ./bin/gemapi
+
+context:
+  default_rules_path: .cx/dev-no-tests.rules
