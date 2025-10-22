@@ -14,6 +14,7 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/mattsolo1/grove-core/tui/theme"
 	"github.com/mattsolo1/grove-gemini/pkg/gemini"
 )
 
@@ -95,37 +96,23 @@ var keys = keyMap{
 	Cancel:    "n",
 }
 
-// Styles
-var (
-	titleStyle = lipgloss.NewStyle().
-			Bold(true).
-			Foreground(lipgloss.Color("205"))
-
-	helpStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("241"))
-	
-	inspectTitleStyle = lipgloss.NewStyle().
-				Bold(true).
-				Foreground(lipgloss.Color("12")).
-				MarginBottom(1)
-
-	inspectHeaderStyle = lipgloss.NewStyle().
-				Bold(true).
-				Foreground(lipgloss.Color("205"))
-
-	statusStyles = map[string]lipgloss.Style{
-		"✅ Active":  lipgloss.NewStyle().Foreground(lipgloss.Color("10")), // Green
-		"⏰ Expired": lipgloss.NewStyle().Foreground(lipgloss.Color("11")), // Yellow
-		"🚫 Cleared": lipgloss.NewStyle().Foreground(lipgloss.Color("9")),  // Red
-		"❓ Missing": lipgloss.NewStyle().Foreground(lipgloss.Color("8")),  // Grey
-		"🔵 Local":   lipgloss.NewStyle().Foreground(lipgloss.Color("12")), // Blue
+// getStatusStyle returns the appropriate theme style for a given status
+func getStatusStyle(status string) lipgloss.Style {
+	switch status {
+	case "✅ Active":
+		return theme.DefaultTheme.Success
+	case "⏰ Expired":
+		return theme.DefaultTheme.Warning
+	case "🚫 Cleared":
+		return theme.DefaultTheme.Error
+	case "❓ Missing":
+		return theme.DefaultTheme.Muted
+	case "🔵 Local":
+		return theme.DefaultTheme.Info
+	default:
+		return lipgloss.NewStyle()
 	}
-	
-	helpBoxStyle = lipgloss.NewStyle().
-			Border(lipgloss.RoundedBorder()).
-			BorderForeground(lipgloss.Color("240")).
-			Padding(1, 2)
-)
+}
 
 // max returns the maximum of two integers
 func max(a, b int) int {
@@ -564,7 +551,7 @@ func (m *cacheTUIModel) View() string {
 	}
 
 	var s strings.Builder
-	s.WriteString(titleStyle.Render("Gemini API Cache Manager"))
+	s.WriteString(theme.DefaultTheme.Header.Render("Gemini API Cache Manager"))
 	s.WriteString("\n\n")
 
 	switch m.currentView {
@@ -588,22 +575,22 @@ func (m *cacheTUIModel) footerView() string {
 	if m.confirmingDelete {
 		if len(m.filteredCaches) > 0 {
 			selectedCache := m.filteredCaches[m.table.Cursor()]
-			return lipgloss.NewStyle().Foreground(lipgloss.Color("226")).Render(fmt.Sprintf("Delete cache '%s' from GCP? (y/n)", selectedCache.Name))
+			return theme.DefaultTheme.Warning.Render(fmt.Sprintf("Delete cache '%s' from GCP? (y/n)", selectedCache.Name))
 		}
 	}
-	
+
 	if m.confirmingWipe {
 		if len(m.filteredCaches) > 0 {
 			selectedCache := m.filteredCaches[m.table.Cursor()]
-			return lipgloss.NewStyle().Foreground(lipgloss.Color("196")).Render(fmt.Sprintf("⚠️  Wipe local file for '%s'? This cannot be undone! (y/n)", selectedCache.Name))
+			return theme.DefaultTheme.Error.Render(fmt.Sprintf("⚠️  Wipe local file for '%s'? This cannot be undone! (y/n)", selectedCache.Name))
 		}
 	}
 
 	switch m.currentView {
 	case inspectView:
-		return helpStyle.Render("Press ? for help")
+		return theme.DefaultTheme.Muted.Render("Press ? for help")
 	default: // listView
-		return helpStyle.Render("Press ? for help")
+		return theme.DefaultTheme.Muted.Render("Press ? for help")
 	}
 }
 
@@ -629,7 +616,7 @@ func (m *cacheTUIModel) helpViewRender() string {
 		m.height,
 		lipgloss.Center,
 		lipgloss.Center,
-		helpBoxStyle.Render(help),
+		theme.DefaultTheme.Box.Render(help),
 	)
 }
 
@@ -641,11 +628,11 @@ func (m *cacheTUIModel) prepareInspectView() {
 	cache := m.filteredCaches[m.table.Cursor()]
 	
 	var b strings.Builder
-	b.WriteString(inspectTitleStyle.Render(fmt.Sprintf("Details for Cache: %s", cache.Name)))
+	b.WriteString(theme.DefaultTheme.Title.Render(fmt.Sprintf("Details for Cache: %s", cache.Name)))
 	b.WriteString("\n\n")
-	
+
 	if cache.LocalInfo != nil {
-		b.WriteString(inspectHeaderStyle.Render("--- Local Info ---"))
+		b.WriteString(theme.DefaultTheme.Header.Copy().Underline(false).MarginBottom(0).Render("--- Local Info ---"))
 		b.WriteString(fmt.Sprintf("\nCache ID: %s", cache.LocalInfo.CacheID))
 		b.WriteString(fmt.Sprintf("\nRepo: %s", cache.LocalInfo.RepoName))
 		b.WriteString(fmt.Sprintf("\nModel: %s", cache.LocalInfo.Model))
@@ -676,7 +663,7 @@ func (m *cacheTUIModel) prepareInspectView() {
 	}
 
 	if cache.APIInfo != nil {
-		b.WriteString(inspectHeaderStyle.Render("\n--- API Info ---"))
+		b.WriteString(theme.DefaultTheme.Header.Copy().Underline(false).MarginBottom(0).Render("\n--- API Info ---"))
 		b.WriteString(fmt.Sprintf("\nID: %s", cache.APIInfo.Name))
 		b.WriteString(fmt.Sprintf("\nModel: %s", cache.APIInfo.Model))
 		b.WriteString(fmt.Sprintf("\nToken Count: %d", cache.APIInfo.TokenCount))
@@ -787,10 +774,7 @@ func (m *cacheTUIModel) updateTableRows() {
 			expires = expireTime.Local().Format("15:04")
 		}
 		
-		statusStyle, ok := statusStyles[cache.Status]
-		if !ok {
-			statusStyle = lipgloss.NewStyle()
-		}
+		statusStyle := getStatusStyle(cache.Status)
 
 		rows[i] = table.Row{
 			statusStyle.Render(cache.Status),
@@ -812,7 +796,7 @@ func (m *cacheTUIModel) updateTableRows() {
 
 func (m *cacheTUIModel) prepareAnalyticsView() {
 	var b strings.Builder
-	b.WriteString(inspectTitleStyle.Render("Cache Analytics Dashboard"))
+	b.WriteString(theme.DefaultTheme.Title.Render("Cache Analytics Dashboard"))
 	b.WriteString("\n\n")
 	
 	// Calculate total stats across all caches
@@ -850,7 +834,7 @@ func (m *cacheTUIModel) prepareAnalyticsView() {
 	}
 	
 	// Overall Statistics
-	b.WriteString(inspectHeaderStyle.Render("📊 Overall Statistics"))
+	b.WriteString(theme.DefaultTheme.Header.Copy().Underline(false).MarginBottom(0).Render("📊 Overall Statistics"))
 	b.WriteString(fmt.Sprintf("\n\nTotal Cost Savings: $%.2f", totalSavings))
 	b.WriteString(fmt.Sprintf("\nTotal Queries: %d", totalQueries))
 	b.WriteString(fmt.Sprintf("\nTotal Cached Tokens: %s", formatTokenCount(totalCachedTokens)))
@@ -859,7 +843,7 @@ func (m *cacheTUIModel) prepareAnalyticsView() {
 	
 	// Top Performing Caches
 	b.WriteString("\n\n")
-	b.WriteString(inspectHeaderStyle.Render("🏆 Top Performing Caches"))
+	b.WriteString(theme.DefaultTheme.Header.Copy().Underline(false).MarginBottom(0).Render("🏆 Top Performing Caches"))
 	b.WriteString("\n\n")
 	
 	// Sort caches by efficiency
@@ -895,7 +879,7 @@ func (m *cacheTUIModel) prepareAnalyticsView() {
 	
 	// Usage Patterns
 	b.WriteString("\n")
-	b.WriteString(inspectHeaderStyle.Render("📈 Usage Patterns"))
+	b.WriteString(theme.DefaultTheme.Header.Copy().Underline(false).MarginBottom(0).Render("📈 Usage Patterns"))
 	b.WriteString("\n\n")
 	
 	// Find peak hour
@@ -937,7 +921,7 @@ func (m *cacheTUIModel) prepareAnalyticsView() {
 	
 	// Cache Hit Rate Trends
 	b.WriteString("\n")
-	b.WriteString(inspectHeaderStyle.Render("📉 Cache Hit Rate Trends"))
+	b.WriteString(theme.DefaultTheme.Header.Copy().Underline(false).MarginBottom(0).Render("📉 Cache Hit Rate Trends"))
 	b.WriteString("\n\n")
 	
 	// Collect recent hit rates from all caches
