@@ -10,8 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/lipgloss"
-	"github.com/charmbracelet/lipgloss/table"
+	tablecomponent "github.com/mattsolo1/grove-core/tui/components/table"
 	"github.com/mattsolo1/grove-gemini/pkg/gemini"
 	"github.com/spf13/cobra"
 )
@@ -743,32 +742,9 @@ func listCachesCombined() error {
 	}
 	
 	// Create styled table
-	t := table.New().
+	t := tablecomponent.NewStyledTable().
 		Headers("CACHE NAME", "REPO", "MODEL", "STATUS", "USES", "TOKENS", "TTL", "EXPIRES", "COST").
-		Rows(rows...).
-		Border(lipgloss.RoundedBorder()).
-		BorderStyle(lipgloss.NewStyle().Foreground(lipgloss.Color("240"))).
-		StyleFunc(func(row, col int) lipgloss.Style {
-			// Header row styling
-			if row == 0 {
-				return lipgloss.NewStyle().
-					Bold(true).
-					Foreground(lipgloss.Color("252")).
-					Padding(0, 1)
-			}
-			
-			// Regular cell styling
-			style := lipgloss.NewStyle().Padding(0, 1)
-			
-			// No special coloring for status column
-			
-			// Alternate row coloring
-			if row%2 == 0 {
-				style = style.Background(lipgloss.Color("235"))
-			}
-			
-			return style
-		})
+		Rows(rows...)
 	
 	fmt.Println()
 	fmt.Println(t)
@@ -893,32 +869,9 @@ func listLocalCachesOnly() error {
 	}
 	
 	// Create styled table
-	t := table.New().
+	t := tablecomponent.NewStyledTable().
 		Headers("CACHE NAME", "REPO", "MODEL", "STATUS", "USES", "TOKENS", "TTL", "EXPIRES", "COST").
-		Rows(rows...).
-		Border(lipgloss.RoundedBorder()).
-		BorderStyle(lipgloss.NewStyle().Foreground(lipgloss.Color("240"))).
-		StyleFunc(func(row, col int) lipgloss.Style {
-			// Header row styling
-			if row == 0 {
-				return lipgloss.NewStyle().
-					Bold(true).
-					Foreground(lipgloss.Color("252")).
-					Padding(0, 1)
-			}
-			
-			// Regular cell styling
-			style := lipgloss.NewStyle().Padding(0, 1)
-			
-			// No special coloring for status column
-			
-			// Alternate row coloring
-			if row%2 == 0 {
-				style = style.Background(lipgloss.Color("235"))
-			}
-			
-			return style
-		})
+		Rows(rows...)
 	
 	fmt.Println(t)
 
@@ -1026,32 +979,9 @@ func listCachesFromAPI() error {
 	}
 	
 	// Create styled table
-	t := table.New().
+	t := tablecomponent.NewStyledTable().
 		Headers("CACHE NAME", "REPO", "MODEL", "STATUS", "USES", "TOKENS", "TTL", "EXPIRES", "COST").
-		Rows(rows...).
-		Border(lipgloss.RoundedBorder()).
-		BorderStyle(lipgloss.NewStyle().Foreground(lipgloss.Color("240"))).
-		StyleFunc(func(row, col int) lipgloss.Style {
-			// Header row styling
-			if row == 0 {
-				return lipgloss.NewStyle().
-					Bold(true).
-					Foreground(lipgloss.Color("252")).
-					Padding(0, 1)
-			}
-			
-			// Regular cell styling
-			style := lipgloss.NewStyle().Padding(0, 1)
-			
-			// No special coloring for status column
-			
-			// Alternate row coloring
-			if row%2 == 0 {
-				style = style.Background(lipgloss.Color("235"))
-			}
-			
-			return style
-		})
+		Rows(rows...)
 	
 	fmt.Println()
 	fmt.Println(t)
