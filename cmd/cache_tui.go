@@ -159,13 +159,11 @@ func newCacheTUIModel() (*cacheTUIModel, error) {
 	s := table.DefaultStyles()
 	s.Header = s.Header.
 		BorderStyle(lipgloss.NormalBorder()).
-		BorderForeground(lipgloss.Color("240")).
+		BorderForeground(theme.DefaultColors.Border).
 		BorderBottom(true).
 		Bold(false)
-	s.Selected = s.Selected.
-		Foreground(lipgloss.Color("229")).
-		Background(lipgloss.Color("57")).
-		Bold(false)
+	// Remove background highlighting - use same style as unselected rows
+	s.Selected = s.Cell.Copy()
 	tbl.SetStyles(s)
 
 	// Filter input
@@ -558,7 +556,7 @@ func (m *cacheTUIModel) View() string {
 	case listView:
 		s.WriteString(m.filterInput.View())
 		s.WriteString("\n\n")
-		s.WriteString(m.table.View())
+		s.WriteString(m.renderTableWithArrow())
 	case inspectView:
 		s.WriteString(m.inspectViewport.View())
 	case analyticsView:
@@ -569,6 +567,41 @@ func (m *cacheTUIModel) View() string {
 	s.WriteString(m.footerView())
 	
 	return s.String()
+}
+
+// renderTableWithArrow renders the table with an arrow indicator on the left side
+func (m *cacheTUIModel) renderTableWithArrow() string {
+	tableStr := m.table.View()
+	lines := strings.Split(tableStr, "\n")
+
+	// Calculate which line the selected row is on
+	// Bubbles table structure:
+	// Line 0: top border
+	// Line 1: header row
+	// Line 2: separator line after header
+	// Line 3+: data rows (with potential separators between them)
+	// If there are row separators, each row takes 2 lines (row + separator)
+	selectedLineIndex := 3 + (m.table.Cursor() * 2)
+
+	// Add the indicator to each line
+	result := ""
+	arrow := theme.DefaultTheme.Highlight.Render("▶")
+	for i, line := range lines {
+		// Add the indicator on the left for the selected row
+		if i == selectedLineIndex {
+			result += arrow + " " + line
+		} else {
+			result += "  " + line
+		}
+		result += "\n"
+	}
+
+	// Remove the trailing newline to match original behavior
+	if len(result) > 0 && result[len(result)-1] == '\n' {
+		result = result[:len(result)-1]
+	}
+
+	return result
 }
 
 func (m *cacheTUIModel) footerView() string {
