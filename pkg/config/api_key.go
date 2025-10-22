@@ -10,6 +10,8 @@ import (
 	core_errors "github.com/mattsolo1/grove-core/errors"
 )
 
+//go:generate sh -c "cd ../.. && go run ./tools/schema-generator/"
+
 // GeminiConfig defines the structure for the 'gemini' extension in grove.yml
 type GeminiConfig struct {
 	APIKey        string `yaml:"api_key"`

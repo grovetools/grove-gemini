@@ -23,11 +23,15 @@ LDFLAGS = -ldflags="\
 -X '$(VERSION_PKG).Branch=$(GIT_BRANCH)' \
 -X '$(VERSION_PKG).BuildDate=$(BUILD_DATE)'"
 
-.PHONY: all build test clean fmt vet lint run check dev build-all generate-docs help
+.PHONY: all build test clean fmt vet lint run check dev build-all generate-docs schema help
 
 all: build
 
-build:
+schema:
+	@echo "Generating JSON schema..."
+	@go generate ./pkg/config
+
+build: schema
 	@mkdir -p $(BIN_DIR)
 	@echo "Building $(BINARY_NAME) version $(VERSION)..."
 	@go build $(LDFLAGS) -o $(BIN_DIR)/$(BINARY_NAME) .
