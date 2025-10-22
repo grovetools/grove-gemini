@@ -43,3 +43,9 @@ sections:
     output: 05-command-reference.md
     prompt: prompts/05-command-reference.md
     title: Command Reference
+  - name: configuration-schema
+    order: 6
+    type: schema_to_md
+    source: gemini.schema.json
+    output: 06-configuration-schema.md
+    title: Configuration Schema Reference
