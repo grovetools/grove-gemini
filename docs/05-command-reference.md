@@ -6,24 +6,24 @@ This document provides a reference for the `gemapi` command-line interface, cove
 
 Sends a request to the Gemini API. It can use `.grove/rules` to generate and attach file-based context.
 
-| Flag | Shorthand | Description |
-| --- | --- | --- |
-| `--model` | `-m` | The Gemini model to use for the request. |
-| `--prompt` | `-p` | The prompt text provided as an argument. |
-| `--file` | `-f` | The path to a file containing the prompt. |
-| `--output` | `-o` | The path to a file to write the response to (defaults to stdout). |
-| `--workdir` | `-w` | The working directory for the request (defaults to the current directory). |
-| `--context` | | A list of additional context files to include. |
-| `--regenerate` | | Forces the regeneration of context from `.grove/rules` before the request. |
-| `--recache` | | Forces the recreation of the Gemini cache, ignoring any existing valid cache. |
-| `--use-cache` | | Specifies a cache name (short hash) to use, bypassing automatic selection. |
-| `--no-cache` | | Disables the use of context caching for this request. |
-| `--cache-ttl` | | Sets a time-to-live duration for a new cache (e.g., `1h`, `30m`). |
-| `--yes` | `-y` | Skips the confirmation prompt for potentially costly cache creation. |
-| `--temperature` | | Sets the temperature for generation (0.0-2.0). |
-| `--top-p` | | Sets the top-p value for nucleus sampling (0.0-1.0). |
-| `--top-k` | | Sets the top-k value for sampling. |
-| `--max-output-tokens` | | Sets the maximum number of tokens to generate in the response. |
+| Flag                | Shorthand | Description                                                              |
+| ------------------- | --------- | ------------------------------------------------------------------------ |
+| `--model`           | `-m`      | The Gemini model to use for the request.                                 |
+| `--prompt`          | `-p`      | The prompt text provided as an argument.                                 |
+| `--file`            | `-f`      | The path to a file containing the prompt.                                |
+| `--output`          | `-o`      | The path to a file to write the response to (defaults to stdout).        |
+| `--workdir`         | `-w`      | The working directory for the request (defaults to the current directory). |
+| `--context`         |           | A list of additional context files to include.                           |
+| `--regenerate`      |           | Forces regeneration of context from `.grove/rules` before the request.   |
+| `--recache`         |           | Forces recreation of the Gemini cache, ignoring any existing valid cache.  |
+| `--use-cache`       |           | Specifies a cache name (short hash) to use, bypassing automatic selection. |
+| `--no-cache`        |           | Disables the use of context caching for this request.                    |
+| `--cache-ttl`       |           | Sets a time-to-live duration for a new cache (e.g., `1h`, `30m`).        |
+| `--yes`             | `-y`      | Skips the confirmation prompt for potentially costly cache creation.     |
+| `--temperature`     |           | Sets the temperature for generation (0.0-2.0).                           |
+| `--top-p`           |           | Sets the top-p value for nucleus sampling (0.0-1.0).                     |
+| `--top-k`           |           | Sets the top-k value for sampling.                                       |
+| `--max-output-tokens` |           | Sets the maximum number of tokens to generate in the response.           |
 
 **Examples**
 
@@ -56,10 +56,10 @@ gemapi cache tui
 
 Lists cached contexts, showing both local records and their status on Google's servers.
 
-| Flag | Description |
-| --- | --- |
+| Flag           | Description                                                            |
+| -------------- | ---------------------------------------------------------------------- |
 | `--local-only` | Shows only information from local cache files, without querying the API. |
-| `--api-only` | Shows only caches found on Google's API servers for the current project. |
+| `--api-only`   | Shows only caches found on Google's API servers for the current project. |
 
 **Example**
 
@@ -85,11 +85,11 @@ gemapi cache inspect <cache-name>
 
 Deletes caches from Google's servers and updates local records. By default, it marks the local record as cleared but does not delete the file.
 
-| Flag | Description |
-| --- | --- |
-| `--all` | Clears all caches for the current project. |
-| `--with-local` | Also removes the local cache file, instead of just marking it as cleared. |
-| `--preserve-local` | Deletes the remote cache but does not modify the local cache file at all. |
+| Flag               | Description                                                                    |
+| ------------------ | ------------------------------------------------------------------------------ |
+| `--all`            | Clears all caches for the current project.                                     |
+| `--with-local`     | Also removes the local cache file, instead of just marking it as cleared.      |
+| `--preserve-local` | Deletes the remote cache but does not modify the local cache file at all.      |
 
 **Example**
 
@@ -105,8 +105,8 @@ gemapi cache clear --all --with-local
 
 Identifies expired local cache records, deletes them from Google's servers, and marks them as cleared locally.
 
-| Flag | Description |
-| --- | --- |
+| Flag             | Description                                                            |
+| ---------------- | ---------------------------------------------------------------------- |
 | `--remove-local` | Removes the local cache files for expired caches instead of marking them. |
 
 **Example**
@@ -121,14 +121,14 @@ Provides a suite of commands to inspect Gemini API usage and costs from various 
 
 ### `gemapi query local`
 
-Queries the detailed request logs stored on the local machine.
+Queries the detailed request logs stored on the local machine, displaying token usage, costs, and performance metrics with a summary.
 
-| Flag | Shorthand | Description |
-| --- | --- | --- |
-| `--hours` | `-H` | The number of hours to look back in the logs. |
-| `--limit` | `-l` | The maximum number of log entries to display. |
-| `--model` | `-m` | Filters the logs to a specific model name. |
-| `--errors` | | Shows only requests that resulted in an error. |
+| Flag      | Shorthand | Description                                       |
+| --------- | --------- | ------------------------------------------------- |
+| `--hours` | `-H`      | The number of hours to look back in the logs.     |
+| `--limit` | `-l`      | The maximum number of log entries to display.     |
+| `--model` | `-m`      | Filters the logs to a specific model name.        |
+| `--errors`  |           | Shows only requests that resulted in an error.    |
 
 **Example**
 
@@ -137,15 +137,33 @@ Queries the detailed request logs stored on the local machine.
 gemapi query local --hours 12
 ```
 
+### `gemapi query requests`
+
+Displays a table of individual Gemini API requests from local logs with details like timestamp, method, tokens, latency, and status.
+
+| Flag      | Shorthand | Description                                       |
+| --------- | --------- | ------------------------------------------------- |
+| `--hours` | `-H`      | The number of hours to look back in the logs.     |
+| `--limit` | `-l`      | The maximum number of requests to display.        |
+| `--model` | `-m`      | Filters the requests to a specific model name.    |
+| `--errors`  |           | Shows only requests that resulted in an error.    |
+
+**Example**
+
+```bash
+# View the last 20 requests
+gemapi query requests --limit 20
+```
+
 ### `gemapi query metrics`
 
 Fetches aggregate metrics, such as request counts and error rates, from Google Cloud Monitoring.
 
-| Flag | Shorthand | Description |
-| --- | --- | --- |
-| `--project-id` | `-p` | The GCP project ID to query. |
-| `--hours` | `-H` | The number of hours to look back for metrics. |
-| `--debug` | | Enables debug output to help diagnose issues with metric filters. |
+| Flag           | Shorthand | Description                                                        |
+| -------------- | --------- | ------------------------------------------------------------------ |
+| `--project-id` | `-p`      | The GCP project ID to query.                                       |
+| `--hours`      | `-H`      | The number of hours to look back for metrics.                      |
+| `--debug`      |           | Enables debug output to help diagnose issues with metric filters. |
 
 **Example**
 
@@ -157,11 +175,11 @@ gemapi query metrics --project-id my-gcp-project --hours 48
 
 Fetches detailed token usage logs from Google Cloud Logging. This provides data on prompt tokens, completion tokens, and cache hits.
 
-| Flag | Shorthand | Description |
-| --- | --- | --- |
-| `--project-id` | `-p` | The GCP project ID to query. |
-| `--hours` | `-H` | The number of hours to look back for logs. |
-| `--debug` | | Enables debug output for troubleshooting. |
+| Flag           | Shorthand | Description                              |
+| -------------- | --------- | ---------------------------------------- |
+| `--project-id` | `-p`      | The GCP project ID to query.             |
+| `--hours`      | `-H`      | The number of hours to look back for logs. |
+| `--debug`      |           | Enables debug output for troubleshooting. |
 
 **Example**
 
@@ -171,14 +189,14 @@ gemapi query tokens --project-id my-gcp-project
 
 ### `gemapi query billing`
 
-Queries cost data directly from a BigQuery billing export. This requires a BigQuery billing export to be configured for your GCP billing account.
+Queries cost data directly from a BigQuery billing export. This requires a BigQuery "Detailed usage cost" export to be configured for your GCP billing account.
 
-| Flag | Shorthand | Description |
-| --- | --- | --- |
-| `--project-id` | `-p` | The GCP project ID where BigQuery is located. |
-| `--dataset-id` | `-d` | The BigQuery dataset ID containing the billing table (required). |
-| `--table-id` | `-t` | The BigQuery table ID for the billing export (required). |
-| `--days` | | The number of days to look back in the billing data. |
+| Flag           | Shorthand | Description                                                        |
+| -------------- | --------- | ------------------------------------------------------------------ |
+| `--project-id` | `-p`      | The GCP project ID where BigQuery is located.                      |
+| `--dataset-id` | `-d`      | The BigQuery dataset ID containing the billing table (required).   |
+| `--table-id`   | `-t`      | The BigQuery table ID for the billing export (required).           |
+| `--days`       |           | The number of days to look back in the billing data.               |
 
 **Example**
 
@@ -189,13 +207,29 @@ gemapi query billing \
   --table-id gcp_billing_export_v1_XXXX
 ```
 
+### `gemapi query explore`
+
+Explores Cloud Logging to find available logs for the Gemini API service, which can help discover resource types and payload structures.
+
+| Flag           | Shorthand | Description                                    |
+| -------------- | --------- | ---------------------------------------------- |
+| `--project-id` | `-p`      | The GCP project ID to query.                   |
+| `--hours`      | `-H`      | The number of hours to look back for logs.     |
+| `--limit`      | `-l`      | The maximum number of log entries to examine.  |
+
+**Example**
+
+```bash
+gemapi query explore --project-id my-gcp-project --hours 2
+```
+
 ## `gemapi count-tokens`
 
 Counts the number of tokens in a given text using the Gemini API tokenizer. Input can be provided as an argument or via stdin.
 
-| Flag | Shorthand | Description |
-| --- | --- | --- |
-| `--model` | `-m` | The model to use for token counting, as different models have different tokenization. |
+| Flag      | Shorthand | Description                                                                    |
+| --------- | --------- | ------------------------------------------------------------------------------ |
+| `--model` | `-m`      | The model to use for token counting, as different models have different tokenization. |
 
 **Examples**
 
@@ -235,8 +269,8 @@ gemapi config set project my-gcp-project-id
 
 Prints version information for the `gemapi` binary.
 
-| Flag | Description |
-| --- | --- |
+| Flag     | Description                              |
+| -------- | ---------------------------------------- |
 | `--json` | Outputs the version information in JSON format. |
 
 **Example**

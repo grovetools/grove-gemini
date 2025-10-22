@@ -1,6 +1,6 @@
 # Examples
 
-This document provides examples for using `grove-gemini` for API calls and development workflows.
+This document provides examples for using `gemapi` for API calls and development workflows.
 
 ## Example 1: Basic API Requests
 
@@ -25,10 +25,10 @@ Files can be used for longer prompts or to save output.
     ```
 
 2.  **Run the request:**
-    This command uses the `-f` flag to read the prompt from `prompt.md`, specifies a model with `-m`, and saves the generated code to `main.go` using the `-o` flag.
+    This command uses the `-f` flag to read the prompt from `prompt.md` and saves the generated code to `main.go` using the `-o` flag.
 
     ```bash
-    gemapi request -f prompt.md -o main.go -m gemini-1.5-flash-latest
+    gemapi request -f prompt.md -o main.go -m gemini-2.0-flash
     ```
 
 3.  **Verify the output:**
@@ -43,7 +43,7 @@ Files can be used for longer prompts or to save output.
     import "fmt"
 
     func main() {
-        fmt.Println("Hello, World!")
+    	fmt.Println("Hello, World!")
     }
     ```
 
@@ -87,7 +87,7 @@ When a `.grove/rules` file is present, `gemapi` reads it to determine which proj
     `gemapi` finds the `.grove/rules` file, gathers all `.go` files, and attaches them to the request.
 
     ```bash
-    gemapi request "Based on the provided code, what will be printed when I run the program?"
+    gemapi request "Based on the provided code, what will be printed when the program is run?"
     ```
 
     The model receives the content of both `main.go` and `greeting.go` and can determine the output.
@@ -100,17 +100,18 @@ When a `.grove/rules` file is present, `gemapi` reads it to determine which proj
     ```
 
 4.  **Regenerating Context:**
-    If the `.grove/rules` file changes, the `--regenerate` flag can be used to force `gemapi` to regenerate the context files before making a request.
+    If the `.grove/rules` file is modified, the `--regenerate` flag forces `gemapi` to re-process the rules and update the context files before making a request.
 
     ```bash
     gemapi request --regenerate "Summarize the project based on the new rules."
     ```
 
-## Example 3: Caching and Observability (Experimental)
+## Example 3: Caching and Observability
 
-WARNING: EXPERIMENTAL
+**WARNING: ALPHA FEATURE**
+The Gemini Caching API is an alpha feature and can incur costs. Monitor your Google Cloud billing when using caching.
 
-For requests involving large, unchanging sets of files, `gemapi` can use the Gemini Caching API to store the context. This is an opt-in, experimental feature.
+For requests involving large, unchanging sets of files, `gemapi` can use the Gemini Caching API to store the context. This is an opt-in feature.
 
 1.  **Enable Caching:**
     Caching is enabled by adding the `@enable-cache` directive to a `.grove/rules` file. This instructs `gemapi` to treat files matched by the rules as "cold context" for caching.
@@ -122,14 +123,14 @@ For requests involving large, unchanging sets of files, `gemapi` can use the Gem
     ```
 
 2.  **Run the first request to create the cache:**
-    The first request with a new context will create a cache on Google's servers, which may increase latency for that initial call. The `--yes` flag can be used to skip the confirmation prompt.
+    The first request with a new context will create a cache on Google's servers. The `--yes` flag skips the confirmation prompt.
 
     ```bash
     gemapi request --yes "What is the purpose of the GetGreeting function?"
     ```
 
 3.  **Run a second request to use the cache:**
-    Subsequent requests will reuse the existing cache if it is still valid. The token usage summary will show a number of `Cold (Cached)` tokens.
+    Subsequent requests will reuse the existing cache if it is still valid. The token usage summary will show a count for `Cold (Cached)` tokens.
 
     ```bash
     gemapi request "How is the greeting message generated?"
@@ -144,14 +145,13 @@ For requests involving large, unchanging sets of files, `gemapi` can use the Gem
         gemapi cache tui
         ```
 
-    *   **Query Local Logs**: The `query local` command reads logs stored on the local machine.
+    *   **Query Local Logs**: The `query local` command reads logs stored on the local machine. This command displays a table of requests made in the last hour.
 
         ```bash
         gemapi query local --hours 1
         ```
-        This command displays a table of requests made in the last hour.
 
-    *   **Query Billing Data**: The `query billing` command can read cost data from a BigQuery billing export, which requires a one-time setup in a GCP account.
+    *   **Query Billing Data**: The `query billing` command can read cost data from a BigQuery billing export. This requires a one-time setup in a GCP account to export billing data to a BigQuery table.
 
         ```bash
         gemapi query billing \
