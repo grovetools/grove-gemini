@@ -1,25 +1,15 @@
 {
-  "$id": "https://github.com/mattsolo1/grove-gemini/pkg/config/gemini-config",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "description": "Schema for the 'gemini' extension in grove.yml.",
+  "$id": "https://github.com/mattsolo1/grove-gemini/pkg/config/gemini-config",
   "properties": {
     "api_key": {
-      "description": "A direct string value for the Gemini API key, used as a fallback if an environment variable or command is not set.",
-      "examples": [
-        "AIzaSyB...your...api...key...here"
-      ],
       "type": "string"
     },
     "api_key_command": {
-      "description": "A shell command that outputs the Gemini API key to stdout, used for dynamic or secure key retrieval.",
-      "examples": [
-        "gcloud secrets versions access latest --secret=gemini-api-key",
-        "op read 'op://Personal/Google AI/api-key'",
-        "pass show ai/gemini"
-      ],
       "type": "string"
     }
   },
+  "type": "object",
   "title": "Grove Gemini Configuration",
-  "type": "object"
+  "description": "Schema for the 'gemini' extension in grove.yml."
 }

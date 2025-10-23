@@ -11,6 +11,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	corelogging "github.com/mattsolo1/grove-core/logging"
+	"github.com/mattsolo1/grove-core/tui/theme"
 	"github.com/sirupsen/logrus"
 )
 
@@ -18,7 +19,7 @@ import (
 type Logger struct {
 	*corelogging.PrettyLogger
 	writer io.Writer
-	styles Styles
+	theme  *theme.Theme
 	log    *logrus.Entry // For structured logging when needed
 }
 
@@ -38,146 +39,12 @@ type ModelFields struct {
 	Model string `json:"model" verbosity:"3"` // metrics
 }
 
-// Styles contains all the lipgloss styles for different log types
-type Styles struct {
-	// Headers and sections
-	WorkDir lipgloss.Style
-	Model   lipgloss.Style
-	Section lipgloss.Style
-
-	// Status messages
-	Info    lipgloss.Style
-	Success lipgloss.Style
-	Warning lipgloss.Style
-	Error   lipgloss.Style
-
-	// Special elements
-	Path       lipgloss.Style
-	Number     lipgloss.Style
-	Percentage lipgloss.Style
-	Duration   lipgloss.Style
-	Command    lipgloss.Style
-
-	// Icons
-	Icon        lipgloss.Style
-	SuccessIcon lipgloss.Style
-	WarningIcon lipgloss.Style
-	ErrorIcon   lipgloss.Style
-
-	// Progress indicators
-	ProgressBar lipgloss.Style
-	Spinner     lipgloss.Style
-
-	// Boxes and containers
-	Box      lipgloss.Style
-	TokenBox lipgloss.Style
-}
-
-// DefaultStyles returns the default styling configuration
-func DefaultStyles() Styles {
-	// Define color palette
-	blue := lipgloss.Color("#3498db")
-	green := lipgloss.Color("#2ecc71")
-	yellow := lipgloss.Color("#f39c12")
-	red := lipgloss.Color("#e74c3c")
-	purple := lipgloss.Color("#9b59b6")
-	cyan := lipgloss.Color("#1abc9c")
-	gray := lipgloss.Color("#95a5a6")
-	darkGray := lipgloss.Color("#7f8c8d")
-
-	return Styles{
-		// Headers and sections
-		WorkDir: lipgloss.NewStyle().
-			Foreground(blue).
-			Bold(true),
-
-		Model: lipgloss.NewStyle().
-			Foreground(purple).
-			Bold(true),
-
-		Section: lipgloss.NewStyle().
-			Foreground(cyan).
-			Bold(true).
-			MarginTop(1),
-
-		// Status messages
-		Info: lipgloss.NewStyle().
-			Foreground(blue),
-
-		Success: lipgloss.NewStyle().
-			Foreground(green),
-
-		Warning: lipgloss.NewStyle().
-			Foreground(yellow),
-
-		Error: lipgloss.NewStyle().
-			Foreground(red).
-			Bold(true),
-
-		// Special elements
-		Path: lipgloss.NewStyle().
-			Foreground(cyan).
-			Italic(true),
-
-		Number: lipgloss.NewStyle().
-			Foreground(purple).
-			Bold(true),
-
-		Percentage: lipgloss.NewStyle().
-			Foreground(green).
-			Bold(true),
-
-		Duration: lipgloss.NewStyle().
-			Foreground(gray),
-
-		Command: lipgloss.NewStyle().
-			Foreground(yellow).
-			Bold(true),
-
-		// Icons
-		Icon: lipgloss.NewStyle().
-			MarginRight(1),
-
-		SuccessIcon: lipgloss.NewStyle().
-			Foreground(green).
-			MarginRight(1),
-
-		WarningIcon: lipgloss.NewStyle().
-			Foreground(yellow).
-			MarginRight(1),
-
-		ErrorIcon: lipgloss.NewStyle().
-			Foreground(red).
-			MarginRight(1),
-
-		// Progress indicators
-		ProgressBar: lipgloss.NewStyle().
-			Foreground(green),
-
-		Spinner: lipgloss.NewStyle().
-			Foreground(blue),
-
-		// Boxes and containers
-		Box: lipgloss.NewStyle().
-			Border(lipgloss.RoundedBorder()).
-			BorderForeground(darkGray).
-			Padding(1, 2),
-
-		TokenBox: lipgloss.NewStyle().
-			Border(lipgloss.RoundedBorder()).
-			BorderForeground(purple).
-			Padding(0, 1).
-			MarginTop(1).
-			MarginBottom(1),
-	}
-}
-
 // New creates a new Gemini-specific pretty logger.
 func New() *Logger {
 	return &Logger{
 		PrettyLogger: corelogging.NewPrettyLogger(),
 		writer:       os.Stderr,
-		styles:       DefaultStyles(),
+		theme:        theme.DefaultTheme,
 		log:          corelogging.NewLogger("grove-gemini"),
 	}
 }
@@ -187,7 +54,7 @@ func NewWithLogger(log *logrus.Entry) *Logger {
 	return &Logger{
 		PrettyLogger: corelogging.NewPrettyLogger(),
 		writer:       os.Stderr,
-		styles:       DefaultStyles(),
+		theme:        theme.DefaultTheme,
 		log:          log,
 	}
 }
@@ -197,53 +64,41 @@ func NewWithWriter(w io.Writer) *Logger {
 	return &Logger{
 		PrettyLogger: corelogging.NewPrettyLogger().WithWriter(w),
 		writer:       w,
-		styles:       DefaultStyles(),
+		theme:        theme.DefaultTheme,
 		log:          corelogging.NewLogger("grove-gemini"),
 	}
 }
 
 // WorkingDirectory logs the working directory
 func (l *Logger) WorkingDirectory(dir string) {
-	fmt.Fprintf(l.writer, "%s %s %s\n",
-		l.styles.Icon.Render("🏠"),
-		l.styles.Info.Render("Working directory:"),
-		l.styles.Path.Render(dir))
+	l.Path("🏠 Working directory", dir)
 }
 
 // FoundRulesFile logs that a rules file was found
 func (l *Logger) FoundRulesFile(path string) {
-	fmt.Fprintf(l.writer, "%s %s %s\n",
-		l.styles.Icon.Render("📋"),
-		l.styles.Info.Render("Found rules file:"),
-		l.styles.Path.Render(path))
+	l.Path("📋 Found rules file", path)
 }
 
 // Warning logs a warning message
 func (l *Logger) Warning(message string) {
-	fmt.Fprintf(l.writer, "%s %s\n",
-		l.styles.WarningIcon.Render("⚠️"),
-		l.styles.Warning.Render(message))
+	l.WarnPretty(message)
 }
 
 // Info logs an info message
 func (l *Logger) Info(message string) {
-	fmt.Fprintf(l.writer, "%s %s\n",
-		l.styles.Icon.Render("📁"),
-		l.styles.Info.Render(message))
+	l.InfoPretty(message)
 }
 
-// Success logs a success message (override to use Gemini style)
+// Success logs a success message
 func (l *Logger) Success(message string) {
-	fmt.Fprintf(l.writer, "%s %s\n",
-		l.styles.SuccessIcon.Render("✅"),
-		l.styles.Success.Render(message))
+	l.PrettyLogger.Success(message)
 }
 
 // Error logs an error message
 func (l *Logger) Error(message string) {
 	fmt.Fprintf(l.writer, "%s %s\n",
-		l.styles.ErrorIcon.Render("❌"),
-		l.styles.Error.Render(message))
+		l.theme.Error.Render(theme.IconError),
+		l.theme.Error.Render(message))
 }
 
 // Model logs the model being used
