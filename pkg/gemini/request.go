@@ -144,9 +144,9 @@ func (r *RequestRunner) Run(ctx context.Context, options RequestOptions) (string
 		}
 
 		if needsRegeneration {
-			fmt.Fprintln(os.Stderr)
-			r.logger.Info("🔄 Regenerating context from rules...")
-			
+			r.logger.Blank()
+			r.logger.Progress("🔄 Regenerating context from rules...")
+
 			// Update context from rules
 			if err := ctxMgr.UpdateFromRules(); err != nil {
 				return "", fmt.Errorf("updating context from rules: %w", err)
@@ -161,23 +161,23 @@ func (r *RequestRunner) Run(ctx context.Context, options RequestOptions) (string
 			files, _ := ctxMgr.ReadFilesList(grovecontext.FilesListFile)
 			stats, err := ctxMgr.GetStats("request", files, 10)
 			if err == nil {
-				fmt.Fprintln(os.Stderr)
-				r.logger.Info("📊 Context Summary:")
-				fmt.Fprintf(os.Stderr, "  Total files: %d\n", stats.TotalFiles)
-				fmt.Fprintf(os.Stderr, "  Total tokens: %s\n", grovecontext.FormatTokenCount(stats.TotalTokens))
-				fmt.Fprintf(os.Stderr, "  Total size: %s\n", grovecontext.FormatBytes(int(stats.TotalSize)))
+				r.logger.Blank()
+				r.logger.Section("Context Summary")
+				r.logger.Field("Total Files", stats.TotalFiles)
+				r.logger.Field("Total Tokens", grovecontext.FormatTokenCount(stats.TotalTokens))
+				r.logger.Field("Total Size", grovecontext.FormatBytes(int(stats.TotalSize)))
 
 				if stats.TotalTokens > 500000 {
 					return "", fmt.Errorf("context size exceeds limit: %d tokens (max 500,000)", stats.TotalTokens)
 				}
 			}
-			fmt.Fprintln(os.Stderr)
+			r.logger.Blank()
 		}
 	} else if !hasContextFiles {
 		// Only show warning if neither rules file nor context files exist
 		r.logger.Warning("No .grove/rules file found - context management disabled")
 		r.logger.Tip("Create .grove/rules to enable automatic context inclusion")
-		fmt.Fprintln(os.Stderr)
+		r.logger.Blank()
 	}
 
 	// Initialize Gemini client
@@ -318,7 +318,6 @@ func (r *RequestRunner) Run(ctx context.Context, options RequestOptions) (string
 	}
 
 	// Make the API request
-	fmt.Fprintln(os.Stderr)
 	r.logger.Model(options.Model)
 	
 	caller := "gemapi-request" // Default caller
