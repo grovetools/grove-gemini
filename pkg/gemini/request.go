@@ -10,6 +10,7 @@ import (
 	"time"
 
 	grovecontext "github.com/mattsolo1/grove-context/pkg/context"
+	"github.com/mattsolo1/grove-core/tui/theme"
 	"github.com/mattsolo1/grove-gemini/pkg/pretty"
 )
 
@@ -145,7 +146,7 @@ func (r *RequestRunner) Run(ctx context.Context, options RequestOptions) (string
 
 		if needsRegeneration {
 			r.logger.Blank()
-			r.logger.Progress("🔄 Regenerating context from rules...")
+			r.logger.Progress(theme.IconSync + " Regenerating context from rules...")
 
 			// Update context from rules
 			if err := ctxMgr.UpdateFromRules(); err != nil {

@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mattsolo1/grove-core/tui/theme"
 	"github.com/mattsolo1/grove-gemini/pkg/logging"
 	"github.com/spf13/cobra"
 )
@@ -113,11 +114,11 @@ func displayRequestsTable(logs []logging.QueryLog) {
 			method = method[:8]
 		}
 		
-		status := "✓"
+		status := theme.IconSuccess
 		if !log.Success {
-			status = "✗"
+			status = theme.IconError
 			if log.Error != "" && len(log.Error) > 20 {
-				status = "✗ " + log.Error[:17] + "..."
+				status = theme.IconError + " " + log.Error[:17] + "..."
 			}
 		}
 		

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	tablecomponent "github.com/mattsolo1/grove-core/tui/components/table"
+	"github.com/mattsolo1/grove-core/tui/theme"
 	"github.com/mattsolo1/grove-gemini/pkg/gemini"
 	"github.com/spf13/cobra"
 )
@@ -541,24 +542,24 @@ func listCachesCombined() error {
 		
 		// Check if manually cleared
 		if localInfo.ClearedAt != nil {
-			status = "🚫 Cleared"
+			status = theme.IconError + " Cleared"
 			isValid = false
 		} else {
 			// Check if exists in API
 			apiCache, existsInAPI := apiCacheMap[cacheID]
-			
+
 			if existsInAPI {
 				// Cache exists in API
 				if time.Now().After(apiCache.ExpireTime) {
-					status = "⏰ Expired"
+					status = theme.IconWarning + " Expired"
 					isValid = false
 				} else {
-					status = "✅ Active"
+					status = theme.IconSuccess + " Active"
 					isValid = true
 				}
 			} else {
 				// Not found in API
-				status = "❓ Missing"
+				status = theme.IconInfo + " Missing"
 				isValid = false
 			}
 		}
@@ -625,7 +626,7 @@ func listCachesCombined() error {
 		}
 		
 		// Determine if cache is active
-		isActive := status == "✅ Active"
+		isActive := status == theme.IconSuccess+" Active"
 		
 		// Get creation time from local info or API
 		createTime := localInfo.CreatedAt
@@ -665,12 +666,12 @@ func listCachesCombined() error {
 			// These are API-only, so no local file
 			var status string
 			var isValid bool
-			
+
 			if time.Now().After(apiCache.ExpireTime) {
-				status = "⏰ Expired"
+				status = theme.IconWarning + " Expired"
 				isValid = false
 			} else {
-				status = "✅ Active"
+				status = theme.IconSuccess + " Active"
 				isValid = true
 			}
 			
@@ -704,7 +705,7 @@ func listCachesCombined() error {
 			}
 			
 			// Determine if cache is active
-			isActive := status == "✅ Active"
+			isActive := status == theme.IconSuccess+" Active"
 			
 			cacheRows = append(cacheRows, cacheRow{
 				data: []string{
@@ -780,7 +781,7 @@ func listLocalCachesOnly() error {
 			}
 			
 			// Note: Local-only view doesn't check API, so we show local status
-			status := "🔵 Local"
+			status := theme.IconInfo + " Local"
 			isValid := !time.Now().After(info.ExpiresAt)
 			
 			// Format values based on local validity
@@ -810,7 +811,7 @@ func listLocalCachesOnly() error {
 				costStr = calculateCacheCost(int32(info.TokenCount), totalDuration, info.Model)
 			} else {
 				// Expired locally
-				status = "⏰ Expired"
+				status = theme.IconWarning + " Expired"
 				tokenStr = "-"
 				expiresInStr = "-"
 				expireTimeStr = "-"
@@ -826,7 +827,7 @@ func listLocalCachesOnly() error {
 			}
 			
 			// Determine if cache is active (for local-only, active means not expired and not cleared)
-			isActive := isValid && info.ClearedAt == nil && status != "⏰ Expired"
+			isActive := isValid && info.ClearedAt == nil && status != theme.IconWarning+" Expired"
 			
 			cacheRows = append(cacheRows, cacheRow{
 				data: []string{
@@ -909,11 +910,11 @@ func listCachesFromAPI() error {
 		}
 		
 		// Determine status
-		status := "✅ Valid"
+		status := theme.IconSuccess + " Valid"
 		expiresIn := time.Until(cache.ExpireTime).Round(time.Second)
 		expiresInStr := formatDuration(expiresIn)
 		if time.Now().After(cache.ExpireTime) {
-			status = "⏰ Expired"
+			status = theme.IconWarning + " Expired"
 			expiresInStr = "expired"
 		}
 		
@@ -942,7 +943,7 @@ func listCachesFromAPI() error {
 		costStr := calculateCacheCost(cache.TokenCount, totalDuration, cache.Model)
 		
 		// Determine if cache is active
-		isActive := status == "✅ Valid"
+		isActive := status == theme.IconSuccess+" Valid"
 		
 		cacheRows = append(cacheRows, cacheRow{
 			data: []string{

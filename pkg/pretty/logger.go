@@ -71,7 +71,7 @@ func NewWithWriter(w io.Writer) *Logger {
 
 // WorkingDirectory logs the working directory
 func (l *Logger) WorkingDirectory(dir string) {
-	l.Path("🏠 Working directory", dir)
+	l.Path(theme.IconHome+" Working directory", dir)
 }
 
 // FoundRulesFile logs that a rules file was found
@@ -123,7 +123,8 @@ func (l *Logger) Model(model string) {
 		entry.Info("Calling Gemini API")
 	}
 	// Display pretty UI
-	fmt.Fprintf(l.writer, "\n🤖 %s %s\n\n",
+	fmt.Fprintf(l.writer, "\n%s %s %s\n\n",
+		theme.IconRobot,
 		l.theme.Info.Render("Calling Gemini API with model:"),
 		l.theme.Accent.Render(model))
 }
@@ -143,7 +144,8 @@ func (l *Logger) UploadComplete(filename string, duration time.Duration) {
 
 // GeneratingResponse logs that response generation has started
 func (l *Logger) GeneratingResponse() {
-	fmt.Fprintf(l.writer, "\n🤖 %s\n",
+	fmt.Fprintf(l.writer, "\n%s %s\n",
+		theme.IconRobot,
 		l.theme.Info.Render("Generating response..."))
 }
 
@@ -279,7 +281,8 @@ func (l *Logger) TokenUsage(cached, dynamic, completion, promptTokens int, respo
 
 	box := tokenBox.Render(strings.Join(content, "\n"))
 
-	fmt.Fprintf(l.writer, "\n📊 %s\n%s\n",
+	fmt.Fprintf(l.writer, "\n%s %s\n%s\n",
+		theme.IconChart,
 		l.theme.Header.Render("Token usage:"),
 		box)
 }
@@ -316,7 +319,8 @@ func (l *Logger) ChangedFiles(files []string) {
 
 // CreatingCache logs cache creation start
 func (l *Logger) CreatingCache() {
-	fmt.Fprintf(l.writer, "\n💰 %s\n",
+	fmt.Fprintf(l.writer, "\n%s %s\n",
+		theme.IconMoney,
 		l.theme.Warning.Render("Creating new cache (one-time operation)..."))
 }
 
@@ -339,14 +343,16 @@ func (l *Logger) CacheValid(until time.Time) {
 // CacheExpired logs when cache has expired
 func (l *Logger) CacheExpired(at time.Time) {
 	relativeTime := formatRelativeTime(at)
-	fmt.Fprintf(l.writer, "⏰ %s (%s)\n",
+	fmt.Fprintf(l.writer, "%s %s (%s)\n",
+		theme.IconClock,
 		l.theme.Warning.Render("Cache expired"),
 		l.theme.Muted.Render(relativeTime))
 }
 
 // CacheFrozen logs when cache is frozen
 func (l *Logger) CacheFrozen() {
-	fmt.Fprintf(l.writer, "❄️ %s\n",
+	fmt.Fprintf(l.writer, "%s %s\n",
+		theme.IconSnowflake,
 		l.theme.Info.Render("Cache is frozen by @freeze-cache directive"))
 }
 
@@ -358,7 +364,8 @@ func (l *Logger) CacheDisabled() {
 
 // TTL logs the cache TTL
 func (l *Logger) TTL(ttl string) {
-	fmt.Fprintf(l.writer, "⏱️ %s %s\n",
+	fmt.Fprintf(l.writer, "%s %s %s\n",
+		theme.IconClock,
 		l.theme.Info.Render("Using cache TTL from @expire-time directive:"),
 		l.theme.Muted.Render(ttl))
 }
@@ -410,7 +417,8 @@ func (l *Logger) ResponseWritten(path string) {
 
 // Tip logs a helpful tip
 func (l *Logger) Tip(message string) {
-	fmt.Fprintf(l.writer, "💡 %s\n",
+	fmt.Fprintf(l.writer, "%s %s\n",
+		theme.IconLightbulb,
 		l.theme.Info.Render(message))
 }
 
@@ -433,7 +441,8 @@ func (l *Logger) RulesFileContent(content string) {
 
 // ContextSummary logs a context summary with styled formatting
 func (l *Logger) ContextSummary(cold, hot int) {
-	fmt.Fprintf(l.writer, "📊 %s\n",
+	fmt.Fprintf(l.writer, "%s %s\n",
+		theme.IconChart,
 		l.theme.Header.Render("Context Summary:"))
 	fmt.Fprintf(l.writer, "  %s %s %s\n",
 		l.theme.Highlight.Render(theme.IconBullet),
@@ -477,7 +486,8 @@ func (l *Logger) CacheCreationPrompt(tokens int, sizeBytes int64, ttl time.Durat
 	fmt.Fprintln(l.writer, box)
 
 	// Prompt for confirmation
-	fmt.Fprintf(l.writer, "\n❓ %s",
+	fmt.Fprintf(l.writer, "\n%s %s",
+		theme.IconHelp,
 		l.theme.Warning.Render("Do you want to create this cache? [y/N]: "))
 
 	// Read user input

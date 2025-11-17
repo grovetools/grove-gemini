@@ -99,15 +99,15 @@ var keys = keyMap{
 // getStatusStyle returns the appropriate theme style for a given status
 func getStatusStyle(status string) lipgloss.Style {
 	switch status {
-	case "✅ Active":
+	case theme.IconSuccess + " Active":
 		return theme.DefaultTheme.Success
-	case "⏰ Expired":
+	case theme.IconWarning + " Expired":
 		return theme.DefaultTheme.Warning
-	case "🚫 Cleared":
+	case theme.IconError + " Cleared":
 		return theme.DefaultTheme.Error
-	case "❓ Missing":
+	case theme.IconInfo + " Missing":
 		return theme.DefaultTheme.Muted
-	case "🔵 Local":
+	case theme.IconInfo + " Local":
 		return theme.DefaultTheme.Info
 	default:
 		return lipgloss.NewStyle()
@@ -234,16 +234,16 @@ func fetchCachesCmd(client *gemini.Client, workDir string) tea.Cmd {
 			apiInfo, existsInAPI := apiCacheMap[cacheID]
 
 			if localInfo.ClearedAt != nil {
-				status = "🚫 Cleared"
+				status = theme.IconError + " Cleared"
 			} else if existsInAPI {
 				if time.Now().After(apiInfo.ExpireTime) {
-					status = "⏰ Expired"
+					status = theme.IconWarning + " Expired"
 				} else {
-					status = "✅ Active"
+					status = theme.IconSuccess + " Active"
 					isActive = true
 				}
 			} else {
-				status = "❓ Missing"
+				status = theme.IconInfo + " Missing"
 			}
 
 			combined = append(combined, combinedCacheInfo{
@@ -259,10 +259,10 @@ func fetchCachesCmd(client *gemini.Client, workDir string) tea.Cmd {
 		// Process API-only caches
 		for _, apiInfo := range apiCaches {
 			if !processed[apiInfo.Name] {
-				status := "✅ Active"
+				status := theme.IconSuccess + " Active"
 				isActive := true
 				if time.Now().After(apiInfo.ExpireTime) {
-					status = "⏰ Expired"
+					status = theme.IconWarning + " Expired"
 					isActive = false
 				}
 				
@@ -302,7 +302,7 @@ func deleteCacheCmd(client *gemini.Client, cache combinedCacheInfo) tea.Cmd {
 		ctx := context.Background()
 		
 		// Check if cache is already cleared or missing
-		if cache.Status == "🚫 Cleared" {
+		if cache.Status == theme.IconError+" Cleared" {
 			return cacheDeletedMsg{} // Already cleared, nothing to do
 		}
 		
@@ -318,7 +318,7 @@ func deleteCacheCmd(client *gemini.Client, cache combinedCacheInfo) tea.Cmd {
 		}
 
 		// Only try to delete from API if the cache is active or expired (not missing/cleared)
-		if cache.Status == "✅ Active" || cache.Status == "⏰ Expired" {
+		if cache.Status == theme.IconSuccess+" Active" || cache.Status == theme.IconWarning+" Expired" {
 			// Delete from API
 			if err := client.DeleteCache(ctx, cacheIDToDelete); err != nil {
 				return errMsg{fmt.Errorf("failed to delete from API: %w", err)}
@@ -585,7 +585,7 @@ func (m *cacheTUIModel) renderTableWithArrow() string {
 
 	// Add the indicator to each line
 	result := ""
-	arrow := theme.DefaultTheme.Highlight.Render("▶")
+	arrow := theme.DefaultTheme.Highlight.Render(theme.IconArrowRightBold)
 	for i, line := range lines {
 		// Add the indicator on the left for the selected row
 		if i == selectedLineIndex {
@@ -615,7 +615,7 @@ func (m *cacheTUIModel) footerView() string {
 	if m.confirmingWipe {
 		if len(m.filteredCaches) > 0 {
 			selectedCache := m.filteredCaches[m.table.Cursor()]
-			return theme.DefaultTheme.Error.Render(fmt.Sprintf("⚠️  Wipe local file for '%s'? This cannot be undone! (y/n)", selectedCache.Name))
+			return theme.DefaultTheme.Error.Render(fmt.Sprintf("%s  Wipe local file for '%s'? This cannot be undone! (y/n)", theme.IconWarning, selectedCache.Name))
 		}
 	}
 
@@ -628,20 +628,26 @@ func (m *cacheTUIModel) footerView() string {
 }
 
 func (m *cacheTUIModel) helpViewRender() string {
-	help := `╭─ Cache Manager Help ─────────────────────────────────────────────────────────────────────╮
+	help := fmt.Sprintf(`╭─ Cache Manager Help ─────────────────────────────────────────────────────────────────────╮
 │                                                                                         │
 │  Navigation:                        Status Icons:                                       │
-│    j/k or ↑/↓  Move up/down        ✅ Active   Cache is valid and accessible         │
-│    enter or i  Inspect cache        ⏰ Expired  Cache has exceeded TTL                 │
-│    a           Analytics view       🚫 Cleared  Cache was manually deleted             │
-│    /           Filter caches        ❓ Missing  Local record but not in API           │
-│    esc         Exit view/cancel     🔵 Local    Local-only view status                 │
+│    j/k or ↑/↓  Move up/down        %s Active   Cache is valid and accessible         │
+│    enter or i  Inspect cache        %s Expired  Cache has exceeded TTL                 │
+│    a           Analytics view       %s Cleared  Cache was manually deleted             │
+│    /           Filter caches        %s Missing  Local record but not in API           │
+│    esc         Exit view/cancel     %s Local    Local-only view status                 │
 │                                                                                         │
 │  Actions:                           Other:                                              │
 │    d           Delete from GCP      r           Refresh cache list                      │
 │    w           Wipe local file      ?           Show/hide this help                     │
 │    y/n         Confirm/cancel       q           Quit the application                    │
-╰─────────────────────────────────────────────────────────────────────────────────────────╯`
+╰─────────────────────────────────────────────────────────────────────────────────────────╯`,
+		theme.IconSuccess,
+		theme.IconWarning,
+		theme.IconError,
+		theme.IconInfo,
+		theme.IconInfo,
+	)
 	
 	// Center the help box
 	return lipgloss.Place(
@@ -867,7 +873,7 @@ func (m *cacheTUIModel) prepareAnalyticsView() {
 	}
 	
 	// Overall Statistics
-	b.WriteString(theme.DefaultTheme.Header.Copy().Underline(false).MarginBottom(0).Render("📊 Overall Statistics"))
+	b.WriteString(theme.DefaultTheme.Header.Copy().Underline(false).MarginBottom(0).Render(theme.IconChart + " Overall Statistics"))
 	b.WriteString(fmt.Sprintf("\n\nTotal Cost Savings: $%.2f", totalSavings))
 	b.WriteString(fmt.Sprintf("\nTotal Queries: %d", totalQueries))
 	b.WriteString(fmt.Sprintf("\nTotal Cached Tokens: %s", formatTokenCount(totalCachedTokens)))
@@ -876,7 +882,7 @@ func (m *cacheTUIModel) prepareAnalyticsView() {
 	
 	// Top Performing Caches
 	b.WriteString("\n\n")
-	b.WriteString(theme.DefaultTheme.Header.Copy().Underline(false).MarginBottom(0).Render("🏆 Top Performing Caches"))
+	b.WriteString(theme.DefaultTheme.Header.Copy().Underline(false).MarginBottom(0).Render(theme.IconTrophy + " Top Performing Caches"))
 	b.WriteString("\n\n")
 	
 	// Sort caches by efficiency
