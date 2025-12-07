@@ -25,13 +25,14 @@ type Logger struct {
 
 // TokenFields represents token usage metrics with verbosity levels
 type TokenFields struct {
-	CachedTokens      int   `json:"cached_tokens" verbosity:"0"`       // metrics
-	DynamicTokens     int   `json:"dynamic_tokens" verbosity:"0"`      // metrics
-	CompletionTokens  int   `json:"completion_tokens" verbosity:"0"`   // metrics
-	UserPromptTokens  int   `json:"user_prompt_tokens" verbosity:"0"`  // metrics
-	TotalPromptTokens int   `json:"total_prompt_tokens" verbosity:"0"` // metrics
-	ResponseTimeMs    int64 `json:"response_time_ms" verbosity:"0"`    // metrics
-	IsNewCache        bool  `json:"is_new_cache" verbosity:"0"`        // metrics
+	CachedTokens      int     `json:"cached_tokens" verbosity:"0"`       // metrics
+	DynamicTokens     int     `json:"dynamic_tokens" verbosity:"0"`      // metrics
+	CompletionTokens  int     `json:"completion_tokens" verbosity:"0"`   // metrics
+	UserPromptTokens  int     `json:"user_prompt_tokens" verbosity:"0"`  // metrics
+	TotalPromptTokens int     `json:"total_prompt_tokens" verbosity:"0"` // metrics
+	ResponseTimeMs    int64   `json:"response_time_ms" verbosity:"0"`    // metrics
+	CacheHitRate      float64 `json:"cache_hit_rate" verbosity:"0"`      // metrics - percentage (0-100)
+	IsNewCache        bool    `json:"is_new_cache" verbosity:"0"`        // metrics
 }
 
 // ModelFields represents model information with verbosity level
@@ -188,6 +189,13 @@ func (l *Logger) FilesIncluded(files []string) {
 
 // TokenUsage displays token usage statistics in a styled box
 func (l *Logger) TokenUsage(cached, dynamic, completion, promptTokens int, responseTime time.Duration, isNewCache bool) {
+	// Calculate cache hit rate
+	totalPrompt := cached + dynamic
+	cacheHitRate := 0.0
+	if totalPrompt > 0 {
+		cacheHitRate = float64(cached) / float64(totalPrompt) * 100
+	}
+
 	// First, log structured data to backend if available
 	if l.log != nil {
 		tokenFields := TokenFields{
@@ -195,8 +203,9 @@ func (l *Logger) TokenUsage(cached, dynamic, completion, promptTokens int, respo
 			DynamicTokens:     dynamic,
 			CompletionTokens:  completion,
 			UserPromptTokens:  promptTokens,
-			TotalPromptTokens: cached + dynamic,
+			TotalPromptTokens: totalPrompt,
 			ResponseTimeMs:    responseTime.Milliseconds(),
+			CacheHitRate:      cacheHitRate,
 			IsNewCache:        isNewCache,
 		}
 		fields := corelogging.StructToLogrusFields(tokenFields)
@@ -211,16 +220,11 @@ func (l *Logger) TokenUsage(cached, dynamic, completion, promptTokens int, respo
 
 		// Create entry without logrus's automatic caller reporting to avoid duplication
 		entry := l.log.WithFields(fields)
-		entry.Info("Token usage summary")
+		entry.Info("Gemini Response & Token Summary")
 	}
 
 	// Calculate derived metrics for UI display
-	totalPrompt := cached + dynamic
 	totalAPIUsage := dynamic + completion
-	cacheHitRate := 0.0
-	if totalPrompt > 0 {
-		cacheHitRate = float64(cached) / float64(totalPrompt) * 100
-	}
 
 	// Conditional labels and styles
 	cachedLabel := "Cold (Cached):"

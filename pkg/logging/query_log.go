@@ -13,6 +13,7 @@ import (
 // QueryLog represents a single API query log entry
 type QueryLog struct {
 	Timestamp        time.Time `json:"timestamp"`
+	RequestID        string    `json:"request_id,omitempty"`
 	Model           string    `json:"model"`
 	Method          string    `json:"method,omitempty"`
 	CachedTokens    int32     `json:"cached_tokens"`
@@ -26,7 +27,7 @@ type QueryLog struct {
 	Error           string    `json:"error,omitempty"`
 	CacheID         string    `json:"cache_id,omitempty"`
 	Success         bool      `json:"success"`
-	
+
 	// Context information
 	WorkingDir      string `json:"working_dir,omitempty"`
 	GitRepo         string `json:"git_repo,omitempty"`

@@ -80,6 +80,9 @@ func (c *Client) GenerateContentWithCache(ctx context.Context, model string, pro
 
 // GenerateContentWithCacheAndOptions generates content with additional context options
 func (c *Client) GenerateContentWithCacheAndOptions(ctx context.Context, model string, prompt string, cacheID string, dynamicFilePaths []string, opts *GenerateContentOptions) (string, error) {
+	// Get request ID from environment for tracing
+	requestID := os.Getenv("GROVE_REQUEST_ID")
+
 	// Create pretty logger for UI output
 	logger := pretty.NewWithLogger(log)
 	
@@ -118,6 +121,7 @@ func (c *Client) GenerateContentWithCacheAndOptions(ctx context.Context, model s
 	if log.Logger.IsLevelEnabled(logrus.DebugLevel) {
 		// Create structured log fields
 		fields := logrus.Fields{
+			"request_id":     requestID,
 			"timestamp":      time.Now(),
 			"model":          model,
 			"cache_id":       cacheID,
@@ -145,19 +149,44 @@ func (c *Client) GenerateContentWithCacheAndOptions(ctx context.Context, model s
 	
 	// Upload all files
 	var requestParts []*genai.Part
+	var uploadResults []FileUploadResult
 	if len(allFilesToUpload) > 0 {
 		fmt.Fprintln(os.Stderr)
 		logger.UploadProgress(fmt.Sprintf("Uploading %d files for request...", len(allFilesToUpload)))
 		for _, filePath := range allFilesToUpload {
 			// Upload file
-			f, err := uploadFile(ctx, c.client, filePath)
+			f, duration, err := uploadFile(ctx, c.client, filePath)
 			if err != nil {
 				return "", fmt.Errorf("failed to upload file %s: %w", filePath, err)
 			}
-			
+
+			// Track upload result
+			uploadResults = append(uploadResults, FileUploadResult{
+				FilePath:   filePath,
+				FileURI:    f.URI,
+				MIMEType:   f.MIMEType,
+				DurationMs: duration.Milliseconds(),
+			})
+
 			// Create part from URI
 			part := genai.NewPartFromURI(f.URI, f.MIMEType)
 			requestParts = append(requestParts, part)
+		}
+
+		// Log all uploads as a single structured log entry
+		if len(uploadResults) > 0 {
+			log.WithFields(logrus.Fields{
+				"request_id":   requestID,
+				"file_count":   len(uploadResults),
+				"uploads":      uploadResults,
+				"total_time_ms": func() int64 {
+					var total int64
+					for _, r := range uploadResults {
+						total += r.DurationMs
+					}
+					return total
+				}(),
+			}).Info("Files uploaded to Gemini API")
 		}
 	}
 
@@ -187,21 +216,9 @@ func (c *Client) GenerateContentWithCacheAndOptions(ctx context.Context, model s
 	// Create contents slice for API
 	contentsForAPI := []*genai.Content{userTurn}
 	
-	// Display files that will be included in the prompt
-	var promptFiles []string
-	if opts != nil && len(opts.PromptFiles) > 0 {
-		promptFiles = opts.PromptFiles
-	}
-	
-	// Create display files list
-	displayFiles := make([]string, len(dynamicFilePaths))
-	copy(displayFiles, dynamicFilePaths)
-	
-	// Add prompt files to display list
-	if len(promptFiles) > 0 {
-		displayFiles = append(displayFiles, promptFiles...)
-	}
-	
+	// Create display files list (deduplicated - use the already deduplicated list)
+	displayFiles := allFilesToUpload
+
 	// Show files before making the request
 	if len(displayFiles) > 0 {
 		logger.FilesIncluded(displayFiles)
@@ -213,15 +230,15 @@ func (c *Client) GenerateContentWithCacheAndOptions(ctx context.Context, model s
 	
 	startTime := time.Now()
 	logger.GeneratingResponse()
-	
+
 	// Build generation config with parameters
 	config := &genai.GenerateContentConfig{}
-	
+
 	// Add cache if provided
 	if cacheID != "" {
 		config.CachedContent = cacheID
 	}
-	
+
 	// Add generation parameters from options
 	if opts != nil {
 		if opts.Temperature != nil {
@@ -239,7 +256,13 @@ func (c *Client) GenerateContentWithCacheAndOptions(ctx context.Context, model s
 			config.MaxOutputTokens = int32(*opts.MaxOutputTokens)
 		}
 	}
-	
+
+	log.WithFields(logrus.Fields{
+		"request_id": requestID,
+		"model":      model,
+		"cache_id":   cacheID,
+	}).Info("Calling Gemini API")
+
 	result, err = c.client.Models.GenerateContent(
 		ctx,
 		model,
@@ -260,6 +283,7 @@ func (c *Client) GenerateContentWithCacheAndOptions(ctx context.Context, model s
 		geminiLogger := logging.GetLogger()
 		logEntry := logging.QueryLog{
 			Timestamp:    startTime,
+			RequestID:    requestID,
 			Model:       model,
 			Method:      "GenerateContent",
 			ResponseTime: time.Since(startTime).Seconds(),
@@ -330,6 +354,7 @@ func (c *Client) GenerateContentWithCacheAndOptions(ctx context.Context, model s
 		geminiLogger := logging.GetLogger()
 		logEntry := logging.QueryLog{
 			Timestamp:        startTime,
+			RequestID:        requestID,
 			Model:           model,
 			Method:          "GenerateContent",
 			CachedTokens:    result.UsageMetadata.CachedContentTokenCount,

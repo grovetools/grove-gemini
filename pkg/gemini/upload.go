@@ -10,9 +10,18 @@ import (
 	"google.golang.org/genai"
 )
 
+// FileUploadResult contains information about an uploaded file
+type FileUploadResult struct {
+	FilePath   string
+	FileURI    string
+	MIMEType   string
+	DurationMs int64
+}
+
 // uploadFile uploads a single file to the Gemini API
-func uploadFile(ctx context.Context, client *genai.Client, filePath string) (*genai.File, error) {
+func uploadFile(ctx context.Context, client *genai.Client, filePath string) (*genai.File, time.Duration, error) {
 	uploadStart := time.Now()
+
 	f, err := client.Files.UploadFromPath(
 		ctx,
 		filePath,
@@ -21,13 +30,15 @@ func uploadFile(ctx context.Context, client *genai.Client, filePath string) (*ge
 		},
 	)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
-	
+
+	duration := time.Since(uploadStart)
+
 	// Create pretty logger
 	logger := pretty.NewWithLogger(log)
-	logger.UploadComplete(filepath.Base(filePath), time.Since(uploadStart))
-	return f, nil
+	logger.UploadComplete(filepath.Base(filePath), duration)
+	return f, duration, nil
 }
 
 // detectMIMEType returns appropriate MIME type for a file

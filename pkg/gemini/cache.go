@@ -289,7 +289,7 @@ func (m *CacheManager) GetOrCreateCache(ctx context.Context, client *Client, mod
 		fileHashes[coldContextFilePath] = hash
 
 		// Upload file
-		f, err := uploadFile(ctx, client.GetClient(), coldContextFilePath)
+		f, _, err := uploadFile(ctx, client.GetClient(), coldContextFilePath)
 		if err != nil {
 			return nil, false, fmt.Errorf("failed to upload %s: %w", coldContextFilePath, err)
 		}
