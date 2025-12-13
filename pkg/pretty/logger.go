@@ -44,7 +44,7 @@ type ModelFields struct {
 func New() *Logger {
 	return &Logger{
 		PrettyLogger: corelogging.NewPrettyLogger(),
-		writer:       os.Stderr,
+		writer:       corelogging.GetGlobalOutput(),
 		theme:        theme.DefaultTheme,
 		log:          corelogging.NewLogger("grove-gemini"),
 	}
@@ -54,7 +54,7 @@ func New() *Logger {
 func NewWithLogger(log *logrus.Entry) *Logger {
 	return &Logger{
 		PrettyLogger: corelogging.NewPrettyLogger(),
-		writer:       os.Stderr,
+		writer:       corelogging.GetGlobalOutput(),
 		theme:        theme.DefaultTheme,
 		log:          log,
 	}
@@ -196,7 +196,7 @@ func (l *Logger) TokenUsage(cached, dynamic, completion, promptTokens int, respo
 		cacheHitRate = float64(cached) / float64(totalPrompt) * 100
 	}
 
-	// First, log structured data to backend if available
+	// First, log structured data to backend if available (even in TUI mode for metrics)
 	if l.log != nil {
 		tokenFields := TokenFields{
 			CachedTokens:      cached,
