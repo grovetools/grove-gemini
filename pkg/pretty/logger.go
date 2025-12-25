@@ -133,8 +133,9 @@ func (l *Logger) Error(message string) {
 		l.theme.Error.Render(message))
 }
 
-// Model logs the model being used
-func (l *Logger) Model(model string) {
+// ModelCtx logs the model being used to the writer from the context
+func (l *Logger) ModelCtx(ctx context.Context, model string) {
+	writer := corelogging.GetWriter(ctx)
 	// Log structured data if backend available
 	if l.log != nil {
 		modelFields := ModelFields{
@@ -155,9 +156,14 @@ func (l *Logger) Model(model string) {
 		entry.Info("Calling Gemini API")
 	}
 	// Display pretty UI
-	fmt.Fprintf(l.writer, "%s %s\n",
+	fmt.Fprintf(writer, "%s %s\n",
 		l.theme.Info.Render(theme.IconRobot+" Calling Gemini API with model:"),
 		l.theme.Accent.Render(model))
+}
+
+// Model logs the model being used
+func (l *Logger) Model(model string) {
+	l.ModelCtx(context.Background(), model)
 }
 
 // UploadProgressCtx logs file upload progress to the writer from the context

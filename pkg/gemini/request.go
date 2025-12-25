@@ -319,7 +319,7 @@ func (r *RequestRunner) Run(ctx context.Context, options RequestOptions) (string
 	}
 
 	// Make the API request
-	r.logger.Model(options.Model)
+	r.logger.ModelCtx(ctx, options.Model)
 	
 	caller := "gemapi-request" // Default caller
 	if options.Caller != "" {
