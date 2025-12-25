@@ -150,9 +150,8 @@ func (l *Logger) Model(model string) {
 		entry.Info("Calling Gemini API")
 	}
 	// Display pretty UI
-	fmt.Fprintf(l.writer, "\n%s %s %s\n\n",
-		theme.IconRobot,
-		l.theme.Info.Render("Calling Gemini API with model:"),
+	fmt.Fprintf(l.writer, "\n%s %s\n\n",
+		l.theme.Info.Render(theme.IconRobot+" Calling Gemini API with model:"),
 		l.theme.Accent.Render(model))
 }
 
@@ -176,9 +175,8 @@ func (l *Logger) UploadComplete(filename string, duration time.Duration) {
 
 // GeneratingResponse logs that response generation has started
 func (l *Logger) GeneratingResponse() {
-	fmt.Fprintf(l.writer, "\n%s %s\n",
-		theme.IconRobot,
-		l.theme.Info.Render("Generating response..."))
+	fmt.Fprintf(l.writer, "\n%s\n",
+		l.theme.Info.Render(theme.IconRobot+" Generating response..."))
 }
 
 // FilesIncludedCtx displays the list of files that will be included in the request to the writer from the context
@@ -188,9 +186,8 @@ func (l *Logger) FilesIncludedCtx(ctx context.Context, files []string) {
 	}
 
 	writer := corelogging.GetWriter(ctx)
-	fmt.Fprintf(writer, "\n%s %s\n",
-		theme.IconFile,
-		l.theme.Header.Render("Files attached to request:"))
+	fmt.Fprintf(writer, "\n%s\n",
+		l.theme.Header.Render(theme.IconFile+" Files attached to request:"))
 
 	// Build display list with styled paths
 	displayFiles := make([]string, len(files))
@@ -223,6 +220,7 @@ func (l *Logger) FilesIncludedCtx(ctx context.Context, files []string) {
 			l.theme.Highlight.Render(theme.IconBullet),
 			item)
 	}
+	fmt.Fprintln(writer) // Add blank line after file list
 }
 
 // FilesIncluded displays the list of files that will be included in the request
@@ -330,9 +328,8 @@ func (l *Logger) TokenUsageCtx(ctx context.Context, cached, dynamic, completion,
 
 	box := tokenBox.Render(strings.Join(content, "\n"))
 
-	fmt.Fprintf(writer, "\n%s %s\n%s\n",
-		theme.IconChart,
-		l.theme.Header.Render("Token usage:"),
+	fmt.Fprintf(writer, "\n%s\n%s\n",
+		l.theme.Header.Render(theme.IconChart+" Token usage:"),
 		box)
 }
 
@@ -362,9 +359,8 @@ func (l *Logger) CacheCreated(cacheID string, expires time.Time) {
 
 // ChangedFiles logs files that have changed
 func (l *Logger) ChangedFiles(files []string) {
-	fmt.Fprintf(l.writer, "%s %s\n",
-		theme.IconSync,
-		l.theme.Warning.Render("Cached files have changed:"))
+	fmt.Fprintf(l.writer, "%s\n",
+		l.theme.Warning.Render(theme.IconSync+" Cached files have changed:"))
 	pathStyle := lipgloss.NewStyle().Foreground(theme.Cyan).Italic(true)
 	for _, file := range files {
 		fmt.Fprintf(l.writer, "%s %s\n",
@@ -375,16 +371,14 @@ func (l *Logger) ChangedFiles(files []string) {
 
 // CreatingCache logs cache creation start
 func (l *Logger) CreatingCache() {
-	fmt.Fprintf(l.writer, "\n%s %s\n",
-		theme.IconMoney,
-		l.theme.Warning.Render("Creating new cache (one-time operation)..."))
+	fmt.Fprintf(l.writer, "\n%s\n",
+		l.theme.Warning.Render(theme.IconMoney+" Creating new cache (one-time operation)..."))
 }
 
 // NoCache logs when no cache is found
 func (l *Logger) NoCache() {
-	fmt.Fprintf(l.writer, "%s %s\n",
-		theme.IconSparkle,
-		l.theme.Info.Render("No existing cache found"))
+	fmt.Fprintf(l.writer, "%s\n",
+		l.theme.Info.Render(theme.IconSparkle+" No existing cache found"))
 }
 
 // CacheValid logs when cache is valid
@@ -400,42 +394,36 @@ func (l *Logger) CacheValid(until time.Time) {
 // CacheExpired logs when cache has expired
 func (l *Logger) CacheExpired(at time.Time) {
 	relativeTime := formatRelativeTime(at)
-	fmt.Fprintf(l.writer, "%s %s (%s)\n",
-		theme.IconClock,
-		l.theme.Warning.Render("Cache expired"),
+	fmt.Fprintf(l.writer, "%s (%s)\n",
+		l.theme.Warning.Render(theme.IconClock+" Cache expired"),
 		l.theme.Muted.Render(relativeTime))
 }
 
 // CacheFrozen logs when cache is frozen
 func (l *Logger) CacheFrozen() {
-	fmt.Fprintf(l.writer, "%s %s\n",
-		theme.IconSnowflake,
-		l.theme.Info.Render("Cache is frozen by @freeze-cache directive"))
+	fmt.Fprintf(l.writer, "%s\n",
+		l.theme.Info.Render(theme.IconSnowflake+" Cache is frozen by @freeze-cache directive"))
 }
 
 // CacheDisabled logs when cache is disabled
 func (l *Logger) CacheDisabled() {
-	fmt.Fprintf(l.writer, "%s %s\n",
-		theme.IconStop,
-		l.theme.Warning.Render("Cache disabled by @disable-cache directive"))
+	fmt.Fprintf(l.writer, "%s\n",
+		l.theme.Warning.Render(theme.IconStop+" Cache disabled by @disable-cache directive"))
 }
 
 // TTL logs the cache TTL
 func (l *Logger) TTL(ttl string) {
-	fmt.Fprintf(l.writer, "%s %s %s\n",
-		theme.IconClock,
-		l.theme.Info.Render("Using cache TTL from @expire-time directive:"),
+	fmt.Fprintf(l.writer, "%s %s\n",
+		l.theme.Info.Render(theme.IconClock+" Using cache TTL from @expire-time directive:"),
 		l.theme.Muted.Render(ttl))
 }
 
 // CacheDisabledByDefault logs when cache is disabled by default (opt-in model)
 func (l *Logger) CacheDisabledByDefault() {
-	fmt.Fprintf(l.writer, "%s %s\n",
-		theme.IconInfo,
-		l.theme.Info.Render("Caching is disabled by default"))
-	fmt.Fprintf(l.writer, "%s %s\n",
-		theme.IconBullet,
-		l.theme.Muted.Render("To enable caching, add @enable-cache to your .grove/rules file"))
+	fmt.Fprintf(l.writer, "%s\n",
+		l.theme.Info.Render(theme.IconInfo+" Caching is disabled by default"))
+	fmt.Fprintf(l.writer, "%s\n",
+		l.theme.Muted.Render(theme.IconBullet+" To enable caching, add @enable-cache to your .grove/rules file"))
 }
 
 // CacheWarningCtx displays a prominent warning about experimental caching and costs to the writer from the context
@@ -484,9 +472,8 @@ func (l *Logger) ResponseWritten(path string) {
 
 // Tip logs a helpful tip
 func (l *Logger) Tip(message string) {
-	fmt.Fprintf(l.writer, "%s %s\n",
-		theme.IconLightbulb,
-		l.theme.Info.Render(message))
+	fmt.Fprintf(l.writer, "%s\n",
+		l.theme.Info.Render(theme.IconLightbulb+" "+message))
 }
 
 // RulesFileContent displays the rules file content in a styled box
@@ -498,9 +485,8 @@ func (l *Logger) RulesFileContent(content string) {
 		MarginTop(1).
 		MarginBottom(1)
 
-	fmt.Fprintf(l.writer, "%s %s\n",
-		theme.IconChecklist,
-		l.theme.Header.Render("Rules file content:"))
+	fmt.Fprintf(l.writer, "%s\n",
+		l.theme.Header.Render(theme.IconChecklist+" Rules file content:"))
 
 	// Apply box styling to the content
 	box := rulesBox.Render(content)
@@ -509,9 +495,8 @@ func (l *Logger) RulesFileContent(content string) {
 
 // ContextSummary logs a context summary with styled formatting
 func (l *Logger) ContextSummary(cold, hot int) {
-	fmt.Fprintf(l.writer, "%s %s\n",
-		theme.IconChart,
-		l.theme.Header.Render("Context Summary:"))
+	fmt.Fprintf(l.writer, "%s\n",
+		l.theme.Header.Render(theme.IconChart+" Context Summary:"))
 	fmt.Fprintf(l.writer, "%s %s %s\n",
 		l.theme.Highlight.Render(theme.IconBullet),
 		l.theme.Muted.Render("Cold files:"),
