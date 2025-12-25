@@ -150,7 +150,7 @@ func (l *Logger) Model(model string) {
 		entry.Info("Calling Gemini API")
 	}
 	// Display pretty UI
-	fmt.Fprintf(l.writer, "\n%s %s\n\n",
+	fmt.Fprintf(l.writer, "%s %s\n",
 		l.theme.Info.Render(theme.IconRobot+" Calling Gemini API with model:"),
 		l.theme.Accent.Render(model))
 }
@@ -175,7 +175,7 @@ func (l *Logger) UploadComplete(filename string, duration time.Duration) {
 
 // GeneratingResponse logs that response generation has started
 func (l *Logger) GeneratingResponse() {
-	fmt.Fprintf(l.writer, "\n%s\n",
+	fmt.Fprintf(l.writer, "%s\n",
 		l.theme.Info.Render(theme.IconRobot+" Generating response..."))
 }
 
@@ -186,7 +186,7 @@ func (l *Logger) FilesIncludedCtx(ctx context.Context, files []string) {
 	}
 
 	writer := corelogging.GetWriter(ctx)
-	fmt.Fprintf(writer, "\n%s\n",
+	fmt.Fprintf(writer, "%s\n",
 		l.theme.Header.Render(theme.IconFile+" Files attached to request:"))
 
 	// Build display list with styled paths
@@ -220,7 +220,6 @@ func (l *Logger) FilesIncludedCtx(ctx context.Context, files []string) {
 			l.theme.Highlight.Render(theme.IconBullet),
 			item)
 	}
-	fmt.Fprintln(writer) // Add blank line after file list
 }
 
 // FilesIncluded displays the list of files that will be included in the request
@@ -322,13 +321,11 @@ func (l *Logger) TokenUsageCtx(ctx context.Context, cached, dynamic, completion,
 	tokenBox := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(l.theme.Colors.Violet).
-		Padding(0, 1).
-		MarginTop(1).
-		MarginBottom(1)
+		Padding(0, 1)
 
 	box := tokenBox.Render(strings.Join(content, "\n"))
 
-	fmt.Fprintf(writer, "\n%s\n%s\n",
+	fmt.Fprintf(writer, "%s\n%s\n",
 		l.theme.Header.Render(theme.IconChart+" Token usage:"),
 		box)
 }
