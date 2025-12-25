@@ -163,7 +163,7 @@ func (l *Logger) Model(model string) {
 // UploadProgressCtx logs file upload progress to the writer from the context
 func (l *Logger) UploadProgressCtx(ctx context.Context, message string) {
 	writer := corelogging.GetWriter(ctx)
-	fmt.Fprintf(writer, "%s %s\n", theme.IconRunning, message)
+	fmt.Fprintf(writer, "%s %s\n\n", theme.IconRunning, message)
 }
 
 // UploadProgress logs file upload progress
@@ -331,7 +331,7 @@ func (l *Logger) TokenUsageCtx(ctx context.Context, cached, dynamic, completion,
 
 	box := tokenBox.Render(strings.Join(content, "\n"))
 
-	fmt.Fprintf(writer, "%s Token usage:\n%s\n",
+	fmt.Fprintf(writer, "\n%s Token usage:\n%s\n",
 		theme.IconChart,
 		box)
 }
