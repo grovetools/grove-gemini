@@ -159,7 +159,8 @@ func (l *Logger) Model(model string) {
 
 // UploadProgressCtx logs file upload progress to the writer from the context
 func (l *Logger) UploadProgressCtx(ctx context.Context, message string) {
-	l.ProgressCtx(ctx, message)
+	writer := corelogging.GetWriter(ctx)
+	fmt.Fprintf(writer, "%s %s\n", theme.IconRunning, message)
 }
 
 // UploadProgress logs file upload progress
@@ -193,7 +194,8 @@ func (l *Logger) FilesIncludedCtx(ctx context.Context, files []string) {
 
 	// Build display list with styled paths
 	displayFiles := make([]string, len(files))
-	pathStyle := lipgloss.NewStyle().Foreground(theme.Cyan).Italic(true)
+	pathStyle := lipgloss.NewStyle().Italic(true)
+	promptStyle := l.theme.Muted
 
 	for i, file := range files {
 		// Extract just the filename or last part of the path for display
@@ -210,7 +212,7 @@ func (l *Logger) FilesIncludedCtx(ctx context.Context, files []string) {
 		if displayName == "CLAUDE.md" || displayName == "context" || displayName == "cached-context" {
 			displayFiles[i] = pathStyle.Render(file)
 		} else if isPromptFile {
-			displayFiles[i] = pathStyle.Render(file) + " (prompt)"
+			displayFiles[i] = pathStyle.Render(file) + " " + promptStyle.Render("(prompt)")
 		} else {
 			displayFiles[i] = pathStyle.Render(displayName)
 		}
@@ -288,14 +290,14 @@ func (l *Logger) TokenUsageCtx(ctx context.Context, cached, dynamic, completion,
 			cachedStyle.Render(fmt.Sprintf("%d tokens", cached))),
 		fmt.Sprintf("%s %s",
 			l.theme.Muted.Render("Hot (Dynamic):"),
-			l.theme.Bold.Render(fmt.Sprintf("%d tokens", dynamic))),
+			l.theme.Normal.Render(fmt.Sprintf("%d tokens", dynamic))),
 	}
 
 	// Add user prompt tokens if available
 	if promptTokens > 0 {
 		content = append(content, fmt.Sprintf("%s %s",
 			l.theme.Muted.Render("User Prompt:"),
-			l.theme.Bold.Render(fmt.Sprintf("%d tokens", promptTokens))))
+			l.theme.Normal.Render(fmt.Sprintf("%d tokens", promptTokens))))
 	}
 
 	divider := l.theme.Muted.Render(strings.Repeat("─", 32))
@@ -303,14 +305,14 @@ func (l *Logger) TokenUsageCtx(ctx context.Context, cached, dynamic, completion,
 		divider,
 		fmt.Sprintf("%s %s",
 			l.theme.Muted.Render("Total Prompt:"),
-			l.theme.Bold.Render(fmt.Sprintf("%d tokens", totalPrompt))),
+			l.theme.Normal.Render(fmt.Sprintf("%d tokens", totalPrompt))),
 		fmt.Sprintf("%s %s",
 			l.theme.Muted.Render("Completion:"),
-			l.theme.Bold.Render(fmt.Sprintf("%d tokens", completion))),
+			l.theme.Normal.Render(fmt.Sprintf("%d tokens", completion))),
 		divider,
 		fmt.Sprintf("%s %s",
 			l.theme.Muted.Render("Total API Usage:"),
-			l.theme.Bold.Render(fmt.Sprintf("%d tokens", totalAPIUsage))),
+			l.theme.Normal.Render(fmt.Sprintf("%d tokens", totalAPIUsage))),
 		fmt.Sprintf("%s %s",
 			l.theme.Muted.Render(cacheHitRateLabel),
 			l.theme.Success.Render(fmt.Sprintf("%.1f%%", cacheHitRate))),
@@ -457,7 +459,7 @@ func (l *Logger) CacheWarning() {
 func (l *Logger) EstimatedTokens(count int) {
 	fmt.Fprintf(l.writer, "   %s %s\n",
 		l.theme.Muted.Render("Estimated tokens:"),
-		l.theme.Bold.Render(fmt.Sprintf("%d", count)))
+		l.theme.Normal.Render(fmt.Sprintf("%d", count)))
 }
 
 // ResponseWritten logs successful response write
@@ -499,11 +501,11 @@ func (l *Logger) ContextSummary(cold, hot int) {
 	fmt.Fprintf(l.writer, "%s %s %s\n",
 		l.theme.Highlight.Render(theme.IconBullet),
 		l.theme.Muted.Render("Cold files:"),
-		l.theme.Bold.Render(fmt.Sprintf("%d", cold)))
+		l.theme.Normal.Render(fmt.Sprintf("%d", cold)))
 	fmt.Fprintf(l.writer, "%s %s %s\n",
 		l.theme.Highlight.Render(theme.IconBullet),
 		l.theme.Muted.Render("Hot files:"),
-		l.theme.Bold.Render(fmt.Sprintf("%d", hot)))
+		l.theme.Normal.Render(fmt.Sprintf("%d", hot)))
 }
 
 // CacheCreationPrompt shows cache creation details and prompts for confirmation
@@ -524,7 +526,7 @@ func (l *Logger) CacheCreationPrompt(tokens int, sizeBytes int64, ttl time.Durat
 		"",
 		fmt.Sprintf("%s %s",
 			l.theme.Muted.Render("Cache size:"),
-			l.theme.Bold.Render(fmt.Sprintf("%d tokens (%s)", tokens, sizeStr))),
+			l.theme.Normal.Render(fmt.Sprintf("%d tokens (%s)", tokens, sizeStr))),
 		fmt.Sprintf("%s %s",
 			l.theme.Muted.Render("Expires:"),
 			l.theme.Muted.Render(relativeTime)),
