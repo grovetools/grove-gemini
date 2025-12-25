@@ -152,7 +152,7 @@ func (c *Client) GenerateContentWithCacheAndOptions(ctx context.Context, model s
 	var uploadResults []FileUploadResult
 	if len(allFilesToUpload) > 0 {
 		fmt.Fprintln(os.Stderr)
-		logger.UploadProgress(fmt.Sprintf("Uploading %d files for request...", len(allFilesToUpload)))
+		logger.UploadProgressCtx(ctx, fmt.Sprintf("Uploading %d files for request...", len(allFilesToUpload)))
 		for _, filePath := range allFilesToUpload {
 			// Upload file
 			f, duration, err := uploadFile(ctx, c.client, filePath)
@@ -221,13 +221,13 @@ func (c *Client) GenerateContentWithCacheAndOptions(ctx context.Context, model s
 
 	// Show files before making the request
 	if len(displayFiles) > 0 {
-		logger.FilesIncluded(displayFiles)
+		logger.FilesIncludedCtx(ctx, displayFiles)
 	}
-	
+
 	// Generate content with optional cache
 	var result *genai.GenerateContentResponse
 	var err error
-	
+
 	startTime := time.Now()
 	logger.GeneratingResponse()
 
@@ -333,7 +333,8 @@ func (c *Client) GenerateContentWithCacheAndOptions(ctx context.Context, model s
 			cacheHitRate = float64(cachedTokens) / float64(totalPromptTokens)
 		}
 		
-		logger.TokenUsage(
+		logger.TokenUsageCtx(
+			ctx,
 			cachedTokens,
 			dynamicTokens,
 			completionTokens,

@@ -277,7 +277,7 @@ func (m *CacheManager) GetOrCreateCache(ctx context.Context, client *Client, mod
 		}
 
 		fmt.Fprintln(os.Stderr)
-		logger.UploadProgress("Uploading files for cache...")
+		logger.UploadProgressCtx(ctx, "Uploading files for cache...")
 		logger.EstimatedTokens(estimatedTokens)
 
 		fileHashes := make(map[string]string)

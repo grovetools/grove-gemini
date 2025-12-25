@@ -156,9 +156,14 @@ func (l *Logger) Model(model string) {
 		l.theme.Accent.Render(model))
 }
 
+// UploadProgressCtx logs file upload progress to the writer from the context
+func (l *Logger) UploadProgressCtx(ctx context.Context, message string) {
+	l.ProgressCtx(ctx, message)
+}
+
 // UploadProgress logs file upload progress
 func (l *Logger) UploadProgress(message string) {
-	l.Progress(message)
+	l.UploadProgressCtx(context.Background(), message)
 }
 
 // UploadComplete logs successful file upload
@@ -176,13 +181,14 @@ func (l *Logger) GeneratingResponse() {
 		l.theme.Info.Render("Generating response..."))
 }
 
-// FilesIncluded displays the list of files that will be included in the request
-func (l *Logger) FilesIncluded(files []string) {
+// FilesIncludedCtx displays the list of files that will be included in the request to the writer from the context
+func (l *Logger) FilesIncludedCtx(ctx context.Context, files []string) {
 	if len(files) == 0 {
 		return
 	}
 
-	fmt.Fprintf(l.writer, "\n📁 %s\n",
+	writer := corelogging.GetWriter(ctx)
+	fmt.Fprintf(writer, "\n📁 %s\n",
 		l.theme.Header.Render("Files attached to request:"))
 
 	// Build display list with styled paths
@@ -210,11 +216,18 @@ func (l *Logger) FilesIncluded(files []string) {
 		}
 	}
 
-	l.List(displayFiles)
+	l.ListCtx(ctx, displayFiles)
 }
 
-// TokenUsage displays token usage statistics in a styled box
-func (l *Logger) TokenUsage(cached, dynamic, completion, promptTokens int, responseTime time.Duration, isNewCache bool) {
+// FilesIncluded displays the list of files that will be included in the request
+func (l *Logger) FilesIncluded(files []string) {
+	l.FilesIncludedCtx(context.Background(), files)
+}
+
+// TokenUsageCtx displays token usage statistics in a styled box to the writer from the context
+func (l *Logger) TokenUsageCtx(ctx context.Context, cached, dynamic, completion, promptTokens int, responseTime time.Duration, isNewCache bool) {
+	writer := corelogging.GetWriter(ctx)
+
 	// Calculate cache hit rate
 	totalPrompt := cached + dynamic
 	cacheHitRate := 0.0
@@ -311,10 +324,15 @@ func (l *Logger) TokenUsage(cached, dynamic, completion, promptTokens int, respo
 
 	box := tokenBox.Render(strings.Join(content, "\n"))
 
-	fmt.Fprintf(l.writer, "\n%s %s\n%s\n",
+	fmt.Fprintf(writer, "\n%s %s\n%s\n",
 		theme.IconChart,
 		l.theme.Header.Render("Token usage:"),
 		box)
+}
+
+// TokenUsage displays token usage statistics in a styled box
+func (l *Logger) TokenUsage(cached, dynamic, completion, promptTokens int, responseTime time.Duration, isNewCache bool) {
+	l.TokenUsageCtx(context.Background(), cached, dynamic, completion, promptTokens, responseTime, isNewCache)
 }
 
 // CacheInfo logs cache-related information
