@@ -74,7 +74,10 @@ func NewWithWriter(w io.Writer) *Logger {
 // WorkingDirectoryCtx logs the working directory to the writer from the context
 func (l *Logger) WorkingDirectoryCtx(ctx context.Context, dir string) {
 	writer := corelogging.GetWriter(ctx)
-	l.PathCtx(ctx, theme.IconHome+" Working directory", dir)
+	pathStyle := lipgloss.NewStyle().Italic(true)
+	fmt.Fprintf(writer, "%s Working directory: %s\n",
+		theme.IconHome,
+		pathStyle.Render(dir))
 	fmt.Fprintln(writer) // Add blank line after working directory
 }
 
@@ -189,8 +192,7 @@ func (l *Logger) FilesIncludedCtx(ctx context.Context, files []string) {
 	}
 
 	writer := corelogging.GetWriter(ctx)
-	fmt.Fprintf(writer, "%s\n",
-		l.theme.Header.Render(theme.IconFile+" Files attached to request:"))
+	fmt.Fprintf(writer, "%s Files attached to request:\n", theme.IconFile)
 
 	// Build display list with styled paths
 	displayFiles := make([]string, len(files))
@@ -329,8 +331,8 @@ func (l *Logger) TokenUsageCtx(ctx context.Context, cached, dynamic, completion,
 
 	box := tokenBox.Render(strings.Join(content, "\n"))
 
-	fmt.Fprintf(writer, "%s\n%s\n",
-		l.theme.Header.Render(theme.IconChart+" Token usage:"),
+	fmt.Fprintf(writer, "%s Token usage:\n%s\n",
+		theme.IconChart,
 		box)
 }
 
