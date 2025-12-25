@@ -281,7 +281,6 @@ func (r *RequestRunner) Run(ctx context.Context, options RequestOptions) (string
 	// Add hot context if it exists
 	if _, err := os.Stat(hotContextFile); err == nil {
 		dynamicFiles = append(dynamicFiles, hotContextFile)
-		r.logger.Info(fmt.Sprintf("Including hot context: %s", hotContextFile))
 	}
 	
 	// If caching is not enabled, also include cold context as dynamic file

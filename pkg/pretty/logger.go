@@ -187,8 +187,7 @@ func (l *Logger) UploadComplete(filename string, duration time.Duration) {
 
 // GeneratingResponse logs that response generation has started
 func (l *Logger) GeneratingResponse() {
-	fmt.Fprintf(l.writer, "%s\n",
-		l.theme.Info.Render(theme.IconRobot+" Generating response..."))
+	fmt.Fprintf(l.writer, "%s Generating response...\n", theme.IconRobot)
 }
 
 // FilesIncludedCtx displays the list of files that will be included in the request to the writer from the context
