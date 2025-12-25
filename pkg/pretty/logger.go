@@ -73,7 +73,9 @@ func NewWithWriter(w io.Writer) *Logger {
 
 // WorkingDirectoryCtx logs the working directory to the writer from the context
 func (l *Logger) WorkingDirectoryCtx(ctx context.Context, dir string) {
+	writer := corelogging.GetWriter(ctx)
 	l.PathCtx(ctx, theme.IconHome+" Working directory", dir)
+	fmt.Fprintln(writer) // Add blank line after working directory
 }
 
 // WorkingDirectory logs the working directory
