@@ -83,7 +83,7 @@ func (l *Logger) WorkingDirectory(dir string) {
 
 // FoundRulesFileCtx logs that a rules file was found to the writer from the context
 func (l *Logger) FoundRulesFileCtx(ctx context.Context, path string) {
-	l.PathCtx(ctx, "📋 Found rules file", path)
+	l.PathCtx(ctx, theme.IconChecklist+" Found rules file", path)
 }
 
 // FoundRulesFile logs that a rules file was found
@@ -168,7 +168,7 @@ func (l *Logger) UploadProgress(message string) {
 
 // UploadComplete logs successful file upload
 func (l *Logger) UploadComplete(filename string, duration time.Duration) {
-	fmt.Fprintf(l.writer, "  %s %s %s\n",
+	fmt.Fprintf(l.writer, "%s %s %s\n",
 		l.theme.Success.Render(theme.IconSuccess),
 		l.theme.Success.Render(filename),
 		l.theme.Muted.Render(fmt.Sprintf("(%.2fs)", duration.Seconds())))
@@ -188,7 +188,8 @@ func (l *Logger) FilesIncludedCtx(ctx context.Context, files []string) {
 	}
 
 	writer := corelogging.GetWriter(ctx)
-	fmt.Fprintf(writer, "\n📁 %s\n",
+	fmt.Fprintf(writer, "\n%s %s\n",
+		theme.IconFile,
 		l.theme.Header.Render("Files attached to request:"))
 
 	// Build display list with styled paths
@@ -216,7 +217,12 @@ func (l *Logger) FilesIncludedCtx(ctx context.Context, files []string) {
 		}
 	}
 
-	l.ListCtx(ctx, displayFiles)
+	// Print files without indentation
+	for _, item := range displayFiles {
+		fmt.Fprintf(writer, "%s %s\n",
+			l.theme.Highlight.Render(theme.IconBullet),
+			item)
+	}
 }
 
 // FilesIncluded displays the list of files that will be included in the request
@@ -344,22 +350,24 @@ func (l *Logger) CacheInfo(message string) {
 func (l *Logger) CacheCreated(cacheID string, expires time.Time) {
 	relativeTime := formatRelativeTime(expires)
 	pathStyle := lipgloss.NewStyle().Foreground(theme.Cyan).Italic(true)
-	fmt.Fprintf(l.writer, "  %s %s %s\n",
+	fmt.Fprintf(l.writer, "%s %s %s\n",
 		l.theme.Success.Render(theme.IconSuccess),
 		l.theme.Success.Render("Cache created:"),
 		pathStyle.Render(cacheID))
-	fmt.Fprintf(l.writer, "  📅 %s %s\n",
+	fmt.Fprintf(l.writer, "%s %s %s\n",
+		theme.IconCalendar,
 		l.theme.Muted.Render("Expires"),
 		l.theme.Muted.Render(relativeTime))
 }
 
 // ChangedFiles logs files that have changed
 func (l *Logger) ChangedFiles(files []string) {
-	fmt.Fprintf(l.writer, "🔄 %s\n",
+	fmt.Fprintf(l.writer, "%s %s\n",
+		theme.IconSync,
 		l.theme.Warning.Render("Cached files have changed:"))
 	pathStyle := lipgloss.NewStyle().Foreground(theme.Cyan).Italic(true)
 	for _, file := range files {
-		fmt.Fprintf(l.writer, "   %s %s\n",
+		fmt.Fprintf(l.writer, "%s %s\n",
 			l.theme.Highlight.Render(theme.IconBullet),
 			pathStyle.Render(file))
 	}
@@ -374,7 +382,8 @@ func (l *Logger) CreatingCache() {
 
 // NoCache logs when no cache is found
 func (l *Logger) NoCache() {
-	fmt.Fprintf(l.writer, "🆕 %s\n",
+	fmt.Fprintf(l.writer, "%s %s\n",
+		theme.IconSparkle,
 		l.theme.Info.Render("No existing cache found"))
 }
 
@@ -406,7 +415,8 @@ func (l *Logger) CacheFrozen() {
 
 // CacheDisabled logs when cache is disabled
 func (l *Logger) CacheDisabled() {
-	fmt.Fprintf(l.writer, "🚫 %s\n",
+	fmt.Fprintf(l.writer, "%s %s\n",
+		theme.IconStop,
 		l.theme.Warning.Render("Cache disabled by @disable-cache directive"))
 }
 
@@ -420,9 +430,11 @@ func (l *Logger) TTL(ttl string) {
 
 // CacheDisabledByDefault logs when cache is disabled by default (opt-in model)
 func (l *Logger) CacheDisabledByDefault() {
-	fmt.Fprintf(l.writer, "ℹ️ %s\n",
+	fmt.Fprintf(l.writer, "%s %s\n",
+		theme.IconInfo,
 		l.theme.Info.Render("Caching is disabled by default"))
-	fmt.Fprintf(l.writer, "   %s\n",
+	fmt.Fprintf(l.writer, "%s %s\n",
+		theme.IconBullet,
 		l.theme.Muted.Render("To enable caching, add @enable-cache to your .grove/rules file"))
 }
 
@@ -486,7 +498,8 @@ func (l *Logger) RulesFileContent(content string) {
 		MarginTop(1).
 		MarginBottom(1)
 
-	fmt.Fprintf(l.writer, "📋 %s\n",
+	fmt.Fprintf(l.writer, "%s %s\n",
+		theme.IconChecklist,
 		l.theme.Header.Render("Rules file content:"))
 
 	// Apply box styling to the content
@@ -499,11 +512,11 @@ func (l *Logger) ContextSummary(cold, hot int) {
 	fmt.Fprintf(l.writer, "%s %s\n",
 		theme.IconChart,
 		l.theme.Header.Render("Context Summary:"))
-	fmt.Fprintf(l.writer, "  %s %s %s\n",
+	fmt.Fprintf(l.writer, "%s %s %s\n",
 		l.theme.Highlight.Render(theme.IconBullet),
 		l.theme.Muted.Render("Cold files:"),
 		l.theme.Bold.Render(fmt.Sprintf("%d", cold)))
-	fmt.Fprintf(l.writer, "  %s %s %s\n",
+	fmt.Fprintf(l.writer, "%s %s %s\n",
 		l.theme.Highlight.Render(theme.IconBullet),
 		l.theme.Muted.Render("Hot files:"),
 		l.theme.Bold.Render(fmt.Sprintf("%d", hot)))
