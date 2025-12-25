@@ -156,9 +156,9 @@ func (l *Logger) ModelCtx(ctx context.Context, model string) {
 		entry.Info("Calling Gemini API")
 	}
 	// Display pretty UI
-	fmt.Fprintf(writer, "%s %s\n",
-		l.theme.Info.Render(theme.IconRobot+" Calling Gemini API with model:"),
-		l.theme.Accent.Render(model))
+	fmt.Fprintf(writer, "%s Calling Gemini API with model: %s\n",
+		theme.IconRobot,
+		model)
 }
 
 // Model logs the model being used
