@@ -2,6 +2,7 @@ package pretty
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -70,29 +71,54 @@ func NewWithWriter(w io.Writer) *Logger {
 	}
 }
 
+// WorkingDirectoryCtx logs the working directory to the writer from the context
+func (l *Logger) WorkingDirectoryCtx(ctx context.Context, dir string) {
+	l.PathCtx(ctx, theme.IconHome+" Working directory", dir)
+}
+
 // WorkingDirectory logs the working directory
 func (l *Logger) WorkingDirectory(dir string) {
-	l.Path(theme.IconHome+" Working directory", dir)
+	l.WorkingDirectoryCtx(context.Background(), dir)
+}
+
+// FoundRulesFileCtx logs that a rules file was found to the writer from the context
+func (l *Logger) FoundRulesFileCtx(ctx context.Context, path string) {
+	l.PathCtx(ctx, "📋 Found rules file", path)
 }
 
 // FoundRulesFile logs that a rules file was found
 func (l *Logger) FoundRulesFile(path string) {
-	l.Path("📋 Found rules file", path)
+	l.FoundRulesFileCtx(context.Background(), path)
+}
+
+// WarningCtx logs a warning message to the writer from the context
+func (l *Logger) WarningCtx(ctx context.Context, message string) {
+	l.WarnPrettyCtx(ctx, message)
 }
 
 // Warning logs a warning message
 func (l *Logger) Warning(message string) {
-	l.WarnPretty(message)
+	l.WarningCtx(context.Background(), message)
+}
+
+// InfoCtx logs an info message to the writer from the context
+func (l *Logger) InfoCtx(ctx context.Context, message string) {
+	l.InfoPrettyCtx(ctx, message)
 }
 
 // Info logs an info message
 func (l *Logger) Info(message string) {
-	l.InfoPretty(message)
+	l.InfoCtx(context.Background(), message)
+}
+
+// SuccessCtx logs a success message to the writer from the context
+func (l *Logger) SuccessCtx(ctx context.Context, message string) {
+	l.PrettyLogger.SuccessCtx(ctx, message)
 }
 
 // Success logs a success message
 func (l *Logger) Success(message string) {
-	l.PrettyLogger.Success(message)
+	l.SuccessCtx(context.Background(), message)
 }
 
 // Error logs an error message
@@ -382,8 +408,10 @@ func (l *Logger) CacheDisabledByDefault() {
 		l.theme.Muted.Render("To enable caching, add @enable-cache to your .grove/rules file"))
 }
 
-// CacheWarning displays a prominent warning about experimental caching and costs
-func (l *Logger) CacheWarning() {
+// CacheWarningCtx displays a prominent warning about experimental caching and costs to the writer from the context
+func (l *Logger) CacheWarningCtx(ctx context.Context) {
+	writer := corelogging.GetWriter(ctx)
+
 	// Create a warning box style using theme colors
 	warningBox := lipgloss.NewStyle().
 		Border(lipgloss.DoubleBorder()).
@@ -400,7 +428,12 @@ func (l *Logger) CacheWarning() {
 			"Please monitor your Google Cloud billing closely to avoid unexpected charges.\n\n" +
 			"You can disable caching with the --no-cache flag or by removing @enable-cache from your rules.")
 
-	fmt.Fprintln(l.writer, warningBox.Render(warningContent))
+	fmt.Fprintln(writer, warningBox.Render(warningContent))
+}
+
+// CacheWarning displays a prominent warning about experimental caching and costs
+func (l *Logger) CacheWarning() {
+	l.CacheWarningCtx(context.Background())
 }
 
 // EstimatedTokens logs estimated token count

@@ -81,7 +81,7 @@ func (r *RequestRunner) Run(ctx context.Context, options RequestOptions) (string
 	}
 	workDir = absWorkDir
 
-	r.logger.WorkingDirectory(workDir)
+	r.logger.WorkingDirectoryCtx(ctx, workDir)
 
 	// Check for .grove/rules file or existing context files
 	// (context files may exist from a custom rules file used by grove-flow)
@@ -115,7 +115,7 @@ func (r *RequestRunner) Run(ctx context.Context, options RequestOptions) (string
 	if !contextGeneratedFromCustomRules {
 		if _, err := os.Stat(rulesPath); err == nil {
 			hasRules = true
-			r.logger.FoundRulesFile(rulesPath)
+			r.logger.FoundRulesFileCtx(ctx, rulesPath)
 
 			// Log the rules file content
 			rulesContent, err := os.ReadFile(rulesPath)
@@ -137,10 +137,10 @@ func (r *RequestRunner) Run(ctx context.Context, options RequestOptions) (string
 			// Check if context files exist
 			if _, err := os.Stat(coldContextFile); os.IsNotExist(err) {
 				needsRegeneration = true
-				r.logger.Warning("Cold context not found, will regenerate")
+				r.logger.WarningCtx(ctx, "Cold context not found, will regenerate")
 			} else if _, err := os.Stat(hotContextFile); os.IsNotExist(err) {
 				needsRegeneration = true
-				r.logger.Warning("Hot context not found, will regenerate")
+				r.logger.WarningCtx(ctx, "Hot context not found, will regenerate")
 			}
 		}
 
@@ -176,7 +176,7 @@ func (r *RequestRunner) Run(ctx context.Context, options RequestOptions) (string
 		}
 	} else if !hasContextFiles {
 		// Only show warning if neither rules file nor context files exist
-		r.logger.Warning("No .grove/rules file found - context management disabled")
+		r.logger.WarningCtx(ctx, "No .grove/rules file found - context management disabled")
 		r.logger.Tip("Create .grove/rules to enable automatic context inclusion")
 		r.logger.Blank()
 	}
@@ -212,7 +212,7 @@ func (r *RequestRunner) Run(ctx context.Context, options RequestOptions) (string
 				if line == "@enable-cache" {
 					cachingEnabled = true
 					// Display prominent warning about experimental caching
-					r.logger.CacheWarning()
+					r.logger.CacheWarningCtx(ctx)
 					break
 				}
 			}
