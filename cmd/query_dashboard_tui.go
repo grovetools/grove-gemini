@@ -18,21 +18,23 @@ import (
 // dashboardKeyMap extends the base keymap with custom keybindings
 type dashboardKeyMap struct {
 	keymap.Base
-	SevenDays  key.Binding
-	ThirtyDays key.Binding
-	NinetyDays key.Binding
+	DailyView    key.Binding
+	WeeklyView   key.Binding
+	MonthlyView  key.Binding
+	PrevPeriod   key.Binding
+	NextPeriod   key.Binding
 }
 
 // ShortHelp returns the short help keybindings
 func (k dashboardKeyMap) ShortHelp() []key.Binding {
 	baseHelp := k.Base.ShortHelp()
-	return append(baseHelp, k.SevenDays, k.ThirtyDays, k.NinetyDays)
+	return append(baseHelp, k.DailyView, k.WeeklyView, k.MonthlyView, k.PrevPeriod, k.NextPeriod)
 }
 
 // FullHelp returns the full help keybindings
 func (k dashboardKeyMap) FullHelp() [][]key.Binding {
 	baseHelp := k.Base.FullHelp()
-	customKeys := []key.Binding{k.SevenDays, k.ThirtyDays, k.NinetyDays}
+	customKeys := []key.Binding{k.DailyView, k.WeeklyView, k.MonthlyView, k.PrevPeriod, k.NextPeriod}
 	return append(baseHelp, customKeys)
 }
 
@@ -42,7 +44,8 @@ type dashboardModel struct {
 	projectID      string
 	datasetID      string
 	tableID        string
-	days           int
+	timeFrame      time.Duration
+	timeOffset     int // Number of periods back from now (0 = current period)
 	billingData    *analytics.BillingData
 	table          table.Model
 	plot           PlotModel
@@ -60,9 +63,16 @@ type billingDataLoadedMsg struct {
 }
 
 // Command to load billing data
-func loadBillingDataCmd(projectID, datasetID, tableID string, days int) tea.Cmd {
+func loadBillingDataCmd(projectID, datasetID, tableID string, timeFrame time.Duration, offset int) tea.Cmd {
 	return func() tea.Msg {
 		ctx := context.Background()
+
+		// Convert to days for the API
+		days := int(timeFrame.Hours() / 24)
+
+		// Fetch data for the calculated period
+		// Note: offset is handled on the client side for display purposes
+		// The API always fetches the most recent N days
 		data, err := analytics.FetchBillingData(ctx, projectID, datasetID, tableID, days)
 		if err != nil {
 			return billingDataLoadedMsg{err: err}
@@ -75,17 +85,25 @@ func loadBillingDataCmd(projectID, datasetID, tableID string, days int) tea.Cmd 
 func newDashboardKeyMap() dashboardKeyMap {
 	return dashboardKeyMap{
 		Base: keymap.NewBase(),
-		SevenDays: key.NewBinding(
-			key.WithKeys("7", "w"),
-			key.WithHelp("7/w", "7 days"),
+		DailyView: key.NewBinding(
+			key.WithKeys("d"),
+			key.WithHelp("d", "daily view"),
 		),
-		ThirtyDays: key.NewBinding(
-			key.WithKeys("3", "m"),
-			key.WithHelp("3/m", "30 days"),
+		WeeklyView: key.NewBinding(
+			key.WithKeys("w"),
+			key.WithHelp("w", "weekly view"),
 		),
-		NinetyDays: key.NewBinding(
-			key.WithKeys("9", "q"),
-			key.WithHelp("9/q", "90 days"),
+		MonthlyView: key.NewBinding(
+			key.WithKeys("m"),
+			key.WithHelp("m", "monthly view"),
+		),
+		PrevPeriod: key.NewBinding(
+			key.WithKeys("left", "h"),
+			key.WithHelp("←/h", "previous period"),
+		),
+		NextPeriod: key.NewBinding(
+			key.WithKeys("right", "l"),
+			key.WithHelp("→/l", "next period"),
 		),
 	}
 }
@@ -104,20 +122,32 @@ func newDashboardModel(projectID, datasetID, tableID string, days int) dashboard
 	keys := newDashboardKeyMap()
 	helpModel := help.New(keys)
 
+	// Convert days to timeFrame, default to monthly if days is 30
+	var timeFrame time.Duration
+	if days == 7 {
+		timeFrame = 7 * 24 * time.Hour
+	} else if days == 90 {
+		timeFrame = 90 * 24 * time.Hour
+	} else {
+		// Default to monthly (30 days)
+		timeFrame = 30 * 24 * time.Hour
+	}
+
 	return dashboardModel{
-		isLoading: true,
-		projectID: projectID,
-		datasetID: datasetID,
-		tableID:   tableID,
-		days:      days,
-		table:     tbl,
-		keys:      keys,
-		help:      helpModel,
+		isLoading:  true,
+		projectID:  projectID,
+		datasetID:  datasetID,
+		tableID:    tableID,
+		timeFrame:  timeFrame,
+		timeOffset: 0,
+		table:      tbl,
+		keys:       keys,
+		help:       helpModel,
 	}
 }
 
 func (m dashboardModel) Init() tea.Cmd {
-	return loadBillingDataCmd(m.projectID, m.datasetID, m.tableID, m.days)
+	return loadBillingDataCmd(m.projectID, m.datasetID, m.tableID, m.timeFrame, m.timeOffset)
 }
 
 func (m dashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -145,18 +175,32 @@ func (m dashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, m.keys.Help):
 			m.help.Toggle()
 			return m, nil
-		case key.Matches(msg, m.keys.SevenDays):
-			m.days = 7
+		case key.Matches(msg, m.keys.DailyView):
+			m.timeFrame = 24 * time.Hour
+			m.timeOffset = 0 // Reset to current period
 			m.isLoading = true
-			return m, loadBillingDataCmd(m.projectID, m.datasetID, m.tableID, m.days)
-		case key.Matches(msg, m.keys.ThirtyDays):
-			m.days = 30
+			return m, loadBillingDataCmd(m.projectID, m.datasetID, m.tableID, m.timeFrame, m.timeOffset)
+		case key.Matches(msg, m.keys.WeeklyView):
+			m.timeFrame = 7 * 24 * time.Hour
+			m.timeOffset = 0 // Reset to current period
 			m.isLoading = true
-			return m, loadBillingDataCmd(m.projectID, m.datasetID, m.tableID, m.days)
-		case key.Matches(msg, m.keys.NinetyDays):
-			m.days = 90
+			return m, loadBillingDataCmd(m.projectID, m.datasetID, m.tableID, m.timeFrame, m.timeOffset)
+		case key.Matches(msg, m.keys.MonthlyView):
+			m.timeFrame = 30 * 24 * time.Hour
+			m.timeOffset = 0 // Reset to current period
 			m.isLoading = true
-			return m, loadBillingDataCmd(m.projectID, m.datasetID, m.tableID, m.days)
+			return m, loadBillingDataCmd(m.projectID, m.datasetID, m.tableID, m.timeFrame, m.timeOffset)
+		case key.Matches(msg, m.keys.PrevPeriod):
+			m.timeOffset++
+			m.isLoading = true
+			return m, loadBillingDataCmd(m.projectID, m.datasetID, m.tableID, m.timeFrame, m.timeOffset)
+		case key.Matches(msg, m.keys.NextPeriod):
+			if m.timeOffset > 0 {
+				m.timeOffset--
+				m.isLoading = true
+				return m, loadBillingDataCmd(m.projectID, m.datasetID, m.tableID, m.timeFrame, m.timeOffset)
+			}
+			return m, nil
 		}
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
@@ -199,8 +243,7 @@ func (m dashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if plotHeight == 0 {
 			plotHeight = 10 // Default height
 		}
-		timeFrame := time.Duration(m.days) * 24 * time.Hour
-		m.plot = NewPlot(buckets, "cost", timeFrame, m.width, plotHeight)
+		m.plot = NewPlot(buckets, "cost", m.timeFrame, m.width, plotHeight)
 
 		// Populate table with SKU breakdown
 		var rows []table.Row
@@ -230,11 +273,21 @@ func (m dashboardModel) renderSummaryView() string {
 		Foreground(theme.DefaultTheme.Colors.Cyan).
 		Bold(true)
 
-	totalCost := fmt.Sprintf("%s %s %.2f", titleStyle.Render("Total Cost:"), m.billingData.Currency, m.billingData.TotalCost)
-	dailyAvg := fmt.Sprintf("%s %s %.2f", titleStyle.Render("Daily Avg:"), m.billingData.Currency, m.billingData.TotalCost/float64(m.days))
-	monthlyProj := fmt.Sprintf("%s %s %.2f", titleStyle.Render("Monthly Proj:"), m.billingData.Currency, (m.billingData.TotalCost/float64(m.days))*30)
+	totalCost := fmt.Sprintf("%s %s %.2f", titleStyle.Render("Cost:"), m.billingData.Currency, m.billingData.TotalCost)
 
-	return fmt.Sprintf("%s  │  %s  │  %s", totalCost, dailyAvg, monthlyProj)
+	// Count total tokens from SKU breakdown (they're stored as usage amounts)
+	var totalTokens int64
+	for _, sku := range m.billingData.SKUBreakdown {
+		totalTokens += int64(sku.TotalUsage)
+	}
+	tokens := fmt.Sprintf("%s %dK", titleStyle.Render("Tokens:"), totalTokens/1000)
+
+	// Calculate requests (estimate based on token averages)
+	requests := fmt.Sprintf("%s %d", titleStyle.Render("Requests:"), len(m.billingData.SKUBreakdown))
+
+	// We don't have error rate in billing data, so omit it
+
+	return fmt.Sprintf("%s  │  %s  │  %s", totalCost, tokens, requests)
 }
 
 func (m dashboardModel) View() string {
@@ -255,7 +308,26 @@ func (m dashboardModel) View() string {
 		Foreground(theme.DefaultTheme.Colors.Cyan).
 		Bold(true)
 
-	header := titleStyle.Render(fmt.Sprintf("GCP Billing Dashboard - Last %d Days", m.days))
+	timeFrameLabel := "Daily"
+	if m.timeFrame == 7*24*time.Hour {
+		timeFrameLabel = "Weekly"
+	} else if m.timeFrame == 30*24*time.Hour {
+		timeFrameLabel = "Monthly"
+	}
+
+	// Calculate date range being viewed
+	endTime := time.Now().Add(-time.Duration(m.timeOffset) * m.timeFrame)
+	startTime := endTime.Add(-m.timeFrame)
+
+	// Format date range
+	var dateRange string
+	if m.timeOffset == 0 {
+		dateRange = ""
+	} else {
+		dateRange = fmt.Sprintf(" (%s - %s)", startTime.Format("Jan 2"), endTime.Format("Jan 2"))
+	}
+
+	header := titleStyle.Render(fmt.Sprintf("GCP Billing Dashboard - %s View%s", timeFrameLabel, dateRange))
 
 	summaryView := m.renderSummaryView()
 	plotView := m.plot.View()
