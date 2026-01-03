@@ -24,6 +24,19 @@ type queryTuiKeyMap struct {
 	ToggleMetric key.Binding
 }
 
+// ShortHelp returns the short help keybindings
+func (k queryTuiKeyMap) ShortHelp() []key.Binding {
+	baseHelp := k.Base.ShortHelp()
+	return append(baseHelp, k.DailyView, k.WeeklyView, k.MonthlyView, k.ToggleMetric)
+}
+
+// FullHelp returns the full help keybindings
+func (k queryTuiKeyMap) FullHelp() [][]key.Binding {
+	baseHelp := k.Base.FullHelp()
+	customKeys := []key.Binding{k.DailyView, k.WeeklyView, k.MonthlyView, k.ToggleMetric}
+	return append(baseHelp, customKeys)
+}
+
 // Main model for the TUI
 type queryTuiModel struct {
 	isLoading   bool
