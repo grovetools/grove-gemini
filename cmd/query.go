@@ -9,6 +9,16 @@ func newQueryCmd() *cobra.Command {
 		Long:  `Provides commands to query various Google Cloud services for Gemini API metrics, token usage logs, and billing information.`,
 	}
 
+	// Add an explicit 'tui' command
+	tuiCmd := &cobra.Command{
+		Use:   "tui",
+		Short: "Launch an interactive TUI to visualize local query logs",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runQueryTUI()
+		},
+	}
+	cmd.AddCommand(tuiCmd)
+
 	// Subcommands will be added here
 	cmd.AddCommand(newQueryMetricsCmd())
 	cmd.AddCommand(newQueryTokensCmd())

@@ -18,6 +18,9 @@ func main() {
 		GeminiDebugLogScenario(),
 		// API Key Configuration
 		APIKeyConfigScenario(),
+		// Query TUI Scenarios
+		QueryTUIComprehensiveScenario(),
+		QueryTUINoLogsScenario(),
 	}
 
 	// Execute the custom tend application with our scenarios
