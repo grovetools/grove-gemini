@@ -157,7 +157,7 @@ func (p StackedPlotModel) renderStackedChart() string {
 
 	// Add X-axis
 	ticks, labelString := p.generateXAxisLabels(chartWidth)
-	xAxis := "       └"
+	xAxis := "      └" // 6 spaces to align with Y-axis labels
 	for i := 0; i < chartWidth; i++ {
 		if _, hasTick := ticks[i]; hasTick {
 			xAxis += "┴"
@@ -166,7 +166,7 @@ func (p StackedPlotModel) renderStackedChart() string {
 		}
 	}
 	lines = append(lines, xAxis)
-	lines = append(lines, "        "+labelString)
+	lines = append(lines, "       "+labelString) // 7 spaces total (6 + 1 for alignment)
 
 	// Add legend
 	legend := p.renderLegend()
