@@ -48,7 +48,7 @@ type dashboardModel struct {
 	timeOffset     int // Number of periods back from now (0 = current period)
 	billingData    *analytics.BillingData
 	table          table.Model
-	plot           PlotModel
+	plot           StackedPlotModel
 	keys           dashboardKeyMap
 	help           help.Model
 	err            error
@@ -228,22 +228,12 @@ func (m dashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.billingData = msg.data
 
-		// Convert daily summaries to buckets for plotting
-		var buckets []analytics.Bucket
-		for _, daily := range msg.data.DailySummaries {
-			buckets = append(buckets, analytics.Bucket{
-				StartTime:   daily.Date,
-				TotalCost:   daily.TotalCost,
-				TotalTokens: int64(daily.TotalUsage),
-			})
-		}
-
-		// Create plot with current dimensions
+		// Create stacked plot with current dimensions
 		plotHeight := m.plot.Height
 		if plotHeight == 0 {
 			plotHeight = 10 // Default height
 		}
-		m.plot = NewPlot(buckets, "cost", m.timeFrame, m.width, plotHeight)
+		m.plot = NewStackedPlot(msg.data.DailySummaries, m.timeFrame, m.width, plotHeight)
 
 		// Populate table with SKU breakdown
 		var rows []table.Row
