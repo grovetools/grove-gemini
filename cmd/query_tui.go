@@ -141,21 +141,30 @@ func (m queryTuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			} else {
 				m.plotMetric = "cost"
 			}
-			m.plot = NewPlot(m.buckets, m.plotMetric, m.width, 5)
+			plotHeight := m.plot.Height
+			if plotHeight == 0 {
+				plotHeight = 10
+			}
+			m.plot = NewPlot(m.buckets, m.plotMetric, m.width, plotHeight)
 			return m, nil
 		}
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
 		m.help.SetSize(m.width, m.height)
-		m.plot.Width = m.width - 4 // Account for plot box padding
+		m.plot.Width = m.width
 
-		// Recalculate table height based on remaining space
-		summaryHeight := 3
-		plotHeight := 7 // Plot + box
-		headerHeight := 1
-		footerHeight := 1
-		m.table.SetHeight(m.height - summaryHeight - plotHeight - headerHeight - footerHeight)
+		// Calculate heights - 50% for table, rest for plot
+		titleHeight := 1    // "Gemini API Usage - X View"
+		summaryHeight := 1  // Single line summary
+		footerHeight := 1   // Help footer
+
+		availableHeight := m.height - titleHeight - summaryHeight - footerHeight - 2
+		plotHeight := availableHeight / 2
+		tableHeight := availableHeight - plotHeight
+
+		m.plot.Height = plotHeight
+		m.table.SetHeight(tableHeight)
 		return m, nil
 	case logsLoadedMsg:
 		m.isLoading = false
@@ -171,8 +180,12 @@ func (m queryTuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.buckets = analytics.AggregateLogs(m.logs, m.timeFrame/24, startTime, endTime) // e.g., hourly for 24h
 		m.totals = analytics.CalculateTotals(m.buckets)
 
-		// Create plot
-		m.plot = NewPlot(m.buckets, m.plotMetric, m.width, 5) // 5 lines high
+		// Create plot with current dimensions
+		plotHeight := m.plot.Height
+		if plotHeight == 0 {
+			plotHeight = 10 // Default height
+		}
+		m.plot = NewPlot(m.buckets, m.plotMetric, m.width, plotHeight)
 
 		// Populate table
 		var rows []table.Row
@@ -200,34 +213,17 @@ func (m queryTuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m queryTuiModel) renderSummaryView() string {
-	if m.width == 0 {
-		m.width = 120 // Fallback width
-	}
+	// Ultra-compact single-line summary with no boxes
+	titleStyle := lipgloss.NewStyle().
+		Foreground(theme.DefaultTheme.Colors.Cyan).
+		Bold(true)
 
-	boxWidth := (m.width / 3) - 6
-	if boxWidth < 20 {
-		boxWidth = 20
-	}
+	cost := fmt.Sprintf("%s $%.2f", titleStyle.Render("Cost:"), m.totals.TotalCost)
+	tokens := fmt.Sprintf("%s %dK", titleStyle.Render("Tokens:"), m.totals.TotalTokens/1000)
+	requests := fmt.Sprintf("%s %d", titleStyle.Render("Requests:"), m.totals.TotalRequests)
+	errors := fmt.Sprintf("%s %.1f%%", titleStyle.Render("Errors:"), m.totals.ErrorRate)
 
-	// Create style with explicit height to ensure content is visible
-	boxStyle := lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(theme.DefaultTheme.Colors.Cyan).
-		Padding(0, 1).
-		Width(boxWidth).
-		Height(4).  // Explicit height: 2 lines of content + padding
-		Align(lipgloss.Left, lipgloss.Top)
-
-	// Format content with proper spacing
-	costContent := fmt.Sprintf("\nTotal Cost\n$%.4f\n", m.totals.TotalCost)
-	tokenContent := fmt.Sprintf("\nTotal Tokens\n%d K\n", m.totals.TotalTokens/1000)
-	requestContent := fmt.Sprintf("\nTotal Requests\n%d (%.1f%% err)\n", m.totals.TotalRequests, m.totals.ErrorRate)
-
-	costBox := boxStyle.Render(costContent)
-	tokenBox := boxStyle.Render(tokenContent)
-	requestBox := boxStyle.Render(requestContent)
-
-	return lipgloss.JoinHorizontal(lipgloss.Top, costBox, "  ", tokenBox, "  ", requestBox)
+	return fmt.Sprintf("%s  │  %s  │  %s  │  %s", cost, tokens, requests, errors)
 }
 
 func (m queryTuiModel) View() string {
@@ -243,21 +239,31 @@ func (m queryTuiModel) View() string {
 		return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, m.help.View())
 	}
 
+	// Render header
+	titleStyle := lipgloss.NewStyle().
+		Foreground(theme.DefaultTheme.Colors.Cyan).
+		Bold(true)
+
+	timeFrameLabel := "Daily"
+	if m.timeFrame == 7*24*time.Hour {
+		timeFrameLabel = "Weekly"
+	} else if m.timeFrame == 30*24*time.Hour {
+		timeFrameLabel = "Monthly"
+	}
+
+	header := titleStyle.Render(fmt.Sprintf("Gemini API Usage - %s View", timeFrameLabel))
+
 	summaryView := m.renderSummaryView()
 	plotView := m.plot.View()
 	tableView := m.table.View()
 	helpView := m.help.View()
 
-	plotBox := lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).Padding(0, 1).Render(plotView)
-
-	// Add spacing between sections
+	// Ultra-compact layout - no borders, no blank lines
 	return lipgloss.JoinVertical(lipgloss.Left,
+		header,
 		summaryView,
-		"",  // Blank line
-		plotBox,
-		"",  // Blank line
+		plotView,
 		tableView,
-		"",  // Blank line
 		helpView,
 	)
 }
