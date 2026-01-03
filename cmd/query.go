@@ -23,6 +23,7 @@ func newQueryCmd() *cobra.Command {
 	cmd.AddCommand(newQueryMetricsCmd())
 	cmd.AddCommand(newQueryTokensCmd())
 	cmd.AddCommand(newQueryBillingCmd())
+	cmd.AddCommand(newQueryDashboardCmd())
 	cmd.AddCommand(newQueryRequestsCmd())
 	cmd.AddCommand(newQueryExploreCmd())
 	cmd.AddCommand(newQueryLocalCmd())

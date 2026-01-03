@@ -160,57 +160,73 @@ func EstimateCost(model string, promptTokens, completionTokens int32) float64 {
 // EstimateCostWithCache calculates the estimated cost accounting for cached token discounts
 // Cached tokens get a 75% discount on input pricing
 func EstimateCostWithCache(model string, promptTokens, completionTokens, cachedTokens int32) float64 {
-	// Pricing as of Dec 2024 (per million tokens)
+	// Pricing as of Jan 2025 (per million tokens)
+	// GCP has different pricing for "long context" (>128K tokens) vs "short context"
 	var inputPrice, outputPrice float64
-	
+
 	modelLower := strings.ToLower(model)
-	
+
+	// Determine if this is a long context request (>128K tokens)
+	// We use total prompt tokens (including cached) for this determination
+	totalPromptTokens := promptTokens
+	isLongContext := totalPromptTokens > 128000
+
 	switch {
-	// Gemini 2.5 models
+	// Gemini 2.5 Pro models
 	case contains(modelLower, "gemini-2.5-pro"):
-		// Note: We're using the base pricing, not accounting for >200k prompts
-		inputPrice = 1.25
-		outputPrice = 10.00
+		if isLongContext {
+			// Long context pricing (observed from GCP billing)
+			inputPrice = 2.50
+			outputPrice = 15.00
+		} else {
+			// Short context pricing
+			inputPrice = 1.25
+			outputPrice = 10.00
+		}
+
+	// Gemini 2.5 Flash models
 	case contains(modelLower, "gemini-2.5-flash") && contains(modelLower, "lite"):
 		inputPrice = 0.10
 		outputPrice = 0.40
 	case contains(modelLower, "gemini-2.5-flash"):
+		// Flash doesn't seem to have long/short pricing tiers in billing data
 		inputPrice = 0.30
 		outputPrice = 2.50
-		
-	// Gemini 2.0 models
+
+	// Gemini 2.0 Flash models
 	case contains(modelLower, "gemini-2.0-flash") && contains(modelLower, "lite"):
 		inputPrice = 0.075
 		outputPrice = 0.30
 	case contains(modelLower, "gemini-2.0-flash"):
 		inputPrice = 0.10
 		outputPrice = 0.40
-		
+
 	// Legacy patterns for backward compatibility
 	case contains(modelLower, "flash"):
 		inputPrice = 0.10   // Default to 2.0 flash pricing
 		outputPrice = 0.40
 	case contains(modelLower, "pro"):
-		inputPrice = 1.25   // Default to 2.5 pro pricing
+		// Default to short context pricing for Pro
+		inputPrice = 1.25
 		outputPrice = 10.00
-		
+
 	default:
 		// Default to 2.0 flash pricing
 		inputPrice = 0.10
 		outputPrice = 0.40
 	}
-	
+
 	// Calculate costs with cache discount
 	// Cached tokens get 75% discount
 	const cacheDiscount = 0.25 // Pay only 25% of the price for cached tokens
-	
+
 	// Separate dynamic tokens from cached tokens
 	dynamicTokens := promptTokens - cachedTokens
-	
+
 	cachedCost := float64(cachedTokens) / 1_000_000 * inputPrice * cacheDiscount
 	dynamicCost := float64(dynamicTokens) / 1_000_000 * inputPrice
 	outputCost := float64(completionTokens) / 1_000_000 * outputPrice
-	
+
 	return cachedCost + dynamicCost + outputCost
 }
 

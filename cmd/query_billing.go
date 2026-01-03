@@ -42,15 +42,23 @@ To set up billing export:
 		RunE: runQueryBilling,
 	}
 
-	// Get default project from config
+	// Get defaults from config
 	defaultProject := config.GetDefaultProject("")
+	defaultDataset := config.GetBillingDatasetID("")
+	defaultTable := config.GetBillingTableID("")
 
 	cmd.Flags().StringVarP(&billingProjectID, "project-id", "p", defaultProject, "GCP project ID")
-	cmd.Flags().StringVarP(&billingDatasetID, "dataset-id", "d", "", "BigQuery dataset ID containing billing export (required)")
-	cmd.Flags().StringVarP(&billingTableID, "table-id", "t", "", "BigQuery table ID for billing export (required)")
+	cmd.Flags().StringVarP(&billingDatasetID, "dataset-id", "d", defaultDataset, "BigQuery dataset ID containing billing export")
+	cmd.Flags().StringVarP(&billingTableID, "table-id", "t", defaultTable, "BigQuery table ID for billing export")
 	cmd.Flags().IntVar(&billingDays, "days", 7, "Number of days to look back")
-	cmd.MarkFlagRequired("dataset-id")
-	cmd.MarkFlagRequired("table-id")
+
+	// Only mark as required if no defaults are available
+	if defaultDataset == "" {
+		cmd.MarkFlagRequired("dataset-id")
+	}
+	if defaultTable == "" {
+		cmd.MarkFlagRequired("table-id")
+	}
 
 	return cmd
 }
@@ -58,9 +66,22 @@ To set up billing export:
 func runQueryBilling(cmd *cobra.Command, args []string) error {
 	ctx := context.Background()
 
-	// Ensure we have a project ID
+	// Apply config defaults if flags weren't set
+	billingProjectID = config.GetDefaultProject(billingProjectID)
+	billingDatasetID = config.GetBillingDatasetID(billingDatasetID)
+	billingTableID = config.GetBillingTableID(billingTableID)
+
+	// Validate required fields
 	if billingProjectID == "" {
 		return fmt.Errorf("no GCP project specified. Use --project-id flag or set a default with 'gemapi config set project PROJECT_ID'")
+	}
+
+	if billingDatasetID == "" {
+		return fmt.Errorf("no billing dataset specified. Use --dataset-id flag or set a default with 'gemapi config set billing DATASET_ID TABLE_ID'")
+	}
+
+	if billingTableID == "" {
+		return fmt.Errorf("no billing table specified. Use --table-id flag or set a default with 'gemapi config set billing DATASET_ID TABLE_ID'")
 	}
 
 	// Create BigQuery client

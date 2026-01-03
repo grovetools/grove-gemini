@@ -12,7 +12,9 @@ const (
 )
 
 type GCPConfig struct {
-	DefaultProject string `json:"default_project,omitempty"`
+	DefaultProject    string `json:"default_project,omitempty"`
+	BillingDatasetID  string `json:"billing_dataset_id,omitempty"`
+	BillingTableID    string `json:"billing_table_id,omitempty"`
 }
 
 // GetConfigPath returns the path to the GCP config file
@@ -90,6 +92,54 @@ func GetDefaultProject(explicit string) string {
 	config, err := LoadGCPConfig()
 	if err == nil && config.DefaultProject != "" {
 		return config.DefaultProject
+	}
+
+	return ""
+}
+
+// GetBillingDatasetID returns the billing dataset ID, checking in order:
+// 1. Explicitly provided value
+// 2. Environment variable GCP_BILLING_DATASET_ID
+// 3. Saved configuration
+func GetBillingDatasetID(explicit string) string {
+	// If explicitly provided, use that
+	if explicit != "" {
+		return explicit
+	}
+
+	// Check environment variable
+	if envDataset := os.Getenv("GCP_BILLING_DATASET_ID"); envDataset != "" {
+		return envDataset
+	}
+
+	// Check saved config
+	config, err := LoadGCPConfig()
+	if err == nil && config.BillingDatasetID != "" {
+		return config.BillingDatasetID
+	}
+
+	return ""
+}
+
+// GetBillingTableID returns the billing table ID, checking in order:
+// 1. Explicitly provided value
+// 2. Environment variable GCP_BILLING_TABLE_ID
+// 3. Saved configuration
+func GetBillingTableID(explicit string) string {
+	// If explicitly provided, use that
+	if explicit != "" {
+		return explicit
+	}
+
+	// Check environment variable
+	if envTable := os.Getenv("GCP_BILLING_TABLE_ID"); envTable != "" {
+		return envTable
+	}
+
+	// Check saved config
+	config, err := LoadGCPConfig()
+	if err == nil && config.BillingTableID != "" {
+		return config.BillingTableID
 	}
 
 	return ""
