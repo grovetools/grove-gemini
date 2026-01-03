@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"cloud.google.com/go/civil"
 	"github.com/mattsolo1/grove-gemini/pkg/gcp"
 	"google.golang.org/api/iterator"
 )
@@ -35,12 +36,12 @@ type BillingData struct {
 }
 
 type billingQueryRow struct {
-	Date       string  `bigquery:"date"`
-	SKU        string  `bigquery:"sku_description"`
-	TotalCost  float64 `bigquery:"total_cost"`
-	TotalUsage float64 `bigquery:"total_usage_amount"`
-	UsageUnit  string  `bigquery:"usage_unit"`
-	Currency   string  `bigquery:"currency"`
+	Date       civil.Date `bigquery:"date"`
+	SKU        string     `bigquery:"sku_description"`
+	TotalCost  float64    `bigquery:"total_cost"`
+	TotalUsage float64    `bigquery:"total_usage_amount"`
+	UsageUnit  string     `bigquery:"usage_unit"`
+	Currency   string     `bigquery:"currency"`
 }
 
 // FetchBillingData retrieves and aggregates billing data from BigQuery
@@ -93,22 +94,20 @@ func FetchBillingData(ctx context.Context, projectID, datasetID, tableID string,
 			return nil, fmt.Errorf("error reading billing data: %w", err)
 		}
 
-		// Parse date
-		date, err := time.Parse("2006-01-02", row.Date)
-		if err != nil {
-			continue
-		}
+		// Convert civil.Date to time.Time
+		date := time.Date(row.Date.Year, time.Month(row.Date.Month), row.Date.Day, 0, 0, 0, 0, time.UTC)
+		dateKey := row.Date.String() // Use string representation as map key
 
 		// Aggregate by day
-		if _, exists := dailyMap[row.Date]; !exists {
-			dailyMap[row.Date] = &DailyBillingSummary{
+		if _, exists := dailyMap[dateKey]; !exists {
+			dailyMap[dateKey] = &DailyBillingSummary{
 				Date: date,
 				SKUs: []SKUCostBreakdown{},
 			}
 		}
-		dailyMap[row.Date].TotalCost += row.TotalCost
-		dailyMap[row.Date].TotalUsage += row.TotalUsage
-		dailyMap[row.Date].SKUs = append(dailyMap[row.Date].SKUs, SKUCostBreakdown{
+		dailyMap[dateKey].TotalCost += row.TotalCost
+		dailyMap[dateKey].TotalUsage += row.TotalUsage
+		dailyMap[dateKey].SKUs = append(dailyMap[dateKey].SKUs, SKUCostBreakdown{
 			SKU:        row.SKU,
 			TotalCost:  row.TotalCost,
 			TotalUsage: row.TotalUsage,
@@ -135,8 +134,15 @@ func FetchBillingData(ctx context.Context, projectID, datasetID, tableID string,
 		dailySummaries = append(dailySummaries, *summary)
 	}
 
-	// Sort daily summaries by date
-	// (Note: Already sorted by query ORDER BY)
+	// Sort daily summaries by date (ascending)
+	// Note: Maps are unordered in Go, so we must sort after conversion
+	for i := 0; i < len(dailySummaries)-1; i++ {
+		for j := i + 1; j < len(dailySummaries); j++ {
+			if dailySummaries[j].Date.Before(dailySummaries[i].Date) {
+				dailySummaries[i], dailySummaries[j] = dailySummaries[j], dailySummaries[i]
+			}
+		}
+	}
 
 	// Calculate SKU percentages and convert to slice
 	var skuBreakdown []SKUCostBreakdown
