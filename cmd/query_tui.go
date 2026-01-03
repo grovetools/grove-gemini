@@ -128,13 +128,28 @@ func (m queryTuiModel) Init() tea.Cmd {
 
 func (m queryTuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
+
+	// Forward all messages to help component first for handling
+	m.help, cmd = m.help.Update(msg)
+	if cmd != nil {
+		return m, cmd
+	}
+
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
+		// If help is showing, let it handle all keys except quit
+		if m.help.ShowAll {
+			if key.Matches(msg, m.keys.Quit) {
+				return m, tea.Quit
+			}
+			return m, nil
+		}
+
 		switch {
 		case key.Matches(msg, m.keys.Quit):
 			return m, tea.Quit
 		case key.Matches(msg, m.keys.Help):
-			m.help.ShowAll = !m.help.ShowAll
+			m.help.Toggle()
 			return m, nil
 		case key.Matches(msg, m.keys.DailyView):
 			m.timeFrame = 24 * time.Hour
