@@ -22,18 +22,20 @@ type queryTuiKeyMap struct {
 	WeeklyView   key.Binding
 	MonthlyView  key.Binding
 	ToggleMetric key.Binding
+	PrevPeriod   key.Binding
+	NextPeriod   key.Binding
 }
 
 // ShortHelp returns the short help keybindings
 func (k queryTuiKeyMap) ShortHelp() []key.Binding {
 	baseHelp := k.Base.ShortHelp()
-	return append(baseHelp, k.DailyView, k.WeeklyView, k.MonthlyView, k.ToggleMetric)
+	return append(baseHelp, k.DailyView, k.WeeklyView, k.MonthlyView, k.ToggleMetric, k.PrevPeriod, k.NextPeriod)
 }
 
 // FullHelp returns the full help keybindings
 func (k queryTuiKeyMap) FullHelp() [][]key.Binding {
 	baseHelp := k.Base.FullHelp()
-	customKeys := []key.Binding{k.DailyView, k.WeeklyView, k.MonthlyView, k.ToggleMetric}
+	customKeys := []key.Binding{k.DailyView, k.WeeklyView, k.MonthlyView, k.ToggleMetric, k.PrevPeriod, k.NextPeriod}
 	return append(baseHelp, customKeys)
 }
 
@@ -44,6 +46,7 @@ type queryTuiModel struct {
 	buckets     []analytics.Bucket
 	totals      analytics.Totals
 	timeFrame   time.Duration
+	timeOffset  int // Number of periods back from now (0 = current period)
 	table       table.Model
 	plot        PlotModel
 	plotMetric  string // "cost" or "tokens"
@@ -61,10 +64,13 @@ type logsLoadedMsg struct {
 }
 
 // Command to load logs
-func loadLogsCmd(timeFrame time.Duration) tea.Cmd {
+func loadLogsCmd(timeFrame time.Duration, offset int) tea.Cmd {
 	return func() tea.Msg {
 		logger := logging.GetLogger()
-		logs, err := logger.ReadLogs(time.Now().Add(-timeFrame), time.Now())
+		// Calculate the time range based on offset
+		endTime := time.Now().Add(-time.Duration(offset) * timeFrame)
+		startTime := endTime.Add(-timeFrame)
+		logs, err := logger.ReadLogs(startTime, endTime)
 		if err != nil {
 			return logsLoadedMsg{err: err}
 		}
@@ -91,6 +97,14 @@ func newQueryTuiKeyMap() queryTuiKeyMap {
 		ToggleMetric: key.NewBinding(
 			key.WithKeys("t"),
 			key.WithHelp("t", "toggle metric"),
+		),
+		PrevPeriod: key.NewBinding(
+			key.WithKeys("left", "h"),
+			key.WithHelp("←/h", "previous period"),
+		),
+		NextPeriod: key.NewBinding(
+			key.WithKeys("right", "l"),
+			key.WithHelp("→/l", "next period"),
 		),
 	}
 }
@@ -123,7 +137,7 @@ func initialModel() queryTuiModel {
 }
 
 func (m queryTuiModel) Init() tea.Cmd {
-	return loadLogsCmd(m.timeFrame)
+	return loadLogsCmd(m.timeFrame, m.timeOffset)
 }
 
 func (m queryTuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -153,16 +167,30 @@ func (m queryTuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		case key.Matches(msg, m.keys.DailyView):
 			m.timeFrame = 24 * time.Hour
+			m.timeOffset = 0 // Reset to current period
 			m.isLoading = true
-			return m, loadLogsCmd(m.timeFrame)
+			return m, loadLogsCmd(m.timeFrame, m.timeOffset)
 		case key.Matches(msg, m.keys.WeeklyView):
 			m.timeFrame = 7 * 24 * time.Hour
+			m.timeOffset = 0 // Reset to current period
 			m.isLoading = true
-			return m, loadLogsCmd(m.timeFrame)
+			return m, loadLogsCmd(m.timeFrame, m.timeOffset)
 		case key.Matches(msg, m.keys.MonthlyView):
 			m.timeFrame = 30 * 24 * time.Hour
+			m.timeOffset = 0 // Reset to current period
 			m.isLoading = true
-			return m, loadLogsCmd(m.timeFrame)
+			return m, loadLogsCmd(m.timeFrame, m.timeOffset)
+		case key.Matches(msg, m.keys.PrevPeriod):
+			m.timeOffset++
+			m.isLoading = true
+			return m, loadLogsCmd(m.timeFrame, m.timeOffset)
+		case key.Matches(msg, m.keys.NextPeriod):
+			if m.timeOffset > 0 {
+				m.timeOffset--
+				m.isLoading = true
+				return m, loadLogsCmd(m.timeFrame, m.timeOffset)
+			}
+			return m, nil
 		case key.Matches(msg, m.keys.ToggleMetric):
 			if m.plotMetric == "cost" {
 				m.plotMetric = "tokens"
@@ -173,7 +201,7 @@ func (m queryTuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if plotHeight == 0 {
 				plotHeight = 10
 			}
-			m.plot = NewPlot(m.buckets, m.plotMetric, m.width, plotHeight)
+			m.plot = NewPlot(m.buckets, m.plotMetric, m.timeFrame, m.width, plotHeight)
 			return m, nil
 		}
 	case tea.WindowSizeMsg:
@@ -202,10 +230,21 @@ func (m queryTuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.logs = msg.logs
 
-		// Aggregate logs
-		endTime := time.Now()
+		// Aggregate logs - use same time range as loadLogsCmd
+		endTime := time.Now().Add(-time.Duration(m.timeOffset) * m.timeFrame)
 		startTime := endTime.Add(-m.timeFrame)
-		m.buckets = analytics.AggregateLogs(m.logs, m.timeFrame/24, startTime, endTime) // e.g., hourly for 24h
+
+		// Calculate bucket size based on time frame
+		// Daily view: 20-minute buckets (3x more granular)
+		// Weekly/Monthly: Keep original granularity
+		var bucketSize time.Duration
+		if m.timeFrame == 24*time.Hour {
+			bucketSize = m.timeFrame / 72 // 20-minute buckets for daily view
+		} else {
+			bucketSize = m.timeFrame / 24 // Original granularity for weekly/monthly
+		}
+
+		m.buckets = analytics.AggregateLogs(m.logs, bucketSize, startTime, endTime)
 		m.totals = analytics.CalculateTotals(m.buckets)
 
 		// Create plot with current dimensions
@@ -213,7 +252,7 @@ func (m queryTuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if plotHeight == 0 {
 			plotHeight = 10 // Default height
 		}
-		m.plot = NewPlot(m.buckets, m.plotMetric, m.width, plotHeight)
+		m.plot = NewPlot(m.buckets, m.plotMetric, m.timeFrame, m.width, plotHeight)
 
 		// Populate table
 		var rows []table.Row
@@ -279,7 +318,19 @@ func (m queryTuiModel) View() string {
 		timeFrameLabel = "Monthly"
 	}
 
-	header := titleStyle.Render(fmt.Sprintf("Gemini API Usage - %s View", timeFrameLabel))
+	// Calculate date range being viewed
+	endTime := time.Now().Add(-time.Duration(m.timeOffset) * m.timeFrame)
+	startTime := endTime.Add(-m.timeFrame)
+
+	// Format date range
+	var dateRange string
+	if m.timeOffset == 0 {
+		dateRange = ""
+	} else {
+		dateRange = fmt.Sprintf(" (%s - %s)", startTime.Format("Jan 2"), endTime.Format("Jan 2"))
+	}
+
+	header := titleStyle.Render(fmt.Sprintf("Gemini API Usage - %s View%s", timeFrameLabel, dateRange))
 
 	summaryView := m.renderSummaryView()
 	plotView := m.plot.View()
