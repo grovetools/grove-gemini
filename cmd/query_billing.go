@@ -17,14 +17,12 @@ var (
 	billingDays      int
 )
 
-type BillingRecord struct {
-	Service     string  `bigquery:"service"`
-	SKU         string  `bigquery:"sku_description"`
-	UsageStart  string  `bigquery:"usage_start_time"`
-	UsageAmount float64 `bigquery:"usage_amount"`
-	UsageUnit   string  `bigquery:"usage_unit"`
-	Cost        float64 `bigquery:"cost"`
-	Currency    string  `bigquery:"currency"`
+type BillingSummary struct {
+	SKU        string  `bigquery:"sku_description"`
+	TotalCost  float64 `bigquery:"total_cost"`
+	TotalUsage float64 `bigquery:"total_usage_amount"`
+	UsageUnit  string  `bigquery:"usage_unit"`
+	Currency   string  `bigquery:"currency"`
 }
 
 func newQueryBillingCmd() *cobra.Command {
@@ -74,21 +72,23 @@ func runQueryBilling(cmd *cobra.Command, args []string) error {
 
 	fmt.Printf("Fetching billing data for the last %d days...\n\n", billingDays)
 
-	// Construct query
+	// Construct query to aggregate results
 	query := fmt.Sprintf(`
 		SELECT
-			service.description as service,
-			sku.description as sku_description,
-			FORMAT_TIMESTAMP("%%Y-%%m-%%d %%H:%%M:%%S", usage_start_time) as usage_start_time,
-			usage.amount as usage_amount,
-			usage.unit as usage_unit,
-			cost,
+			sku.description AS sku_description,
+			SUM(cost) AS total_cost,
+			SUM(usage.amount) AS total_usage_amount,
+			usage.unit AS usage_unit,
 			currency
-		FROM %s.%s.%s
-		WHERE service.description = "Generative Language API"
+		FROM
+			`+"`%s.%s.%s`"+`
+		WHERE
+			service.description = 'Gemini API'
 			AND DATE(usage_start_time) >= DATE_SUB(CURRENT_DATE(), INTERVAL %d DAY)
-		ORDER BY usage_start_time DESC
-		LIMIT 1000
+		GROUP BY
+			sku_description, usage_unit, currency
+		ORDER BY
+			total_cost DESC
 	`, billingProjectID, billingDatasetID, billingTableID, billingDays)
 
 	q := client.Query(query)
@@ -97,53 +97,30 @@ func runQueryBilling(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("error executing query: %w", err)
 	}
 
-	fmt.Println("=== Gemini API Billing Data ===")
+	fmt.Println("=== Gemini API Billing Summary ===")
 
 	var totalCost float64
 	var currency string
-	skuCosts := make(map[string]float64)
-	skuUsage := make(map[string]struct {
-		Amount float64
-		Unit   string
-	})
-
+	var summaries []BillingSummary
 	recordCount := 0
+
 	for {
-		var record BillingRecord
+		var record BillingSummary
 		err := it.Next(&record)
 		if err == iterator.Done {
 			break
 		}
 		if err != nil {
-			return fmt.Errorf("error reading billing record: %w", err)
+			return fmt.Errorf("error reading billing summary: %w", err)
 		}
-
-		recordCount++
-		if recordCount <= 10 { // Show first 10 records as examples
-			fmt.Printf("SKU: %s\n", record.SKU)
-			fmt.Printf("  Usage: %.2f %s\n", record.UsageAmount, record.UsageUnit)
-			fmt.Printf("  Cost: %s %.4f\n", record.Currency, record.Cost)
-			fmt.Printf("  Time: %s\n\n", record.UsageStart)
-		}
-
-		totalCost += record.Cost
+		summaries = append(summaries, record)
+		totalCost += record.TotalCost
 		currency = record.Currency
-		skuCosts[record.SKU] += record.Cost
-
-		// Track usage amounts
-		if usage, exists := skuUsage[record.SKU]; exists {
-			usage.Amount += record.UsageAmount
-			skuUsage[record.SKU] = usage
-		} else {
-			skuUsage[record.SKU] = struct {
-				Amount float64
-				Unit   string
-			}{Amount: record.UsageAmount, Unit: record.UsageUnit}
-		}
+		recordCount++
 	}
 
 	if recordCount == 0 {
-		fmt.Println("No billing data found for Generative Language API in the specified time range.")
+		fmt.Println("No billing data found for Gemini API in the specified time range.")
 		fmt.Println("\nPossible reasons:")
 		fmt.Println("- Billing export may not be enabled")
 		fmt.Println("- There may be a delay in billing data availability (up to 24 hours)")
@@ -151,22 +128,17 @@ func runQueryBilling(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	// Show summary
-	if recordCount > 10 {
-		fmt.Printf("... (%d more records)\n\n", recordCount-10)
-	}
+	// Show summary by SKU
+	fmt.Println("\n=== Cost Summary by SKU ===")
+	for _, summary := range summaries {
+		fmt.Printf("%s\n", summary.SKU)
+		fmt.Printf("  Total Usage: %.2f %s\n", summary.TotalUsage, summary.UsageUnit)
+		fmt.Printf("  Total Cost: %s %.4f\n", summary.Currency, summary.TotalCost)
 
-	fmt.Println("=== Cost Summary by SKU ===")
-	for sku, cost := range skuCosts {
-		usage := skuUsage[sku]
-		fmt.Printf("%s\n", sku)
-		fmt.Printf("  Total Usage: %.2f %s\n", usage.Amount, usage.Unit)
-		fmt.Printf("  Total Cost: %s %.4f\n", currency, cost)
-		
 		// Calculate unit cost if applicable
-		if usage.Amount > 0 {
-			unitCost := cost / usage.Amount
-			fmt.Printf("  Unit Cost: %s %.6f per %s\n", currency, unitCost, usage.Unit)
+		if summary.TotalUsage > 0 {
+			unitCost := summary.TotalCost / summary.TotalUsage
+			fmt.Printf("  Unit Cost: %s %.6f per %s\n", summary.Currency, unitCost, summary.UsageUnit)
 		}
 		fmt.Println()
 	}
