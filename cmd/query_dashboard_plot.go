@@ -98,6 +98,9 @@ func (p StackedPlotModel) renderStackedChart() string {
 		maxValue = 1
 	}
 
+	// Add 20% headroom above bars
+	maxValue = maxValue * 1.2
+
 	// Build the chart grid
 	var lines []string
 	for row := chartHeight - 1; row >= 0; row-- {

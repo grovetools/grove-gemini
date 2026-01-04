@@ -18,23 +18,25 @@ import (
 // dashboardKeyMap extends the base keymap with custom keybindings
 type dashboardKeyMap struct {
 	keymap.Base
-	DailyView    key.Binding
-	WeeklyView   key.Binding
-	MonthlyView  key.Binding
-	PrevPeriod   key.Binding
-	NextPeriod   key.Binding
+	DailyView     key.Binding
+	WeeklyView    key.Binding
+	MonthlyView   key.Binding
+	QuarterlyView key.Binding
+	YearlyView    key.Binding
+	PrevPeriod    key.Binding
+	NextPeriod    key.Binding
 }
 
 // ShortHelp returns the short help keybindings
 func (k dashboardKeyMap) ShortHelp() []key.Binding {
 	baseHelp := k.Base.ShortHelp()
-	return append(baseHelp, k.DailyView, k.WeeklyView, k.MonthlyView, k.PrevPeriod, k.NextPeriod)
+	return append(baseHelp, k.DailyView, k.WeeklyView, k.MonthlyView, k.QuarterlyView, k.YearlyView, k.PrevPeriod, k.NextPeriod)
 }
 
 // FullHelp returns the full help keybindings
 func (k dashboardKeyMap) FullHelp() [][]key.Binding {
 	baseHelp := k.Base.FullHelp()
-	customKeys := []key.Binding{k.DailyView, k.WeeklyView, k.MonthlyView, k.PrevPeriod, k.NextPeriod}
+	customKeys := []key.Binding{k.DailyView, k.WeeklyView, k.MonthlyView, k.QuarterlyView, k.YearlyView, k.PrevPeriod, k.NextPeriod}
 	return append(baseHelp, customKeys)
 }
 
@@ -67,13 +69,10 @@ func loadBillingDataCmd(projectID, datasetID, tableID string, timeFrame time.Dur
 	return func() tea.Msg {
 		ctx := context.Background()
 
-		// Convert to days for the API
-		days := int(timeFrame.Hours() / 24)
+		daysInPeriod := int(timeFrame.Hours() / 24)
+		offsetDays := offset * daysInPeriod
 
-		// Fetch data for the calculated period
-		// Note: offset is handled on the client side for display purposes
-		// The API always fetches the most recent N days
-		data, err := analytics.FetchBillingData(ctx, projectID, datasetID, tableID, days)
+		data, err := analytics.FetchBillingData(ctx, projectID, datasetID, tableID, daysInPeriod, offsetDays)
 		if err != nil {
 			return billingDataLoadedMsg{err: err}
 		}
@@ -96,6 +95,14 @@ func newDashboardKeyMap() dashboardKeyMap {
 		MonthlyView: key.NewBinding(
 			key.WithKeys("m"),
 			key.WithHelp("m", "monthly view"),
+		),
+		QuarterlyView: key.NewBinding(
+			key.WithKeys("3"),
+			key.WithHelp("3", "90-day view"),
+		),
+		YearlyView: key.NewBinding(
+			key.WithKeys("y"),
+			key.WithHelp("y", "yearly view"),
 		),
 		PrevPeriod: key.NewBinding(
 			key.WithKeys("left", "h"),
@@ -187,6 +194,16 @@ func (m dashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, loadBillingDataCmd(m.projectID, m.datasetID, m.tableID, m.timeFrame, m.timeOffset)
 		case key.Matches(msg, m.keys.MonthlyView):
 			m.timeFrame = 30 * 24 * time.Hour
+			m.timeOffset = 0 // Reset to current period
+			m.isLoading = true
+			return m, loadBillingDataCmd(m.projectID, m.datasetID, m.tableID, m.timeFrame, m.timeOffset)
+		case key.Matches(msg, m.keys.QuarterlyView):
+			m.timeFrame = 90 * 24 * time.Hour
+			m.timeOffset = 0 // Reset to current period
+			m.isLoading = true
+			return m, loadBillingDataCmd(m.projectID, m.datasetID, m.tableID, m.timeFrame, m.timeOffset)
+		case key.Matches(msg, m.keys.YearlyView):
+			m.timeFrame = 365 * 24 * time.Hour
 			m.timeOffset = 0 // Reset to current period
 			m.isLoading = true
 			return m, loadBillingDataCmd(m.projectID, m.datasetID, m.tableID, m.timeFrame, m.timeOffset)
@@ -299,10 +316,16 @@ func (m dashboardModel) View() string {
 		Bold(true)
 
 	timeFrameLabel := "Daily"
-	if m.timeFrame == 7*24*time.Hour {
+	days := int(m.timeFrame.Hours() / 24)
+	switch days {
+	case 7:
 		timeFrameLabel = "Weekly"
-	} else if m.timeFrame == 30*24*time.Hour {
+	case 30:
 		timeFrameLabel = "Monthly"
+	case 90:
+		timeFrameLabel = "90-Day"
+	case 365:
+		timeFrameLabel = "Yearly"
 	}
 
 	// Calculate date range being viewed
