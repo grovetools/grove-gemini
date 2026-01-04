@@ -83,8 +83,8 @@ func getSKUColor(index int) lipgloss.TerminalColor {
 }
 
 func (p StackedPlotModel) renderStackedChart() string {
-	chartHeight := p.Height - 2 // Reserve space for Y-axis labels
-	chartWidth := p.Width - 7   // Reserve space for Y-axis
+	chartHeight := p.Height - 3 // Reserve space for Y-axis labels and X-axis spacing
+	chartWidth := p.Width - 8   // Reserve space for Y-axis
 
 	// Find max total cost for any day
 	var maxValue float64
@@ -107,9 +107,16 @@ func (p StackedPlotModel) renderStackedChart() string {
 		var line strings.Builder
 
 		// Y-axis label
-		yValue := maxValue * float64(row+1) / float64(chartHeight)
-		label := formatYAxisLabel(yValue, "cost")
-		line.WriteString(fmt.Sprintf("%6s│", label))
+		label := ""
+		// Create labels at top, middle, and bottom
+		if row == chartHeight-1 {
+			label = formatYAxisLabel(maxValue, "cost")
+		} else if row == chartHeight/2 {
+			label = formatYAxisLabel(maxValue/2, "cost")
+		} else if row == 0 {
+			label = formatYAxisLabel(0, "cost")
+		}
+		line.WriteString(fmt.Sprintf("%7s│", label))
 
 		// Render bars
 		for col := 0; col < chartWidth; col++ {
@@ -160,7 +167,7 @@ func (p StackedPlotModel) renderStackedChart() string {
 
 	// Add X-axis
 	ticks, labelString := p.generateXAxisLabels(chartWidth)
-	xAxis := "      └" // 6 spaces to align with Y-axis labels
+	xAxis := "       └" // 7 spaces to align with Y-axis labels
 	for i := 0; i < chartWidth; i++ {
 		if _, hasTick := ticks[i]; hasTick {
 			xAxis += "┴"
@@ -169,7 +176,8 @@ func (p StackedPlotModel) renderStackedChart() string {
 		}
 	}
 	lines = append(lines, xAxis)
-	lines = append(lines, "       "+labelString) // 7 spaces total (6 + 1 for alignment)
+	lines = append(lines, "")                      // Add blank line for spacing
+	lines = append(lines, "        "+labelString) // 8 spaces total
 
 	// Add legend
 	legend := p.renderLegend()
