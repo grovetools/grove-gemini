@@ -115,7 +115,7 @@ func (l *Logger) Success(message string) {
 
 // Error logs an error message
 func (l *Logger) Error(message string) {
-	l.ulog.Error(message).Log(context.Background())
+	l.ulog.Error(message).Emit()
 }
 
 // ModelCtx logs the model being used to the writer from the context
