@@ -170,16 +170,20 @@ func runRequest(cmd *cobra.Command, args []string) error {
 		if err := os.WriteFile(requestOutputFile, []byte(response), 0644); err != nil {
 			return fmt.Errorf("writing output file: %w", err)
 		}
-		fmt.Fprintln(os.Stderr)
 		logger := pretty.New()
 		logger.ResponseWritten(requestOutputFile)
 	} else {
 		// Write to stdout (not stderr) for piping
-		fmt.Print(response)
+		responseOutput := response
 		// Add newline if response doesn't end with one
 		if !strings.HasSuffix(response, "\n") {
-			fmt.Println()
+			responseOutput += "\n"
 		}
+		ulog.Info("Response output").
+			Field("length", len(response)).
+			Pretty(responseOutput).
+			PrettyOnly().
+			Log(ctx)
 	}
 
 	return nil

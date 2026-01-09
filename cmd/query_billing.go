@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/mattsolo1/grove-gemini/pkg/config"
 	"github.com/mattsolo1/grove-gemini/pkg/gcp"
@@ -91,7 +92,14 @@ func runQueryBilling(cmd *cobra.Command, args []string) error {
 	}
 	defer client.Close()
 
-	fmt.Printf("Fetching billing data for the last %d days...\n\n", billingDays)
+	ulog.Info("Fetching billing data").
+		Field("project_id", billingProjectID).
+		Field("dataset_id", billingDatasetID).
+		Field("table_id", billingTableID).
+		Field("days", billingDays).
+		Pretty(fmt.Sprintf("Fetching billing data for the last %d days...\n", billingDays)).
+		PrettyOnly().
+		Log(ctx)
 
 	// Construct query to aggregate results
 	query := fmt.Sprintf(`
@@ -118,8 +126,6 @@ func runQueryBilling(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("error executing query: %w", err)
 	}
 
-	fmt.Println("=== Gemini API Billing Summary ===")
-
 	var totalCost float64
 	var currency string
 	var summaries []BillingSummary
@@ -141,42 +147,57 @@ func runQueryBilling(cmd *cobra.Command, args []string) error {
 	}
 
 	if recordCount == 0 {
-		fmt.Println("No billing data found for Gemini API in the specified time range.")
-		fmt.Println("\nPossible reasons:")
-		fmt.Println("- Billing export may not be enabled")
-		fmt.Println("- There may be a delay in billing data availability (up to 24 hours)")
-		fmt.Println("- No Gemini API usage during the specified period")
+		ulog.Info("No billing data found").
+			Field("days", billingDays).
+			Field("project_id", billingProjectID).
+			Field("dataset_id", billingDatasetID).
+			Field("table_id", billingTableID).
+			Pretty("No billing data found for Gemini API in the specified time range.\n\nPossible reasons:\n- Billing export may not be enabled\n- There may be a delay in billing data availability (up to 24 hours)\n- No Gemini API usage during the specified period").
+			PrettyOnly().
+			Log(ctx)
 		return nil
 	}
 
+	var output strings.Builder
+	output.WriteString("=== Gemini API Billing Summary ===\n")
+
 	// Show summary by SKU
-	fmt.Println("\n=== Cost Summary by SKU ===")
+	output.WriteString("\n=== Cost Summary by SKU ===\n")
 	for _, summary := range summaries {
-		fmt.Printf("%s\n", summary.SKU)
-		fmt.Printf("  Total Usage: %.2f %s\n", summary.TotalUsage, summary.UsageUnit)
-		fmt.Printf("  Total Cost: %s %.4f\n", summary.Currency, summary.TotalCost)
+		output.WriteString(fmt.Sprintf("%s\n", summary.SKU))
+		output.WriteString(fmt.Sprintf("  Total Usage: %.2f %s\n", summary.TotalUsage, summary.UsageUnit))
+		output.WriteString(fmt.Sprintf("  Total Cost: %s %.4f\n", summary.Currency, summary.TotalCost))
 
 		// Calculate unit cost if applicable
 		if summary.TotalUsage > 0 {
 			unitCost := summary.TotalCost / summary.TotalUsage
-			fmt.Printf("  Unit Cost: %s %.6f per %s\n", summary.Currency, unitCost, summary.UsageUnit)
+			output.WriteString(fmt.Sprintf("  Unit Cost: %s %.6f per %s\n", summary.Currency, unitCost, summary.UsageUnit))
 		}
-		fmt.Println()
+		output.WriteString("\n")
 	}
 
-	fmt.Printf("=== Total Cost ===\n")
-	fmt.Printf("Period: Last %d days\n", billingDays)
-	fmt.Printf("Total: %s %.4f\n", currency, totalCost)
-	
+	output.WriteString("=== Total Cost ===\n")
+	output.WriteString(fmt.Sprintf("Period: Last %d days\n", billingDays))
+	output.WriteString(fmt.Sprintf("Total: %s %.4f\n", currency, totalCost))
+
 	// Daily average
 	if billingDays > 0 {
 		dailyAvg := totalCost / float64(billingDays)
-		fmt.Printf("Daily Average: %s %.4f\n", currency, dailyAvg)
-		
+		output.WriteString(fmt.Sprintf("Daily Average: %s %.4f\n", currency, dailyAvg))
+
 		// Projected monthly cost (30 days)
 		monthlyProjection := dailyAvg * 30
-		fmt.Printf("Projected Monthly: %s %.2f\n", currency, monthlyProjection)
+		output.WriteString(fmt.Sprintf("Projected Monthly: %s %.2f\n", currency, monthlyProjection))
 	}
+
+	ulog.Info("Billing summary").
+		Field("days", billingDays).
+		Field("total_cost", totalCost).
+		Field("currency", currency).
+		Field("record_count", recordCount).
+		Pretty(output.String()).
+		PrettyOnly().
+		Log(ctx)
 
 	return nil
 }

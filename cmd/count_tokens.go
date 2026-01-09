@@ -57,11 +57,11 @@ func runCountTokens(cmd *cobra.Command, args []string) error {
 		stat, _ := os.Stdin.Stat()
 		if (stat.Mode() & os.ModeCharDevice) != 0 {
 			// No pipe input
-			fmt.Fprintln(os.Stderr, "No text provided. Use command line arguments or pipe text via stdin.")
-			fmt.Fprintln(os.Stderr, "Examples:")
-			fmt.Fprintln(os.Stderr, "  gemapi count-tokens \"Your text here\"")
-			fmt.Fprintln(os.Stderr, "  echo \"Your text\" | gemapi count-tokens")
-			fmt.Fprintln(os.Stderr, "  cat file.txt | gemapi count-tokens")
+			ctx := context.Background()
+			ulog.Info("Usage information").
+				Pretty("No text provided. Use command line arguments or pipe text via stdin.\nExamples:\n  gemapi count-tokens \"Your text here\"\n  echo \"Your text\" | gemapi count-tokens\n  cat file.txt | gemapi count-tokens").
+				PrettyOnly().
+				Log(ctx)
 			return fmt.Errorf("no input text provided")
 		}
 
@@ -94,8 +94,12 @@ func runCountTokens(cmd *cobra.Command, args []string) error {
 	genaiClient := client.GetClient()
 
 	// Count tokens
-	fmt.Fprintf(os.Stderr, "Counting tokens using model: %s\n", countTokensModel)
-	
+	ulog.Info("Counting tokens").
+		Field("model", countTokensModel).
+		Pretty(fmt.Sprintf("Counting tokens using model: %s", countTokensModel)).
+		PrettyOnly().
+		Log(ctx)
+
 	tokenResp, err := genaiClient.Models.CountTokens(ctx,
 		countTokensModel,
 		[]*genai.Content{{Parts: []*genai.Part{{Text: text}}}},
@@ -106,9 +110,10 @@ func runCountTokens(cmd *cobra.Command, args []string) error {
 	}
 
 	// Display results
-	fmt.Printf("=== Token Count ===\n")
-	fmt.Printf("Model: %s\n", countTokensModel)
-	fmt.Printf("Total Tokens: %d\n", tokenResp.TotalTokens)
+	var output strings.Builder
+	output.WriteString("=== Token Count ===\n")
+	output.WriteString(fmt.Sprintf("Model: %s\n", countTokensModel))
+	output.WriteString(fmt.Sprintf("Total Tokens: %d\n", tokenResp.TotalTokens))
 
 	// Calculate estimated costs based on current Gemini pricing
 	// These are prompt token prices
@@ -130,28 +135,37 @@ func runCountTokens(cmd *cobra.Command, args []string) error {
 	}
 
 	estimatedCost := float64(tokenResp.TotalTokens) / 1_000_000 * pricePerMillion
-	fmt.Printf("\nEstimated Input Cost: $%.6f\n", estimatedCost)
-	
+	output.WriteString(fmt.Sprintf("\nEstimated Input Cost: $%.6f\n", estimatedCost))
+
 	// Show text preview if not too long
 	if len(text) <= 200 {
-		fmt.Printf("\nText: %q\n", text)
+		output.WriteString(fmt.Sprintf("\nText: %q\n", text))
 	} else {
-		fmt.Printf("\nText Preview: %q...\n", text[:200])
-		fmt.Printf("(Total length: %d characters)\n", len(text))
+		output.WriteString(fmt.Sprintf("\nText Preview: %q...\n", text[:200]))
+		output.WriteString(fmt.Sprintf("(Total length: %d characters)\n", len(text)))
 	}
 
 	// Model limits information
-	fmt.Printf("\n=== Model Context Information ===\n")
+	output.WriteString("\n=== Model Context Information ===\n")
 	switch {
 	case strings.Contains(countTokensModel, "flash"):
-		fmt.Println("Context Window: 1,048,576 tokens")
-		fmt.Printf("Usage: %.2f%% of context window\n", float64(tokenResp.TotalTokens)/1_048_576*100)
+		output.WriteString("Context Window: 1,048,576 tokens\n")
+		output.WriteString(fmt.Sprintf("Usage: %.2f%% of context window\n", float64(tokenResp.TotalTokens)/1_048_576*100))
 	case strings.Contains(countTokensModel, "pro"):
-		fmt.Println("Context Window: 2,097,152 tokens")
-		fmt.Printf("Usage: %.2f%% of context window\n", float64(tokenResp.TotalTokens)/2_097_152*100)
+		output.WriteString("Context Window: 2,097,152 tokens\n")
+		output.WriteString(fmt.Sprintf("Usage: %.2f%% of context window\n", float64(tokenResp.TotalTokens)/2_097_152*100))
 	default:
-		fmt.Println("Context Window: Model-specific (check documentation)")
+		output.WriteString("Context Window: Model-specific (check documentation)\n")
 	}
+
+	ulog.Info("Token count results").
+		Field("model", countTokensModel).
+		Field("total_tokens", tokenResp.TotalTokens).
+		Field("estimated_cost", estimatedCost).
+		Field("text_length", len(text)).
+		Pretty(output.String()).
+		PrettyOnly().
+		Log(ctx)
 
 	return nil
 }

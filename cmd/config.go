@@ -1,7 +1,9 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
+	"strings"
 
 	"github.com/mattsolo1/grove-gemini/pkg/config"
 	"github.com/spf13/cobra"
@@ -50,6 +52,7 @@ func newConfigSetProjectCmd() *cobra.Command {
 		Short: "Set the default GCP project",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := context.Background()
 			projectID := args[0]
 
 			cfg, err := config.LoadGCPConfig()
@@ -64,8 +67,12 @@ func newConfigSetProjectCmd() *cobra.Command {
 			}
 
 			configPath, _ := config.GetConfigPath()
-			fmt.Printf("Default GCP project set to: %s\n", projectID)
-			fmt.Printf("Configuration saved to: %s\n", configPath)
+			ulog.Success("Configuration updated").
+				Field("project_id", projectID).
+				Field("config_path", configPath).
+				Pretty(fmt.Sprintf("Default GCP project set to: %s\nConfiguration saved to: %s", projectID, configPath)).
+				PrettyOnly().
+				Log(ctx)
 			return nil
 		},
 	}
@@ -76,24 +83,36 @@ func newConfigGetProjectCmd() *cobra.Command {
 		Use:   "project",
 		Short: "Get the default GCP project",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// Show all sources
-			fmt.Println("GCP Project Resolution Order:")
-			fmt.Println("1. Command flag: --project-id")
+			ctx := context.Background()
+			var output strings.Builder
 
-			if envProject := config.GetDefaultProject(""); envProject != "" {
-				fmt.Printf("2. Environment variable GCP_PROJECT_ID: %s\n", envProject)
+			// Show all sources
+			output.WriteString("GCP Project Resolution Order:\n")
+			output.WriteString("1. Command flag: --project-id\n")
+
+			envProject := config.GetDefaultProject("")
+			if envProject != "" {
+				output.WriteString(fmt.Sprintf("2. Environment variable GCP_PROJECT_ID: %s\n", envProject))
 			} else {
-				fmt.Println("2. Environment variable GCP_PROJECT_ID: (not set)")
+				output.WriteString("2. Environment variable GCP_PROJECT_ID: (not set)\n")
 			}
 
 			cfg, err := config.LoadGCPConfig()
 			if err == nil && cfg.DefaultProject != "" {
-				fmt.Printf("3. Saved configuration: %s\n", cfg.DefaultProject)
+				output.WriteString(fmt.Sprintf("3. Saved configuration: %s\n", cfg.DefaultProject))
 			} else {
-				fmt.Println("3. Saved configuration: (not set)")
+				output.WriteString("3. Saved configuration: (not set)\n")
 			}
 
-			fmt.Printf("\nCurrent default project: %s\n", config.GetDefaultProject(""))
+			currentProject := config.GetDefaultProject("")
+			output.WriteString(fmt.Sprintf("\nCurrent default project: %s\n", currentProject))
+
+			ulog.Info("GCP project configuration").
+				Field("current_project", currentProject).
+				Field("env_project", envProject).
+				Pretty(output.String()).
+				PrettyOnly().
+				Log(ctx)
 
 			return nil
 		},
@@ -106,6 +125,7 @@ func newConfigSetBillingCmd() *cobra.Command {
 		Short: "Set the default BigQuery billing dataset and table",
 		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := context.Background()
 			datasetID := args[0]
 			tableID := args[1]
 
@@ -122,9 +142,13 @@ func newConfigSetBillingCmd() *cobra.Command {
 			}
 
 			configPath, _ := config.GetConfigPath()
-			fmt.Printf("Billing dataset set to: %s\n", datasetID)
-			fmt.Printf("Billing table set to: %s\n", tableID)
-			fmt.Printf("Configuration saved to: %s\n", configPath)
+			ulog.Success("Billing configuration updated").
+				Field("dataset_id", datasetID).
+				Field("table_id", tableID).
+				Field("config_path", configPath).
+				Pretty(fmt.Sprintf("Billing dataset set to: %s\nBilling table set to: %s\nConfiguration saved to: %s", datasetID, tableID, configPath)).
+				PrettyOnly().
+				Log(ctx)
 			return nil
 		},
 	}
@@ -135,41 +159,57 @@ func newConfigGetBillingCmd() *cobra.Command {
 		Use:   "billing",
 		Short: "Get the default BigQuery billing configuration",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// Show all sources
-			fmt.Println("Billing Dataset Resolution Order:")
-			fmt.Println("1. Command flag: --dataset-id")
+			ctx := context.Background()
+			var output strings.Builder
 
-			if envDataset := config.GetBillingDatasetID(""); envDataset != "" {
-				fmt.Printf("2. Environment variable GCP_BILLING_DATASET_ID: %s\n", envDataset)
+			// Show all sources
+			output.WriteString("Billing Dataset Resolution Order:\n")
+			output.WriteString("1. Command flag: --dataset-id\n")
+
+			envDataset := config.GetBillingDatasetID("")
+			if envDataset != "" {
+				output.WriteString(fmt.Sprintf("2. Environment variable GCP_BILLING_DATASET_ID: %s\n", envDataset))
 			} else {
-				fmt.Println("2. Environment variable GCP_BILLING_DATASET_ID: (not set)")
+				output.WriteString("2. Environment variable GCP_BILLING_DATASET_ID: (not set)\n")
 			}
 
 			cfg, err := config.LoadGCPConfig()
 			if err == nil && cfg.BillingDatasetID != "" {
-				fmt.Printf("3. Saved configuration: %s\n", cfg.BillingDatasetID)
+				output.WriteString(fmt.Sprintf("3. Saved configuration: %s\n", cfg.BillingDatasetID))
 			} else {
-				fmt.Println("3. Saved configuration: (not set)")
+				output.WriteString("3. Saved configuration: (not set)\n")
 			}
 
-			fmt.Printf("\nCurrent billing dataset: %s\n", config.GetBillingDatasetID(""))
+			currentDataset := config.GetBillingDatasetID("")
+			output.WriteString(fmt.Sprintf("\nCurrent billing dataset: %s\n", currentDataset))
 
-			fmt.Println("\nBilling Table Resolution Order:")
-			fmt.Println("1. Command flag: --table-id")
+			output.WriteString("\nBilling Table Resolution Order:\n")
+			output.WriteString("1. Command flag: --table-id\n")
 
-			if envTable := config.GetBillingTableID(""); envTable != "" {
-				fmt.Printf("2. Environment variable GCP_BILLING_TABLE_ID: %s\n", envTable)
+			envTable := config.GetBillingTableID("")
+			if envTable != "" {
+				output.WriteString(fmt.Sprintf("2. Environment variable GCP_BILLING_TABLE_ID: %s\n", envTable))
 			} else {
-				fmt.Println("2. Environment variable GCP_BILLING_TABLE_ID: (not set)")
+				output.WriteString("2. Environment variable GCP_BILLING_TABLE_ID: (not set)\n")
 			}
 
 			if err == nil && cfg.BillingTableID != "" {
-				fmt.Printf("3. Saved configuration: %s\n", cfg.BillingTableID)
+				output.WriteString(fmt.Sprintf("3. Saved configuration: %s\n", cfg.BillingTableID))
 			} else {
-				fmt.Println("3. Saved configuration: (not set)")
+				output.WriteString("3. Saved configuration: (not set)\n")
 			}
 
-			fmt.Printf("\nCurrent billing table: %s\n", config.GetBillingTableID(""))
+			currentTable := config.GetBillingTableID("")
+			output.WriteString(fmt.Sprintf("\nCurrent billing table: %s\n", currentTable))
+
+			ulog.Info("Billing configuration").
+				Field("current_dataset", currentDataset).
+				Field("current_table", currentTable).
+				Field("env_dataset", envDataset).
+				Field("env_table", envTable).
+				Pretty(output.String()).
+				PrettyOnly().
+				Log(ctx)
 
 			return nil
 		},

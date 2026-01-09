@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -37,21 +38,31 @@ This command reads from local logs since Google doesn't publish individual Gemin
 }
 
 func runQueryRequests(cmd *cobra.Command, args []string) error {
+	ctx := context.Background()
 	logger := logging.GetLogger()
-	
+
 	endTime := time.Now()
 	startTime := endTime.Add(-time.Duration(requestsHours) * time.Hour)
-	
-	fmt.Printf("Fetching Gemini API requests for the last %d hour(s)...\n\n", requestsHours)
-	
+
+	ulog.Info("Fetching Gemini API requests").
+		Field("hours", requestsHours).
+		Field("start_time", startTime).
+		Field("end_time", endTime).
+		Pretty(fmt.Sprintf("Fetching Gemini API requests for the last %d hour(s)...\n", requestsHours)).
+		PrettyOnly().
+		Log(ctx)
+
 	logs, err := logger.ReadLogs(startTime, endTime)
 	if err != nil {
 		return fmt.Errorf("failed to read logs: %w", err)
 	}
-	
+
 	if len(logs) == 0 {
-		fmt.Println("No requests found for the specified time range.")
-		fmt.Println("\nNote: This command reads from local logs. Make sure you have made some Gemini API calls.")
+		ulog.Info("No requests found").
+			Field("time_range_hours", requestsHours).
+			Pretty("No requests found for the specified time range.\n\nNote: This command reads from local logs. Make sure you have made some Gemini API calls.").
+			PrettyOnly().
+			Log(ctx)
 		return nil
 	}
 	
@@ -88,11 +99,17 @@ func runQueryRequests(cmd *cobra.Command, args []string) error {
 }
 
 func displayRequestsTable(logs []logging.QueryLog) {
-	// Header
-	fmt.Printf("%-20s %-15s %-8s %-10s %-10s %-10s %-8s %-10s %-30s %-15s\n",
+	ctx := context.Background()
+
+	// Build table header
+	header := fmt.Sprintf("%-20s %-15s %-8s %-10s %-10s %-10s %-8s %-10s %-30s %-15s\n",
 		"Timestamp", "Model", "Method", "Prompt", "Completion", "Total", "Latency", "Cost", "Repository/Branch", "Caller")
-	fmt.Println(strings.Repeat("-", 170))
-	
+	separator := strings.Repeat("-", 170) + "\n"
+
+	var output strings.Builder
+	output.WriteString(header)
+	output.WriteString(separator)
+
 	// Rows
 	for _, log := range logs {
 		timestamp := log.Timestamp.Format("01-02 15:04:05.000")
@@ -151,10 +168,10 @@ func displayRequestsTable(logs []logging.QueryLog) {
 		} else if len(caller) > 15 {
 			caller = caller[:13] + ".."
 		}
-		
-		fmt.Printf("%-20s %-15s %-8s %-10d %-10d %-10d %-8.2fs %-10s %-30s %-15s %s\n",
-			timestamp, 
-			model, 
+
+		row := fmt.Sprintf("%-20s %-15s %-8s %-10d %-10d %-10d %-8.2fs %-10s %-30s %-15s %s\n",
+			timestamp,
+			model,
 			method,
 			log.PromptTokens,
 			log.CompletionTokens,
@@ -164,7 +181,15 @@ func displayRequestsTable(logs []logging.QueryLog) {
 			repoInfo,
 			caller,
 			status)
+		output.WriteString(row)
 	}
-	
-	fmt.Printf("\nShowing %d request(s)\n", len(logs))
+
+	summary := fmt.Sprintf("\nShowing %d request(s)\n", len(logs))
+	output.WriteString(summary)
+
+	ulog.Info("Requests table").
+		Field("request_count", len(logs)).
+		Pretty(output.String()).
+		PrettyOnly().
+		Log(ctx)
 }
