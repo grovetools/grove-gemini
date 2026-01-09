@@ -18,8 +18,21 @@ type FileUploadResult struct {
 	DurationMs int64
 }
 
-// uploadFile uploads a single file to the Gemini API
+// uploadFile uploads a single file to the Gemini API and logs completion
 func uploadFile(ctx context.Context, client *genai.Client, filePath string) (*genai.File, time.Duration, error) {
+	f, duration, err := uploadFileQuiet(ctx, client, filePath)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// Log completion
+	logger := pretty.New()
+	logger.UploadComplete(filepath.Base(filePath), duration)
+	return f, duration, nil
+}
+
+// uploadFileQuiet uploads a single file without logging
+func uploadFileQuiet(ctx context.Context, client *genai.Client, filePath string) (*genai.File, time.Duration, error) {
 	uploadStart := time.Now()
 
 	f, err := client.Files.UploadFromPath(
@@ -33,12 +46,7 @@ func uploadFile(ctx context.Context, client *genai.Client, filePath string) (*ge
 		return nil, 0, err
 	}
 
-	duration := time.Since(uploadStart)
-
-	// Create pretty logger
-	logger := pretty.NewWithLogger(log)
-	logger.UploadComplete(filepath.Base(filePath), duration)
-	return f, duration, nil
+	return f, time.Since(uploadStart), nil
 }
 
 // detectMIMEType returns appropriate MIME type for a file

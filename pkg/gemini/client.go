@@ -11,9 +11,13 @@ import (
 	ctxinfo "github.com/mattsolo1/grove-gemini/pkg/context"
 	"github.com/mattsolo1/grove-gemini/pkg/logging"
 	"github.com/mattsolo1/grove-gemini/pkg/pretty"
+	corelogging "github.com/mattsolo1/grove-core/logging"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/genai"
 )
+
+// ulog is the unified logger for this package
+var ulog = corelogging.NewUnifiedLogger("grove-gemini")
 
 // Client wraps the Google Generative AI client
 type Client struct {
@@ -84,7 +88,7 @@ func (c *Client) GenerateContentWithCacheAndOptions(ctx context.Context, model s
 	requestID := os.Getenv("GROVE_REQUEST_ID")
 
 	// Create pretty logger for UI output
-	logger := pretty.NewWithLogger(log)
+	logger := pretty.New()
 	
 	// Create a map to track uploaded files and prevent duplicates
 	uploadedFiles := make(map[string]bool)
@@ -151,16 +155,16 @@ func (c *Client) GenerateContentWithCacheAndOptions(ctx context.Context, model s
 	var requestParts []*genai.Part
 	var uploadResults []FileUploadResult
 	if len(allFilesToUpload) > 0 {
-		fmt.Fprintln(os.Stderr)
-		logger.UploadProgressCtx(ctx, fmt.Sprintf("Uploading %d files for request...", len(allFilesToUpload)))
+		// Show files to be uploaded (with full paths)
+		logger.FilesIncludedCtx(ctx, allFilesToUpload)
+
+		// Upload files silently
 		for _, filePath := range allFilesToUpload {
-			// Upload file
-			f, duration, err := uploadFile(ctx, c.client, filePath)
+			f, duration, err := uploadFileQuiet(ctx, c.client, filePath)
 			if err != nil {
 				return "", fmt.Errorf("failed to upload file %s: %w", filePath, err)
 			}
 
-			// Track upload result
 			uploadResults = append(uploadResults, FileUploadResult{
 				FilePath:   filePath,
 				FileURI:    f.URI,
@@ -168,26 +172,19 @@ func (c *Client) GenerateContentWithCacheAndOptions(ctx context.Context, model s
 				DurationMs: duration.Milliseconds(),
 			})
 
-			// Create part from URI
 			part := genai.NewPartFromURI(f.URI, f.MIMEType)
 			requestParts = append(requestParts, part)
 		}
 
-		// Log all uploads as a single structured log entry
-		if len(uploadResults) > 0 {
-			log.WithFields(logrus.Fields{
-				"request_id":   requestID,
-				"file_count":   len(uploadResults),
-				"uploads":      uploadResults,
-				"total_time_ms": func() int64 {
-					var total int64
-					for _, r := range uploadResults {
-						total += r.DurationMs
-					}
-					return total
-				}(),
-			}).Info("Files uploaded to Gemini API")
+		// Confirm uploads complete
+		var totalTimeMs int64
+		for _, r := range uploadResults {
+			totalTimeMs += r.DurationMs
 		}
+		ulog.Success("Files uploaded").
+			Field("file_count", len(uploadResults)).
+			Field("total_time_ms", totalTimeMs).
+			Log(ctx)
 	}
 
 	// Count tokens for the user prompt separately
@@ -215,15 +212,6 @@ func (c *Client) GenerateContentWithCacheAndOptions(ctx context.Context, model s
 	
 	// Create contents slice for API
 	contentsForAPI := []*genai.Content{userTurn}
-	
-	// Create display files list (deduplicated - use the already deduplicated list)
-	displayFiles := allFilesToUpload
-
-	// Show files before making the request
-	if len(displayFiles) > 0 {
-		logger.FilesIncludedCtx(ctx, displayFiles)
-	}
-
 	// Generate content with optional cache
 	var result *genai.GenerateContentResponse
 	var err error
@@ -256,12 +244,6 @@ func (c *Client) GenerateContentWithCacheAndOptions(ctx context.Context, model s
 			config.MaxOutputTokens = int32(*opts.MaxOutputTokens)
 		}
 	}
-
-	log.WithFields(logrus.Fields{
-		"request_id": requestID,
-		"model":      model,
-		"cache_id":   cacheID,
-	}).Info("Calling Gemini API")
 
 	result, err = c.client.Models.GenerateContent(
 		ctx,
@@ -302,9 +284,9 @@ func (c *Client) GenerateContentWithCacheAndOptions(ctx context.Context, model s
 		}
 		if err := geminiLogger.Log(logEntry); err != nil {
 			// Don't fail the request if logging fails
-			fmt.Fprintf(os.Stderr, "Warning: Failed to log query: %v\n", err)
+			ulog.Warn("Failed to log query").Err(err).Log(ctx)
 		}
-		
+
 		return "", fmt.Errorf("failed to generate content: %w", err)
 	}
 
@@ -382,16 +364,16 @@ func (c *Client) GenerateContentWithCacheAndOptions(ctx context.Context, model s
 		
 		if err := geminiLogger.Log(logEntry); err != nil {
 			// Don't fail the request if logging fails
-			fmt.Fprintf(os.Stderr, "Warning: Failed to log query: %v\n", err)
+			ulog.Warn("Failed to log query").Err(err).Log(ctx)
 		}
-		
+
 		// Update cache usage statistics
 		if cacheID != "" && opts != nil && opts.WorkingDir != "" {
 			// Try to update cache usage stats
 			cacheManager := NewCacheManager(opts.WorkingDir)
 			if err := cacheManager.UpdateCacheUsageStats(cacheID, cachedTokens, dynamicTokens, completionTokens, cacheHitRate); err != nil {
 				// Don't fail the request if updating stats fails
-				fmt.Fprintf(os.Stderr, "Warning: Failed to update cache usage stats: %v\n", err)
+				ulog.Warn("Failed to update cache usage stats").Err(err).Log(ctx)
 			}
 		}
 	}

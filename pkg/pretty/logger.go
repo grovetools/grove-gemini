@@ -6,22 +6,20 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"runtime"
 	"strings"
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
 	corelogging "github.com/mattsolo1/grove-core/logging"
 	"github.com/mattsolo1/grove-core/tui/theme"
-	"github.com/sirupsen/logrus"
 )
 
-// Logger is a wrapper around the grove-core PrettyLogger with Gemini-specific helpers.
+// Logger is a wrapper around the grove-core UnifiedLogger with Gemini-specific helpers.
 type Logger struct {
 	*corelogging.PrettyLogger
+	ulog   *corelogging.UnifiedLogger
 	writer io.Writer
 	theme  *theme.Theme
-	log    *logrus.Entry // For structured logging when needed
 }
 
 // TokenFields represents token usage metrics with verbosity levels
@@ -45,19 +43,9 @@ type ModelFields struct {
 func New() *Logger {
 	return &Logger{
 		PrettyLogger: corelogging.NewPrettyLogger(),
+		ulog:         corelogging.NewUnifiedLogger("grove-gemini"),
 		writer:       corelogging.GetGlobalOutput(),
 		theme:        theme.DefaultTheme,
-		log:          corelogging.NewLogger("grove-gemini"),
-	}
-}
-
-// NewWithLogger creates a new logger with a specific structured logging backend.
-func NewWithLogger(log *logrus.Entry) *Logger {
-	return &Logger{
-		PrettyLogger: corelogging.NewPrettyLogger(),
-		writer:       corelogging.GetGlobalOutput(),
-		theme:        theme.DefaultTheme,
-		log:          log,
 	}
 }
 
@@ -65,20 +53,19 @@ func NewWithLogger(log *logrus.Entry) *Logger {
 func NewWithWriter(w io.Writer) *Logger {
 	return &Logger{
 		PrettyLogger: corelogging.NewPrettyLogger().WithWriter(w),
+		ulog:         corelogging.NewUnifiedLogger("grove-gemini"),
 		writer:       w,
 		theme:        theme.DefaultTheme,
-		log:          corelogging.NewLogger("grove-gemini"),
 	}
 }
 
 // WorkingDirectoryCtx logs the working directory to the writer from the context
 func (l *Logger) WorkingDirectoryCtx(ctx context.Context, dir string) {
-	writer := corelogging.GetWriter(ctx)
 	pathStyle := lipgloss.NewStyle().Italic(true)
-	fmt.Fprintf(writer, "%s Working directory: %s\n",
-		theme.IconHome,
-		pathStyle.Render(dir))
-	fmt.Fprintln(writer) // Add blank line after working directory
+	l.ulog.Info("Working directory").
+		Field("directory", dir).
+		Pretty(fmt.Sprintf("%s Working directory: %s", theme.IconHome, pathStyle.Render(dir))).
+		Log(ctx)
 }
 
 // WorkingDirectory logs the working directory
@@ -128,37 +115,15 @@ func (l *Logger) Success(message string) {
 
 // Error logs an error message
 func (l *Logger) Error(message string) {
-	fmt.Fprintf(l.writer, "%s %s\n",
-		l.theme.Error.Render(theme.IconError),
-		l.theme.Error.Render(message))
+	l.ulog.Error(message).Log(context.Background())
 }
 
 // ModelCtx logs the model being used to the writer from the context
 func (l *Logger) ModelCtx(ctx context.Context, model string) {
-	writer := corelogging.GetWriter(ctx)
-	// Log structured data if backend available
-	if l.log != nil {
-		modelFields := ModelFields{
-			Model: model,
-		}
-		fields := corelogging.StructToLogrusFields(modelFields)
-
-		// Get caller information manually to point to the actual caller
-		if pc, file, line, ok := runtime.Caller(1); ok {
-			fields["file"] = fmt.Sprintf("%s:%d", file, line)
-			if fn := runtime.FuncForPC(pc); fn != nil {
-				fields["func"] = fn.Name()
-			}
-		}
-
-		// Create entry without logrus's automatic caller reporting to avoid duplication
-		entry := l.log.WithFields(fields)
-		entry.Info("Calling Gemini API")
-	}
-	// Display pretty UI
-	fmt.Fprintf(writer, "%s Calling Gemini API with model: %s\n",
-		theme.IconRobot,
-		model)
+	l.ulog.Info("Calling Gemini API").
+		Field("model", model).
+		Pretty(fmt.Sprintf("%s Calling Gemini API with model: %s", theme.IconRobot, model)).
+		Log(ctx)
 }
 
 // Model logs the model being used
@@ -168,8 +133,9 @@ func (l *Logger) Model(model string) {
 
 // UploadProgressCtx logs file upload progress to the writer from the context
 func (l *Logger) UploadProgressCtx(ctx context.Context, message string) {
-	writer := corelogging.GetWriter(ctx)
-	fmt.Fprintf(writer, "%s %s\n\n", theme.IconRunning, message)
+	l.ulog.Progress(message).
+		Pretty(fmt.Sprintf("%s %s", theme.IconRunning, message)).
+		Log(ctx)
 }
 
 // UploadProgress logs file upload progress
@@ -179,15 +145,21 @@ func (l *Logger) UploadProgress(message string) {
 
 // UploadComplete logs successful file upload
 func (l *Logger) UploadComplete(filename string, duration time.Duration) {
-	fmt.Fprintf(l.writer, "%s %s %s\n",
-		l.theme.Success.Render(theme.IconSuccess),
-		l.theme.Success.Render(filename),
-		l.theme.Muted.Render(fmt.Sprintf("(%.2fs)", duration.Seconds())))
+	l.ulog.Info(filename).
+		Field("filename", filename).
+		Field("duration_seconds", duration.Seconds()).
+		Pretty(fmt.Sprintf("%s %s %s",
+			theme.IconSuccess,
+			filename,
+			l.theme.Muted.Render(fmt.Sprintf("(%.2fs)", duration.Seconds())))).
+		Log(context.Background())
 }
 
 // GeneratingResponse logs that response generation has started
 func (l *Logger) GeneratingResponse() {
-	fmt.Fprintf(l.writer, "%s Generating response...\n", theme.IconRobot)
+	l.ulog.Progress("Generating response...").
+		Icon(theme.IconRobot).
+		Log(context.Background())
 }
 
 // FilesIncludedCtx displays the list of files that will be included in the request to the writer from the context
@@ -196,15 +168,12 @@ func (l *Logger) FilesIncludedCtx(ctx context.Context, files []string) {
 		return
 	}
 
-	writer := corelogging.GetWriter(ctx)
-	fmt.Fprintf(writer, "%s Files attached to request:\n", theme.IconFile)
-
-	// Build display list with styled paths
-	displayFiles := make([]string, len(files))
 	pathStyle := lipgloss.NewStyle().Italic(true)
 	promptStyle := l.theme.Muted
+	var prettyLines []string
+	prettyLines = append(prettyLines, fmt.Sprintf("%s Files attached to request:", theme.IconFile))
 
-	for i, file := range files {
+	for _, file := range files {
 		// Extract just the filename or last part of the path for display
 		displayName := file
 		if idx := strings.LastIndex(file, "/"); idx != -1 {
@@ -216,21 +185,22 @@ func (l *Logger) FilesIncludedCtx(ctx context.Context, files []string) {
 			displayName != "context" && displayName != "cached-context"
 
 		// Show full path if it's a special file or prompt file
+		var displayItem string
 		if displayName == "CLAUDE.md" || displayName == "context" || displayName == "cached-context" {
-			displayFiles[i] = pathStyle.Render(file)
+			displayItem = pathStyle.Render(file)
 		} else if isPromptFile {
-			displayFiles[i] = pathStyle.Render(file) + " " + promptStyle.Render("(prompt)")
+			displayItem = pathStyle.Render(file) + " " + promptStyle.Render("(prompt)")
 		} else {
-			displayFiles[i] = pathStyle.Render(displayName)
+			displayItem = pathStyle.Render(displayName)
 		}
+		prettyLines = append(prettyLines, fmt.Sprintf("%s %s", l.theme.Highlight.Render(theme.IconBullet), displayItem))
 	}
 
-	// Print files without indentation
-	for _, item := range displayFiles {
-		fmt.Fprintf(writer, "%s %s\n",
-			l.theme.Highlight.Render(theme.IconBullet),
-			item)
-	}
+	l.ulog.Info("Files attached to request").
+		Field("files", files).
+		Field("count", len(files)).
+		Pretty(strings.Join(prettyLines, "\n")).
+		Log(ctx)
 }
 
 // FilesIncluded displays the list of files that will be included in the request
@@ -240,40 +210,11 @@ func (l *Logger) FilesIncluded(files []string) {
 
 // TokenUsageCtx displays token usage statistics in a styled box to the writer from the context
 func (l *Logger) TokenUsageCtx(ctx context.Context, cached, dynamic, completion, promptTokens int, responseTime time.Duration, isNewCache bool) {
-	writer := corelogging.GetWriter(ctx)
-
 	// Calculate cache hit rate
 	totalPrompt := cached + dynamic
 	cacheHitRate := 0.0
 	if totalPrompt > 0 {
 		cacheHitRate = float64(cached) / float64(totalPrompt) * 100
-	}
-
-	// First, log structured data to backend if available (even in TUI mode for metrics)
-	if l.log != nil {
-		tokenFields := TokenFields{
-			CachedTokens:      cached,
-			DynamicTokens:     dynamic,
-			CompletionTokens:  completion,
-			UserPromptTokens:  promptTokens,
-			TotalPromptTokens: totalPrompt,
-			ResponseTimeMs:    responseTime.Milliseconds(),
-			CacheHitRate:      cacheHitRate,
-			IsNewCache:        isNewCache,
-		}
-		fields := corelogging.StructToLogrusFields(tokenFields)
-
-		// Get caller information manually to point to the actual caller
-		if pc, file, line, ok := runtime.Caller(1); ok {
-			fields["file"] = fmt.Sprintf("%s:%d", file, line)
-			if fn := runtime.FuncForPC(pc); fn != nil {
-				fields["func"] = fn.Name()
-			}
-		}
-
-		// Create entry without logrus's automatic caller reporting to avoid duplication
-		entry := l.log.WithFields(fields)
-		entry.Info("Gemini Response & Token Summary")
 	}
 
 	// Calculate derived metrics for UI display
@@ -336,9 +277,17 @@ func (l *Logger) TokenUsageCtx(ctx context.Context, cached, dynamic, completion,
 
 	box := tokenBox.Render(strings.Join(content, "\n"))
 
-	fmt.Fprintf(writer, "\n%s Token usage:\n%s\n",
-		theme.IconChart,
-		box)
+	l.ulog.Info("Gemini Response & Token Summary").
+		Field("cached_tokens", cached).
+		Field("dynamic_tokens", dynamic).
+		Field("completion_tokens", completion).
+		Field("user_prompt_tokens", promptTokens).
+		Field("total_prompt_tokens", totalPrompt).
+		Field("response_time_ms", responseTime.Milliseconds()).
+		Field("cache_hit_rate", cacheHitRate).
+		Field("is_new_cache", isNewCache).
+		Pretty(fmt.Sprintf("%s Token usage:\n%s", theme.IconChart, box)).
+		Log(ctx)
 }
 
 // TokenUsage displays token usage statistics in a styled box

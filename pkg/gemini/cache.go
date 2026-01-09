@@ -117,7 +117,7 @@ func SaveCacheInfo(filePath string, info *CacheInfo) error {
 // This method does NOT check for file content changes - it's meant to force use of a specific cache
 func (m *CacheManager) FindAndValidateCache(ctx context.Context, client *Client, cacheName string, disableExpiration bool) (*CacheInfo, error) {
 	// Create pretty logger
-	logger := pretty.NewWithLogger(log)
+	logger := pretty.New()
 	
 	// Construct path to cache info file
 	cacheInfoFile := filepath.Join(m.cacheDir, "hybrid_"+cacheName+".json")
@@ -161,7 +161,7 @@ func (m *CacheManager) FindAndValidateCache(ctx context.Context, client *Client,
 // The second return value indicates whether a new cache was created
 func (m *CacheManager) GetOrCreateCache(ctx context.Context, client *Client, model string, coldContextFilePath string, ttl time.Duration, ignoreChanges bool, disableExpiration bool, forceRecache bool, skipConfirmation bool) (*CacheInfo, bool, error) {
 	// Create pretty logger for UI output
-	logger := pretty.NewWithLogger(log)
+	logger := pretty.New()
 
 	// Check if the cold context file exists
 	if _, err := os.Stat(coldContextFilePath); err != nil {
