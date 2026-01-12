@@ -179,12 +179,31 @@ func runRequest(cmd *cobra.Command, args []string) error {
 		if !strings.HasSuffix(response, "\n") {
 			responseOutput += "\n"
 		}
-		ulog.Info("Response output").
-			Field("length", len(response)).
-			Pretty(responseOutput).
-			PrettyOnly().
-			Log(ctx)
+		// When called non-interactively (for capturing output), write to stdout
+		// Otherwise use ulog to avoid corrupting TUIs
+		if isNonInteractive() {
+			fmt.Print(responseOutput)
+		} else {
+			ulog.Info("Response output").
+				Field("length", len(response)).
+				Pretty(responseOutput).
+				PrettyOnly().
+				Log(ctx)
+		}
 	}
 
 	return nil
+}
+
+// isNonInteractive returns true if stdout is being captured (not a TTY)
+// This allows gemapi to output the response to stdout when being piped,
+// while using ulog (stderr) when running interactively to avoid corrupting TUIs
+func isNonInteractive() bool {
+	fileInfo, err := os.Stdout.Stat()
+	if err != nil {
+		return false
+	}
+	// Check if stdout is a character device (terminal)
+	// If not, we're being piped or redirected
+	return (fileInfo.Mode() & os.ModeCharDevice) == 0
 }
