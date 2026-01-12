@@ -1,51 +1,51 @@
-# yaml-language-server: $schema=https://raw.githubusercontent.com/mattsolo1/grove-docgen/main/schema/docgen.config.schema.json
-title: "Grove Gemini"
+enabled: true
+title: Grove Gemini
 description: A command-line interface for Google's Gemini API, with context management, caching, and observability features.
 category: Developer Tools
-enabled: true
 settings:
-  output_dir: docs
-  rules_file: docs.rules
-  structured_output_file: pkg/docs/docs.json
-  system_prompt: default
-  model: gemini-2.5-pro
-  regeneration_mode: reference
-readme:
-  generate_toc: true
-  template: docs/README.md.tpl
-  output: README.md
-  source_section: overview
-  strip_lines: 2
+    model: gemini-2.5-pro
+    regeneration_mode: reference
+    rules_file: docs.rules
+    structured_output_file: pkg/docs/docs.json
+    system_prompt: default
+    output_dir: docs
 sections:
-  - name: overview
-    order: 1
-    output: 01-overview.md
-    prompt: prompts/01-overview.md
-    title: Overview
-    agg_strip_lines: 2
-  - name: examples
-    order: 2
-    output: 02-examples.md
-    prompt: prompts/02-examples.md
-    title: Examples
-  - name: experimental
-    order: 3
-    output: 03-experimental.md
-    prompt: prompts/03-experimental.md
-    title: Experimental
-  - name: configuration
-    order: 4
-    output: 04-configuration.md
-    prompt: prompts/04-configuration.md
-    title: Configuration
-  - name: command-reference
-    order: 5
-    output: 05-command-reference.md
-    prompt: prompts/05-command-reference.md
-    title: Command Reference
-  - name: configuration-schema
-    order: 6
-    type: schema_to_md
-    source: gemini.schema.json
-    output: 06-configuration-schema.md
-    title: Configuration Schema Reference
+    - name: overview
+      title: Overview
+      order: 1
+      prompt: 01-overview.md
+      output: 01-overview.md
+      agg_strip_lines: 2
+    - name: examples
+      title: Examples
+      order: 2
+      prompt: 02-examples.md
+      output: 02-examples.md
+    - name: experimental
+      title: Experimental
+      order: 3
+      prompt: 03-experimental.md
+      output: 03-experimental.md
+    - name: configuration
+      title: Configuration
+      order: 4
+      prompt: 04-configuration.md
+      output: 04-configuration.md
+    - name: command-reference
+      title: Command Reference
+      order: 5
+      prompt: 05-command-reference.md
+      output: 05-command-reference.md
+    - name: configuration-schema
+      title: Configuration Schema Reference
+      order: 6
+      prompt: .
+      output: 06-configuration-schema.md
+      type: schema_to_md
+      source: gemini.schema.json
+readme:
+    template: docs/README.md.tpl
+    output: README.md
+    source_section: overview
+    strip_lines: 2
+    generate_toc: true
