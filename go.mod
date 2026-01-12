@@ -3,6 +3,7 @@ module github.com/mattsolo1/grove-gemini
 go 1.24.4
 
 require (
+	cloud.google.com/go v0.121.0
 	cloud.google.com/go/bigquery v1.69.0
 	cloud.google.com/go/logging v1.13.0
 	cloud.google.com/go/monitoring v1.24.2
@@ -21,7 +22,6 @@ require (
 )
 
 require (
-	cloud.google.com/go v0.121.0 // indirect
 	cloud.google.com/go/auth v0.16.1 // indirect
 	cloud.google.com/go/auth/oauth2adapt v0.2.8 // indirect
 	cloud.google.com/go/compute/metadata v0.7.0 // indirect
