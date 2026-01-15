@@ -14,8 +14,6 @@ func main() {
 	scenarios := []*harness.Scenario{
 		// Basic Scenarios
 		BasicScenario(),
-		// Debug Logging
-		GeminiDebugLogScenario(),
 		// API Key Configuration
 		APIKeyConfigScenario(),
 		// Query TUI Scenarios

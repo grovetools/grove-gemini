@@ -82,7 +82,6 @@ These files are automatically attached to API requests. The `--regenerate` flag 
 | --- | --- |
 | `GEMINI_API_KEY` | Google Gemini API key. |
 | `GCP_PROJECT_ID` | Default Google Cloud Project ID for `query` subcommands. |
-| `GROVE_DEBUG` | If set, saves request payloads to `.grove/logs/gemini_prompts/`. |
 
 ## Configuration Files
 

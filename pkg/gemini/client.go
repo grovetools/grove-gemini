@@ -64,19 +64,6 @@ type GenerateContentOptions struct {
 	MaxOutputTokens *int32
 }
 
-// GeminiRequestLog holds the details of a request for debugging purposes
-type GeminiRequestLog struct {
-	Timestamp        time.Time `json:"timestamp"`
-	Model            string    `json:"model"`
-	CacheID          string    `json:"cache_id,omitempty"`
-	PromptText       string    `json:"prompt_text"`
-	AttachedFiles    []string  `json:"attached_files"`
-	TotalFiles       int       `json:"total_files"`
-	WorkingDir       string    `json:"working_dir,omitempty"`
-	JobID            string    `json:"job_id,omitempty"`
-	PlanName         string    `json:"plan_name,omitempty"`
-}
-
 // GenerateContentWithCache generates content using a cached context and dynamic files
 func (c *Client) GenerateContentWithCache(ctx context.Context, model string, prompt string, cacheID string, dynamicFilePaths []string) (string, error) {
 	return c.GenerateContentWithCacheAndOptions(ctx, model, prompt, cacheID, dynamicFilePaths, nil)
@@ -150,7 +137,7 @@ func (c *Client) GenerateContentWithCacheAndOptions(ctx context.Context, model s
 		// Log with structured fields
 		log.WithFields(fields).Debug("Preparing Gemini API request")
 	}
-	
+
 	// Upload all files
 	var requestParts []*genai.Part
 	var uploadResults []FileUploadResult

@@ -83,7 +83,7 @@
         },
         {
           "title": "Environment Variables",
-          "content": "| Variable | Description |\n| --- | --- |\n| `GEMINI_API_KEY` | Google Gemini API key. |\n| `GCP_PROJECT_ID` | Default Google Cloud Project ID for `query` subcommands. |\n| `GROVE_DEBUG` | If set, saves request payloads to `.grove/logs/gemini_prompts/`. |"
+          "content": "| Variable | Description |\n| --- | --- |\n| `GEMINI_API_KEY` | Google Gemini API key. |\n| `GCP_PROJECT_ID` | Default Google Cloud Project ID for `query` subcommands. |"
         },
         {
           "title": "Configuration Files",
