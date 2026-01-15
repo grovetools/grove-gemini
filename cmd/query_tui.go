@@ -257,9 +257,9 @@ func (m queryTuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Populate table
 		var rows []table.Row
 		for _, log := range m.logs {
-			status := "✓"
+			status := "*"
 			if !log.Success {
-				status = "✗"
+				status = "x"
 			}
 			rows = append(rows, table.Row{
 				log.Timestamp.Format("15:04:05"),

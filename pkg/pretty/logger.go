@@ -398,7 +398,7 @@ func (l *Logger) CacheWarningCtx(ctx context.Context) {
 		Bold(true)
 
 	warningContent := fmt.Sprintf(
-		"⚠️  ALPHA FEATURE WARNING\n\n" +
+		"WARNING:  ALPHA FEATURE WARNING\n\n" +
 			"Gemini Caching is experimental and can incur significant costs.\n" +
 			"Please monitor your Google Cloud billing closely to avoid unexpected charges.\n\n" +
 			"You can disable caching with the --no-cache flag or by removing @enable-cache from your rules.")
