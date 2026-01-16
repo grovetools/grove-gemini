@@ -8,8 +8,8 @@ import (
 )
 
 func main() {
-	// CLI output goes to stdout (stderr is for errors only)
-	grovelogging.SetGlobalOutput(os.Stdout)
+	// CLI logging/progress goes to stderr so stdout can be used for piping LLM responses
+	grovelogging.SetGlobalOutput(os.Stderr)
 
 	if err := cmd.Execute(); err != nil {
 		os.Exit(1)
