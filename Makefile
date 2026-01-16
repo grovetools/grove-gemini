@@ -1,7 +1,7 @@
-# Makefile for grove-gemini (gemapi)
+# Makefile for grove-gemini
 
-BINARY_NAME=gemapi
-E2E_BINARY_NAME=tend-gemapi
+BINARY_NAME=grove-gemini
+E2E_BINARY_NAME=tend-grove-gemini
 BIN_DIR=bin
 VERSION_PKG=github.com/mattsolo1/grove-core/version
 

@@ -1,9 +1,10 @@
 name: grove-gemini
 description: Tools for Google's Gemini API
 type: go
+managed: true
 binary:
-  name: gemapi
-  path: ./bin/gemapi
+  name: grove-gemini
+  path: ./bin/grove-gemini
 
 context:
   default_rules_path: .cx/dev-no-tests.rules
