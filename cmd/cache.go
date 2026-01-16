@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
-	tablecomponent "github.com/mattsolo1/grove-core/tui/components/table"
-	"github.com/mattsolo1/grove-core/tui/theme"
-	"github.com/mattsolo1/grove-gemini/pkg/gemini"
+	tablecomponent "github.com/grovetools/core/tui/components/table"
+	"github.com/grovetools/core/tui/theme"
+	"github.com/grovetools/grove-gemini/pkg/gemini"
 	"github.com/spf13/cobra"
 )
 

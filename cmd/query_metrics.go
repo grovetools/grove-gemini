@@ -8,8 +8,8 @@ import (
 
 	monitoring "cloud.google.com/go/monitoring/apiv3/v2"
 	"cloud.google.com/go/monitoring/apiv3/v2/monitoringpb"
-	"github.com/mattsolo1/grove-gemini/pkg/config"
-	"github.com/mattsolo1/grove-gemini/pkg/gcp"
+	"github.com/grovetools/grove-gemini/pkg/config"
+	"github.com/grovetools/grove-gemini/pkg/gcp"
 	"github.com/spf13/cobra"
 	"google.golang.org/api/iterator"
 	"google.golang.org/protobuf/types/known/timestamppb"

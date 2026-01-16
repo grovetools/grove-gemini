@@ -6,8 +6,8 @@ import (
 	"os/exec"
 	"strings"
 
-	core_config "github.com/mattsolo1/grove-core/config"
-	core_errors "github.com/mattsolo1/grove-core/errors"
+	core_config "github.com/grovetools/core/config"
+	core_errors "github.com/grovetools/core/errors"
 )
 
 //go:generate sh -c "cd ../.. && go run ./tools/schema-generator/"

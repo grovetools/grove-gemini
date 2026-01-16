@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/mattsolo1/grove-core/tui/theme"
-	"github.com/mattsolo1/grove-gemini/pkg/analytics"
+	"github.com/grovetools/core/tui/theme"
+	"github.com/grovetools/grove-gemini/pkg/analytics"
 )
 
 type PlotModel struct {

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mattsolo1/grove-gemini/pkg/pretty"
+	"github.com/grovetools/grove-gemini/pkg/pretty"
 	"google.golang.org/genai"
 )
 

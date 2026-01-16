@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/mattsolo1/grove-gemini/pkg/config"
+	"github.com/grovetools/grove-gemini/pkg/config"
 	"github.com/spf13/cobra"
 )
 

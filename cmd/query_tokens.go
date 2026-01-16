@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"cloud.google.com/go/logging/logadmin"
-	"github.com/mattsolo1/grove-gemini/pkg/config"
-	"github.com/mattsolo1/grove-gemini/pkg/gcp"
+	"github.com/grovetools/grove-gemini/pkg/config"
+	"github.com/grovetools/grove-gemini/pkg/gcp"
 	"github.com/spf13/cobra"
 	"google.golang.org/api/iterator"
 )

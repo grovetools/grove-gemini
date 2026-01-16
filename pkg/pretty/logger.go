@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
-	corelogging "github.com/mattsolo1/grove-core/logging"
-	"github.com/mattsolo1/grove-core/tui/theme"
+	corelogging "github.com/grovetools/core/logging"
+	"github.com/grovetools/core/tui/theme"
 )
 
 // Logger is a wrapper around the grove-core UnifiedLogger with Gemini-specific helpers.

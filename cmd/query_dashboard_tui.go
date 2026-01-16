@@ -9,10 +9,10 @@ import (
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/charmbracelet/lipgloss"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/mattsolo1/grove-core/tui/components/help"
-	"github.com/mattsolo1/grove-core/tui/keymap"
-	"github.com/mattsolo1/grove-core/tui/theme"
-	"github.com/mattsolo1/grove-gemini/pkg/analytics"
+	"github.com/grovetools/core/tui/components/help"
+	"github.com/grovetools/core/tui/keymap"
+	"github.com/grovetools/core/tui/theme"
+	"github.com/grovetools/grove-gemini/pkg/analytics"
 )
 
 // dashboardKeyMap extends the base keymap with custom keybindings

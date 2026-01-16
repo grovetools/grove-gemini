@@ -1,7 +1,7 @@
 package gemini
 
 import (
-	grovelogging "github.com/mattsolo1/grove-core/logging"
+	grovelogging "github.com/grovetools/core/logging"
 )
 
 // Package-level logger instance

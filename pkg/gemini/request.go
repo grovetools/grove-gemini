@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	grovecontext "github.com/mattsolo1/grove-context/pkg/context"
-	"github.com/mattsolo1/grove-core/tui/theme"
-	"github.com/mattsolo1/grove-gemini/pkg/pretty"
+	grovecontext "github.com/grovetools/cx/pkg/context"
+	"github.com/grovetools/core/tui/theme"
+	"github.com/grovetools/grove-gemini/pkg/pretty"
 )
 
 // RequestOptions contains all the parameters for a request

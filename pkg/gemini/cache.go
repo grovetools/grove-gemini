@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mattsolo1/grove-gemini/pkg/pretty"
+	"github.com/grovetools/grove-gemini/pkg/pretty"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/genai"
 )

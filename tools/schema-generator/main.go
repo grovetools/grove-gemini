@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/invopop/jsonschema"
-	"github.com/mattsolo1/grove-gemini/pkg/config"
+	"github.com/grovetools/grove-gemini/pkg/config"
 )
 
 func main() {

@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mattsolo1/grove-core/tui/theme"
-	"github.com/mattsolo1/grove-gemini/pkg/logging"
+	"github.com/grovetools/core/tui/theme"
+	"github.com/grovetools/grove-gemini/pkg/logging"
 	"github.com/spf13/cobra"
 )
 

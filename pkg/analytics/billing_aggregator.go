@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"cloud.google.com/go/civil"
-	"github.com/mattsolo1/grove-gemini/pkg/gcp"
+	"github.com/grovetools/grove-gemini/pkg/gcp"
 	"google.golang.org/api/iterator"
 )
 

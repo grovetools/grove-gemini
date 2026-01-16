@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/mattsolo1/grove-core/version"
+	"github.com/grovetools/core/version"
 	"github.com/spf13/cobra"
 )
 

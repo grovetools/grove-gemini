@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	grovelogging "github.com/mattsolo1/grove-core/logging"
+	grovelogging "github.com/grovetools/core/logging"
 )
 
 // Package-level unified logger instance

@@ -3,7 +3,7 @@ package analytics
 import (
 	"time"
 
-	"github.com/mattsolo1/grove-gemini/pkg/logging"
+	"github.com/grovetools/grove-gemini/pkg/logging"
 )
 
 // Bucket holds aggregated data for a time interval.

@@ -3,8 +3,8 @@ package main
 import (
 	"os"
 
-	grovelogging "github.com/mattsolo1/grove-core/logging"
-	"github.com/mattsolo1/grove-gemini/cmd"
+	grovelogging "github.com/grovetools/core/logging"
+	"github.com/grovetools/grove-gemini/cmd"
 )
 
 func main() {

@@ -7,11 +7,11 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/mattsolo1/grove-gemini/pkg/config"
-	ctxinfo "github.com/mattsolo1/grove-gemini/pkg/context"
-	"github.com/mattsolo1/grove-gemini/pkg/logging"
-	"github.com/mattsolo1/grove-gemini/pkg/pretty"
-	corelogging "github.com/mattsolo1/grove-core/logging"
+	"github.com/grovetools/grove-gemini/pkg/config"
+	ctxinfo "github.com/grovetools/grove-gemini/pkg/context"
+	"github.com/grovetools/grove-gemini/pkg/logging"
+	"github.com/grovetools/grove-gemini/pkg/pretty"
+	corelogging "github.com/grovetools/core/logging"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/genai"
 )
