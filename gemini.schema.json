@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/mattsolo1/grove-gemini/pkg/config/gemini-config",
+  "$id": "https://github.com/grovetools/grove-gemini/pkg/config/gemini-config",
   "properties": {
     "api_key": {
       "type": "string"
