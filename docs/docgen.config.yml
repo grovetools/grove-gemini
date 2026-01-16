@@ -1,7 +1,7 @@
 enabled: true
-title: Grove Gemini
+title: grove-gemini
 description: A command-line interface for Google's Gemini API, with context management, caching, and observability features.
-category: Developer Tools
+category: LLM Providers
 settings:
     model: gemini-2.5-pro
     regeneration_mode: reference
