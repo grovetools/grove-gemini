@@ -3,7 +3,7 @@
 BINARY_NAME=grove-gemini
 E2E_BINARY_NAME=tend-grove-gemini
 BIN_DIR=bin
-VERSION_PKG=github.com/mattsolo1/grove-core/version
+VERSION_PKG=github.com/grovetools/core/version
 
 # --- Versioning ---
 # For dev builds, we construct a version string from git info.
