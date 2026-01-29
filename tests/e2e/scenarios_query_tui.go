@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/grovetools/core/pkg/paths"
 	"github.com/grovetools/tend/pkg/fs"
 	"github.com/grovetools/tend/pkg/harness"
 	"github.com/grovetools/tend/pkg/tui"
@@ -30,10 +31,9 @@ func QueryTUIComprehensiveScenario() *harness.Scenario {
 
 // setupQueryTUIEnvironment creates a test environment with mock query logs.
 func setupQueryTUIEnvironment(ctx *harness.Context) error {
-	// Logs are read from $HOME/.grove/gemini-cache/, so we need to use the home directory
-	// The test harness sets up HOME at ctx.RootDir/home
-	homeDir := filepath.Join(ctx.RootDir, "home")
-	logDir := filepath.Join(homeDir, ".grove", "gemini-cache")
+	// Use the paths package to get the XDG-compliant state directory
+	// The test harness sets HOME at ctx.RootDir/home, and paths.StateDir() will use that
+	logDir := filepath.Join(paths.StateDir(), "logs", "gemini")
 	if err := fs.CreateDir(logDir); err != nil {
 		return err
 	}

@@ -8,6 +8,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/grovetools/core/pkg/paths"
 )
 
 // QueryLog represents a single API query log entry
@@ -66,16 +68,16 @@ func GetLogger() *QueryLogger {
 
 // getLogPath returns the path to the query log file
 func getLogPath() (string, error) {
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return "", err
+	stateDir := paths.StateDir()
+	if stateDir == "" {
+		return "", fmt.Errorf("could not determine grove state directory")
 	}
-	
-	groveDir := filepath.Join(homeDir, ".grove", "gemini-cache")
+
+	groveDir := filepath.Join(stateDir, "logs", "gemini")
 	if err := os.MkdirAll(groveDir, 0755); err != nil {
 		return "", err
 	}
-	
+
 	// Use date-based log files for easy rotation
 	today := time.Now().Format("2006-01-02")
 	return filepath.Join(groveDir, fmt.Sprintf("query-log-%s.jsonl", today)), nil
