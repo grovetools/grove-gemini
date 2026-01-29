@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/grovetools/core/pkg/paths"
 )
 
 const (
@@ -19,12 +21,12 @@ type GCPConfig struct {
 
 // GetConfigPath returns the path to the GCP config file
 func GetConfigPath() (string, error) {
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return "", err
+	configDir := paths.ConfigDir()
+	if configDir == "" {
+		return "", fmt.Errorf("could not determine grove config directory")
 	}
-	
-	groveDir := filepath.Join(homeDir, ".grove", "gemini-cache")
+
+	groveDir := filepath.Join(configDir, "gemini")
 	return filepath.Join(groveDir, configFileName), nil
 }
 
