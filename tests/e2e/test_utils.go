@@ -9,21 +9,21 @@ import (
 
 // FindBinary is a helper to find the binary path for tests.
 // It checks in the following order:
-// 1. GEMAPI_BINARY environment variable
+// 1. GROVE_GEMINI_BINARY environment variable
 // 2. Common relative paths from test execution directory
 // 3. System PATH
 func FindBinary() (string, error) {
 	// Check environment variable first
-	if binary := os.Getenv("GEMAPI_BINARY"); binary != "" {
+	if binary := os.Getenv("GROVE_GEMINI_BINARY"); binary != "" {
 		return binary, nil
 	}
 
 	// Try common locations relative to test execution directory
 	candidates := []string{
-		"./bin/gemapi",
-		"../bin/gemapi",
-		"../../bin/gemapi",
-		"../../../bin/gemapi",
+		"./bin/grove-gemini",
+		"../bin/grove-gemini",
+		"../../bin/grove-gemini",
+		"../../../bin/grove-gemini",
 	}
 
 	for _, candidate := range candidates {
@@ -37,9 +37,9 @@ func FindBinary() (string, error) {
 	}
 
 	// Try to find in PATH
-	if path, err := exec.LookPath("gemapi"); err == nil {
+	if path, err := exec.LookPath("grove-gemini"); err == nil {
 		return path, nil
 	}
 
-	return "", fmt.Errorf("could not find gemapi binary - please set GEMAPI_BINARY environment variable or ensure gemapi is built and in PATH")
+	return "", fmt.Errorf("could not find grove-gemini binary - please set GROVE_GEMINI_BINARY environment variable or ensure grove-gemini is built and in PATH")
 }

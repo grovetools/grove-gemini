@@ -35,7 +35,7 @@ type QueryLog struct {
 	GitRepo         string `json:"git_repo,omitempty"`
 	GitBranch       string `json:"git_branch,omitempty"`
 	GitCommit       string `json:"git_commit,omitempty"`
-	Caller          string `json:"caller,omitempty"` // e.g., "grove-flow", "gemapi-request", "gemapi-count-tokens"
+	Caller          string `json:"caller,omitempty"` // e.g., "grove-flow", "grove-gemini-request", "grove-gemini-count-tokens"
 }
 
 // QueryLogger handles logging of API queries

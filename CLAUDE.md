@@ -13,7 +13,7 @@ This file contains important instructions for Claude when working with this repo
    ```
 
 3. **Binary Management** - IMPORTANT:
-   - Binaries are created in the `./bin` directory
+   - Binary `grove-gemini` is created in the `./bin` directory
    - **NEVER** copy binaries elsewhere in the PATH
    - Binaries are managed by the `grove` meta-tool
    - Use `grove list` to see currently active binaries across the ecosystem

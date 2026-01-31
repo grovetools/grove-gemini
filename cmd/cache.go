@@ -20,7 +20,7 @@ func newCacheCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "cache",
 		Short: "Manage the local cache of Gemini contexts",
-		Long:  `Provides commands to manage the local cache of Gemini API context data. You can list, inspect, clear, and prune cached items. Use 'gemapi cache tui' to launch the interactive interface.`,
+		Long:  `Provides commands to manage the local cache of Gemini API context data. You can list, inspect, clear, and prune cached items. Use 'grove-gemini cache tui' to launch the interactive interface.`,
 	}
 
 	// Add an explicit 'tui' command

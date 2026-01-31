@@ -51,7 +51,7 @@ func runQueryTokens(cmd *cobra.Command, args []string) error {
 
 	// Ensure we have a project ID
 	if tokensProjectID == "" {
-		return fmt.Errorf("no GCP project specified. Use --project-id flag or set a default with 'gemapi config set project PROJECT_ID'")
+		return fmt.Errorf("no GCP project specified. Use --project-id flag or set a default with 'grove-gemini config set project PROJECT_ID'")
 	}
 
 	// Create logging client

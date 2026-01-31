@@ -1,159 +1,23 @@
 {
   "sections": {
-    "command-reference": {
-      "title": "Command Reference",
-      "content": "This document provides a reference for the `gemapi` command-line interface, covering all subcommands and their options.",
-      "subsections": [
-        {
-          "title": "`gemapi request`",
-          "content": "Sends a request to the Gemini API. It can use `.grove/rules` to generate and attach file-based context.\n\n| Flag                | Shorthand | Description                                                              |\n| ------------------- | --------- | ------------------------------------------------------------------------ |\n| `--model`           | `-m`      | The Gemini model to use for the request.                                 |\n| `--prompt`          | `-p`      | The prompt text provided as an argument.                                 |\n| `--file`            | `-f`      | The path to a file containing the prompt.                                |\n| `--output`          | `-o`      | The path to a file to write the response to (defaults to stdout).        |\n| `--workdir`         | `-w`      | The working directory for the request (defaults to the current directory). |\n| `--context`         |           | A list of additional context files to include.                           |\n| `--regenerate`      |           | Forces regeneration of context from `.grove/rules` before the request.   |\n| `--recache`         |           | Forces recreation of the Gemini cache, ignoring any existing valid cache.  |\n| `--use-cache`       |           | Specifies a cache name (short hash) to use, bypassing automatic selection. |\n| `--no-cache`        |           | Disables the use of context caching for this request.                    |\n| `--cache-ttl`       |           | Sets a time-to-live duration for a new cache (e.g., `1h`, `30m`).        |\n| `--yes`             | `-y`      | Skips the confirmation prompt for potentially costly cache creation.     |\n| `--temperature`     |           | Sets the temperature for generation (0.0-2.0).                           |\n| `--top-p`           |           | Sets the top-p value for nucleus sampling (0.0-1.0).                     |\n| `--top-k`           |           | Sets the top-k value for sampling.                                       |\n| `--max-output-tokens` |           | Sets the maximum number of tokens to generate in the response.           |\n\n**Examples**",
-          "code_blocks": [
-            "# Make a request with an inline prompt\ngemapi request -p \"Explain this Go function.\"\n\n# Use a prompt from a file and save the response to another file\ngemapi request -f prompt.md -o response.md\n\n# Force a rebuild of the cold context cache\ngemapi request --recache \"Analyze the latest version of the code.\""
-          ]
-        },
-        {
-          "title": "`gemapi cache`",
-          "content": "Manages local records and remote state of Gemini API context caches.\n\n### `gemapi cache tui`\n\nLaunches an interactive terminal user interface (TUI) for browsing, inspecting, and managing caches.\n\n**Example**\n\n\n### `gemapi cache list`\n\nLists cached contexts, showing both local records and their status on Google's servers.\n\n| Flag           | Description                                                            |\n| -------------- | ---------------------------------------------------------------------- |\n| `--local-only` | Shows only information from local cache files, without querying the API. |\n| `--api-only`   | Shows only caches found on Google's API servers for the current project. |\n\n**Example**\n\n\n### `gemapi cache inspect`\n\nShows detailed information about a specific cache, including its creation date, expiration, token count, and the files it contains.\n\n**Example**\n\n\n### `gemapi cache clear`\n\nDeletes caches from Google's servers and updates local records. By default, it marks the local record as cleared but does not delete the file.\n\n| Flag               | Description                                                                    |\n| ------------------ | ------------------------------------------------------------------------------ |\n| `--all`            | Clears all caches for the current project.                                     |\n| `--with-local`     | Also removes the local cache file, instead of just marking it as cleared.      |\n| `--preserve-local` | Deletes the remote cache but does not modify the local cache file at all.      |\n\n**Example**\n\n\n### `gemapi cache prune`\n\nIdentifies expired local cache records, deletes them from Google's servers, and marks them as cleared locally.\n\n| Flag             | Description                                                            |\n| ---------------- | ---------------------------------------------------------------------- |\n| `--remove-local` | Removes the local cache files for expired caches instead of marking them. |\n\n**Example**",
-          "code_blocks": [
-            "gemapi cache tui",
-            "# List all caches with a combined local and remote view\ngemapi cache list\n\n# List only local cache records\ngemapi cache list --local-only",
-            "gemapi cache inspect \u003ccache-name\u003e",
-            "# Clear a specific cache from the remote API and update the local record\ngemapi cache clear \u003ccache-name\u003e\n\n# Clear all caches and delete the local files\ngemapi cache clear --all --with-local",
-            "gemapi cache prune"
-          ]
-        },
-        {
-          "title": "`gemapi query`",
-          "content": "Provides a suite of commands to inspect Gemini API usage and costs from various sources.\n\n### `gemapi query local`\n\nQueries the detailed request logs stored on the local machine, displaying token usage, costs, and performance metrics with a summary.\n\n| Flag      | Shorthand | Description                                       |\n| --------- | --------- | ------------------------------------------------- |\n| `--hours` | `-H`      | The number of hours to look back in the logs.     |\n| `--limit` | `-l`      | The maximum number of log entries to display.     |\n| `--model` | `-m`      | Filters the logs to a specific model name.        |\n| `--errors`  |           | Shows only requests that resulted in an error.    |\n\n**Example**\n\n\n### `gemapi query requests`\n\nDisplays a table of individual Gemini API requests from local logs with details like timestamp, method, tokens, latency, and status.\n\n| Flag      | Shorthand | Description                                       |\n| --------- | --------- | ------------------------------------------------- |\n| `--hours` | `-H`      | The number of hours to look back in the logs.     |\n| `--limit` | `-l`      | The maximum number of requests to display.        |\n| `--model` | `-m`      | Filters the requests to a specific model name.    |\n| `--errors`  |           | Shows only requests that resulted in an error.    |\n\n**Example**\n\n\n### `gemapi query metrics`\n\nFetches aggregate metrics, such as request counts and error rates, from Google Cloud Monitoring.\n\n| Flag           | Shorthand | Description                                                        |\n| -------------- | --------- | ------------------------------------------------------------------ |\n| `--project-id` | `-p`      | The GCP project ID to query.                                       |\n| `--hours`      | `-H`      | The number of hours to look back for metrics.                      |\n| `--debug`      |           | Enables debug output to help diagnose issues with metric filters. |\n\n**Example**\n\n\n### `gemapi query tokens`\n\nFetches detailed token usage logs from Google Cloud Logging. This provides data on prompt tokens, completion tokens, and cache hits.\n\n| Flag           | Shorthand | Description                              |\n| -------------- | --------- | ---------------------------------------- |\n| `--project-id` | `-p`      | The GCP project ID to query.             |\n| `--hours`      | `-H`      | The number of hours to look back for logs. |\n| `--debug`      |           | Enables debug output for troubleshooting. |\n\n**Example**\n\n\n### `gemapi query billing`\n\nQueries cost data directly from a BigQuery billing export. This requires a BigQuery \"Detailed usage cost\" export to be configured for your GCP billing account.\n\n| Flag           | Shorthand | Description                                                        |\n| -------------- | --------- | ------------------------------------------------------------------ |\n| `--project-id` | `-p`      | The GCP project ID where BigQuery is located.                      |\n| `--dataset-id` | `-d`      | The BigQuery dataset ID containing the billing table (required).   |\n| `--table-id`   | `-t`      | The BigQuery table ID for the billing export (required).           |\n| `--days`       |           | The number of days to look back in the billing data.               |\n\n**Example**\n\n\n### `gemapi query explore`\n\nExplores Cloud Logging to find available logs for the Gemini API service, which can help discover resource types and payload structures.\n\n| Flag           | Shorthand | Description                                    |\n| -------------- | --------- | ---------------------------------------------- |\n| `--project-id` | `-p`      | The GCP project ID to query.                   |\n| `--hours`      | `-H`      | The number of hours to look back for logs.     |\n| `--limit`      | `-l`      | The maximum number of log entries to examine.  |\n\n**Example**",
-          "code_blocks": [
-            "# View all requests from the last 12 hours\ngemapi query local --hours 12",
-            "# View the last 20 requests\ngemapi query requests --limit 20",
-            "gemapi query metrics --project-id my-gcp-project --hours 48",
-            "gemapi query tokens --project-id my-gcp-project",
-            "gemapi query billing \\\n  --project-id my-gcp-project \\\n  --dataset-id my_billing_dataset \\\n  --table-id gcp_billing_export_v1_XXXX",
-            "gemapi query explore --project-id my-gcp-project --hours 2"
-          ]
-        },
-        {
-          "title": "`gemapi count-tokens`",
-          "content": "Counts the number of tokens in a given text using the Gemini API tokenizer. Input can be provided as an argument or via stdin.\n\n| Flag      | Shorthand | Description                                                                    |\n| --------- | --------- | ------------------------------------------------------------------------------ |\n| `--model` | `-m`      | The model to use for token counting, as different models have different tokenization. |\n\n**Examples**",
-          "code_blocks": [
-            "# Count tokens from an argument\ngemapi count-tokens \"How many tokens is this string?\"\n\n# Count tokens from a file\ncat my_file.txt | gemapi count-tokens"
-          ]
-        },
-        {
-          "title": "`gemapi config`",
-          "content": "Manages the local configuration for `gemapi`.\n\n### `gemapi config get project`\n\nDisplays the resolution order and the currently configured default GCP project ID.\n\n**Example**\n\n\n### `gemapi config set project`\n\nSets a default GCP project ID in the local configuration file.\n\n**Example**",
-          "code_blocks": [
-            "gemapi config get project",
-            "gemapi config set project my-gcp-project-id"
-          ]
-        },
-        {
-          "title": "`gemapi version`",
-          "content": "Prints version information for the `gemapi` binary.\n\n| Flag     | Description                              |\n| -------- | ---------------------------------------- |\n| `--json` | Outputs the version information in JSON format. |\n\n**Example**",
-          "code_blocks": [
-            "gemapi version"
-          ]
-        }
-      ]
-    },
-    "configuration": {
-      "title": "Configuration",
-      "content": "Configuration for `gemapi` is managed through environment variables, project-level files, and user-specific settings.",
-      "subsections": [
-        {
-          "title": "API and Project Configuration",
-          "content": "### API Key\n\nThe Gemini API key is required for requests. It is resolved from the following sources, in order of precedence:\n\n1.  **`GEMINI_API_KEY` Environment Variable**:\n    ```bash\n    export GEMINI_API_KEY=\"your-api-key\"\n    ```\n\n2.  **`api_key_command` in `grove.yml`**: A command that prints the key to stdout.\n    ```yaml\n    # ./{project_root}/grove.yml\n    gemini:\n      api_key_command: \"gcloud secrets versions access latest --secret=gemini-api-key\"\n    ```\n\n3.  **`api_key` in `grove.yml`**: A static key defined in the file.\n    ```yaml\n    # ./{project_root}/grove.yml\n    gemini:\n      api_key: \"your-api-key\"\n    ```\n\n### GCP Project ID\n\nA Google Cloud Project ID is required for `query` subcommands. A default can be configured to avoid using the `--project-id` flag for every command.\n\nTo set the default project, use the `config set` command. This writes the ID to a user-specific configuration file.\n\nThe project ID is resolved in the following order:\n1.  The `--project-id` command-line flag.\n2.  The `GCP_PROJECT_ID` environment variable.\n3.  The value stored in the user configuration file.",
-          "code_blocks": [
-            "gemapi config set project your-gcp-project-id"
-          ]
-        },
-        {
-          "title": "Model and Generation Parameters",
-          "content": "### Model Selection\n\nThe model is specified per-request with the `--model` (or `-m`) flag. If unspecified, `gemapi request` defaults to `gemini-2.0-flash`.\n\n\n### Generation Parameters\n\nThe following flags can be used with `gemapi request` to control the generation process:\n\n| Flag | Description | Default |\n| --- | --- | --- |\n| `--temperature` | Controls sampling randomness (0.0-2.0). | Model default |\n| `--top-p` | Sets the nucleus sampling threshold (0.0-1.0). | Model default |\n| `--top-k` | Sets the top-k sampling value. | Model default |\n| `--max-output-tokens` | Maximum number of tokens in the response. | Model default |\n\n**Example:**",
-          "code_blocks": [
-            "gemapi request -m gemini-1.5-pro-latest -p \"Explain this function.\"",
-            "gemapi request --temperature 0.5 --max-output-tokens 2048 -p \"Write a unit test.\""
-          ]
-        },
-        {
-          "title": "Context File Integration",
-          "content": "If a `.grove/rules` file exists in the project root, `gemapi request` uses `grove-context` to generate context files from the codebase.\n\n-   `.grove/context` is generated for frequently changing (\"hot\") context.\n-   `.grove/cached-context` is generated for less frequently changing (\"cold\") context.\n\nThese files are automatically attached to API requests. The `--regenerate` flag can be used to force an update to the context files before a request is made. This behavior is intrinsic to `grove-context` and does not require `gemapi`-specific configuration."
-        },
-        {
-          "title": "Environment Variables",
-          "content": "| Variable | Description |\n| --- | --- |\n| `GEMINI_API_KEY` | Google Gemini API key. |\n| `GCP_PROJECT_ID` | Default Google Cloud Project ID for `query` subcommands. |"
-        },
-        {
-          "title": "Configuration Files",
-          "content": "-   **`grove.yml`**: A project-level file located in the repository root. It can contain a `gemini` extension to configure the API key.\n-   **`~/.grove/gemini-cache/gcp-config.json`**: A user-specific file that stores the default GCP Project ID. This file is managed by `gemapi config` commands and should not be added to version control."
-        }
-      ]
-    },
-    "configuration-schema": {
-      "title": "Configuration Schema Reference",
-      "content": "Schema for the 'gemini' extension in `grove.yml`.",
-      "subsections": [
-        {
-          "title": "Properties",
-          "content": "| Property          | Type   | Description                                                                                             |\n| ----------------- | ------ | ------------------------------------------------------------------------------------------------------- |\n| `api_key`         | string | A direct string value for the Gemini API key, used as a fallback if an environment variable or command is not set. |\n| `api_key_command` | string | A shell command that outputs the Gemini API key to stdout, used for dynamic or secure key retrieval.      |"
-        }
-      ]
-    },
-    "examples": {
-      "title": "Examples",
-      "content": "This document provides examples for using `gemapi` for API calls and development workflows.",
-      "subsections": [
-        {
-          "title": "Example 1: Basic API Requests",
-          "content": "This example shows how to use the `gemapi request` command for direct interaction with the Gemini API.\n\n### Making a Simple Request\n\nA prompt can be provided as an argument. The tool sends the request to the default model and prints the response to standard output.\n\n\n### Using Files for Prompts and Outputs\n\nFiles can be used for longer prompts or to save output.\n\n1.  **Create a prompt file:**\n\n    ```bash\n    echo \"Write a simple 'Hello, World!' program in Go.\" \u003e prompt.md\n    ```\n\n2.  **Run the request:**\n    This command uses the `-f` flag to read the prompt from `prompt.md` and saves the generated code to `main.go` using the `-o` flag.\n\n    ```bash\n    gemapi request -f prompt.md -o main.go -m gemini-2.0-flash\n    ```\n\n3.  **Verify the output:**\n    The `main.go` file will contain the Go code generated by the API.\n\n    ```bash\n    cat main.go\n    ```\n    ```go\n    package main\n\n    import \"fmt\"\n\n    func main() {\n    \tfmt.Println(\"Hello, World!\")\n    }\n    ```",
-          "code_blocks": [
-            "gemapi request \"What is the Go programming language?\""
-          ]
-        },
-        {
-          "title": "Example 2: Requests with Codebase Context",
-          "content": "When a `.grove/rules` file is present, `gemapi` reads it to determine which project files to include in the request. This provides the model with the contents of the matched files.\n\n1.  **Set up the project:**\n    Create a Go project with two files.\n\n    `main.go`:\n    ```go\n    package main\n\n    import \"fmt\"\n\n    func main() {\n        message := GetGreeting()\n        fmt.Println(message)\n    }\n    ```\n\n    `greeting.go`:\n    ```go\n    package main\n\n    func GetGreeting() string {\n        return \"Hello from a separate file!\"\n    }\n    ```\n\n2.  **Define the context rules:**\n    Create a `.grove/rules` file to specify which files to include.\n\n    ```bash\n    mkdir -p .grove\n    echo \"*.go\" \u003e .grove/rules\n    ```\n\n3.  **Make a context-aware request:**\n    `gemapi` finds the `.grove/rules` file, gathers all `.go` files, and attaches them to the request.\n\n    ```bash\n    gemapi request \"Based on the provided code, what will be printed when the program is run?\"\n    ```\n\n    The model receives the content of both `main.go` and `greeting.go` and can determine the output.\n\n    **Expected Output:**\n    ```\n    Based on the provided code, when you run the program, it will print:\n\n    Hello from a separate file!\n    ```\n\n4.  **Regenerating Context:**\n    If the `.grove/rules` file is modified, the `--regenerate` flag forces `gemapi` to re-process the rules and update the context files before making a request.\n\n    ```bash\n    gemapi request --regenerate \"Summarize the project based on the new rules.\"\n    ```"
-        },
-        {
-          "title": "Example 3: Caching and Observability",
-          "content": "**WARNING: ALPHA FEATURE**\nThe Gemini Caching API is an alpha feature and can incur costs. Monitor your Google Cloud billing when using caching.\n\nFor requests involving large, unchanging sets of files, `gemapi` can use the Gemini Caching API to store the context. This is an opt-in feature.\n\n1.  **Enable Caching:**\n    Caching is enabled by adding the `@enable-cache` directive to a `.grove/rules` file. This instructs `gemapi` to treat files matched by the rules as \"cold context\" for caching.\n\n    `.grove/rules`:\n    ```\n    @enable-cache\n    *.go\n    ```\n\n2.  **Run the first request to create the cache:**\n    The first request with a new context will create a cache on Google's servers. The `--yes` flag skips the confirmation prompt.\n\n    ```bash\n    gemapi request --yes \"What is the purpose of the GetGreeting function?\"\n    ```\n\n3.  **Run a second request to use the cache:**\n    Subsequent requests will reuse the existing cache if it is still valid. The token usage summary will show a count for `Cold (Cached)` tokens.\n\n    ```bash\n    gemapi request \"How is the greeting message generated?\"\n    ```\n\n4.  **Observability Commands:**\n    `gemapi` provides commands to inspect API usage.\n\n    *   **Inspect Caches**: Launches a terminal interface for viewing cache records, their status, and usage statistics.\n\n        ```bash\n        gemapi cache tui\n        ```\n\n    *   **Query Local Logs**: The `query local` command reads logs stored on the local machine. This command displays a table of requests made in the last hour.\n\n        ```bash\n        gemapi query local --hours 1\n        ```\n\n    *   **Query Billing Data**: The `query billing` command can read cost data from a BigQuery billing export. This requires a one-time setup in a GCP account to export billing data to a BigQuery table.\n\n        ```bash\n        gemapi query billing \\\n          --project-id your-gcp-project \\\n          --dataset-id your_billing_dataset \\\n          --table-id your_billing_table\n        ```"
-        }
-      ]
-    },
-    "experimental": {
-      "title": "Experimental",
-      "content": "This section covers features under active development. Their interfaces and behavior are subject to change.",
-      "subsections": [
-        {
-          "title": "Context Caching",
-          "content": "The context caching feature uses the Gemini Caching API to store \"cold context\" files between requests.\n\n\u003e **⚠️ CRITICAL WARNING: Risk of Substantial Unexpected Charges**\n\u003e\n\u003e The Gemini Caching API is a billable service. Misuse or misconfiguration of this feature can lead to substantial and unexpected charges on your Google Cloud account.\n\u003e\n\u003e The primary risk comes from frequent cache invalidation. If \"cold context\" files change often or the cache time-to-live (TTL) is misconfigured, `gemapi` will repeatedly create new caches. This action incurs costs for both the cache creation API calls and the storage of the cached content.\n\u003e\n\u003e **This feature is NOT recommended for general use until further stabilized.** Use it only if you understand the cost implications and are actively monitoring your billing.\n\nThe caching functionality is enabled by adding an `@enable-cache` directive to your `.grove/rules` file. The associated command-line flags (`--no-cache`, `--recache`, `--use-cache`, `--cache-ttl`) and other directives (`@freeze-cache`, `@no-expire`) are also considered experimental."
-        },
-        {
-          "title": "Observability Integration",
-          "content": "Integration with `grove-hooks` for session tracking and performance monitoring is in development. The event schemas and integration points may change in future releases."
-        }
-      ]
-    },
     "overview": {
       "title": "Overview",
-      "content": "Grove Gemini (`gemapi`) is a command-line interface for Google's Gemini API. It is designed to manage codebase context for API requests and includes commands to query API usage.\n\n\u003c!-- placeholder for animated gif --\u003e",
+      "content": "Grove Gemini (`grove-gemini`) is a command-line interface for Google's Gemini API. It is designed to manage codebase context for API requests and includes commands to query API usage.\n\n\u003c!-- placeholder for animated gif --\u003e",
       "subsections": [
         {
           "title": "Key Features",
-          "content": "*   **Context Management**: Builds prompt context by reading a `.grove/rules` file and passing matching files to the API. This process is handled by `grove-context`.\n\n*   **Caching (experimental)**: Caches \"cold context\" files using the Gemini Caching API. This feature is opt-in via an `@enable-cache` directive in the rules file. A terminal interface (`gemapi cache tui`) is available for cache management.\n\n*   **API Usage Querying**: Includes a `query` command to inspect API usage from multiple sources: `query local` for local request logs, `query metrics` for Google Cloud Monitoring, `query tokens` for Google Cloud Logging, and `query billing` for BigQuery exports.\n\n*   **Token Utilities**: Provides a `count-tokens` command to estimate the token count and cost for a given text before making an API call."
+          "content": "*   **Context Management**: Builds prompt context by reading a `.grove/rules` file and passing matching files to the API. This process is handled by `grove-context`.\n\n*   **Caching (experimental)**: Caches \"cold context\" files using the Gemini Caching API. This feature is opt-in via an `@enable-cache` directive in the rules file. A terminal interface (`grove-gemini cache tui`) is available for cache management.\n\n*   **API Usage Querying**: Includes a `query` command to inspect API usage from multiple sources: `query local` for local request logs, `query metrics` for Google Cloud Monitoring, `query tokens` for Google Cloud Logging, and `query billing` for BigQuery exports.\n\n*   **Token Utilities**: Provides a `count-tokens` command to estimate the token count and cost for a given text before making an API call."
         },
         {
           "title": "How It Works",
-          "content": "When `gemapi request` is executed, it performs the following steps:\n1.  It checks for a `.grove/rules` file in the current project. If found, it uses `grove-context` to generate `hot-context` and `cached-context` files based on the defined patterns.\n2.  If caching is enabled via an `@enable-cache` directive, the tool attempts to find a valid cache for the static `cached-context` file. If a valid cache is not found or if file contents have changed, it creates a new cache using the Gemini Caching API.\n3.  A request is sent to the Gemini API containing the user's prompt, any `hot-context` files, and a reference to the cached content (if used).\n4.  The tool logs request metrics locally and prints the API response to standard output."
+          "content": "When `grove-gemini request` is executed, it performs the following steps:\n1.  It checks for a `.grove/rules` file in the current project. If found, it uses `grove-context` to generate `hot-context` and `cached-context` files based on the defined patterns.\n2.  If caching is enabled via an `@enable-cache` directive, the tool attempts to find a valid cache for the static `cached-context` file. If a valid cache is not found or if file contents have changed, it creates a new cache using the Gemini Caching API.\n3.  A request is sent to the Gemini API containing the user's prompt, any `hot-context` files, and a reference to the cached content (if used).\n4.  The tool logs request metrics locally and prints the API response to standard output."
         },
         {
           "title": "Ecosystem Integration",
-          "content": "Grove Gemini functions as a component of the Grove tool suite and executes other tools as subprocesses.\n\n*   **Grove Meta-CLI (`grove`)**: Handles installation, updates, and version management of `gemapi` and other tools.\n\n*   **Grove Context (`cx`)**: Before a request, `gemapi` can call `grove-context` to read `.grove/rules` and generate file-based context. This context is then provided to the Gemini API.\n\n### Installation\n\nInstall via the Grove meta-CLI:\n\nVerify installation:\n\nRequires the `grove` meta-CLI. See the [Grove Installation Guide](https://github.com/mattsolo1/grove-meta/blob/main/docs/02-installation.md) if you don't have it installed.",
+          "content": "Grove Gemini functions as a component of the Grove tool suite and executes other tools as subprocesses.\n\n*   **Grove Meta-CLI (`grove`)**: Handles installation, updates, and version management of `grove-gemini` and other tools.\n\n*   **Grove Context (`cx`)**: Before a request, `grove-gemini` can call `grove-context` to read `.grove/rules` and generate file-based context. This context is then provided to the Gemini API.\n\n### Installation\n\nInstall via the Grove meta-CLI:\n\nVerify installation:\n\nRequires the `grove` meta-CLI. See the [Grove Installation Guide](https://github.com/mattsolo1/grove-meta/blob/main/docs/02-installation.md) if you don't have it installed.",
           "code_blocks": [
             "grove install gemini",
-            "gemapi version"
+            "grove-gemini version"
           ]
         }
       ]

@@ -1,8 +1,8 @@
 # Command Reference
 
-This document provides a reference for the `gemapi` command-line interface, covering all subcommands and their options.
+This document provides a reference for the `grove-gemini` command-line interface, covering all subcommands and their options.
 
-## `gemapi request`
+## `grove-gemini request`
 
 Sends a request to the Gemini API. It can use `.grove/rules` to generate and attach file-based context.
 
@@ -29,30 +29,30 @@ Sends a request to the Gemini API. It can use `.grove/rules` to generate and att
 
 ```bash
 # Make a request with an inline prompt
-gemapi request -p "Explain this Go function."
+grove-gemini request -p "Explain this Go function."
 
 # Use a prompt from a file and save the response to another file
-gemapi request -f prompt.md -o response.md
+grove-gemini request -f prompt.md -o response.md
 
 # Force a rebuild of the cold context cache
-gemapi request --recache "Analyze the latest version of the code."
+grove-gemini request --recache "Analyze the latest version of the code."
 ```
 
-## `gemapi cache`
+## `grove-gemini cache`
 
 Manages local records and remote state of Gemini API context caches.
 
-### `gemapi cache tui`
+### `grove-gemini cache tui`
 
 Launches an interactive terminal user interface (TUI) for browsing, inspecting, and managing caches.
 
 **Example**
 
 ```bash
-gemapi cache tui
+grove-gemini cache tui
 ```
 
-### `gemapi cache list`
+### `grove-gemini cache list`
 
 Lists cached contexts, showing both local records and their status on Google's servers.
 
@@ -65,23 +65,23 @@ Lists cached contexts, showing both local records and their status on Google's s
 
 ```bash
 # List all caches with a combined local and remote view
-gemapi cache list
+grove-gemini cache list
 
 # List only local cache records
-gemapi cache list --local-only
+grove-gemini cache list --local-only
 ```
 
-### `gemapi cache inspect`
+### `grove-gemini cache inspect`
 
 Shows detailed information about a specific cache, including its creation date, expiration, token count, and the files it contains.
 
 **Example**
 
 ```bash
-gemapi cache inspect <cache-name>
+grove-gemini cache inspect <cache-name>
 ```
 
-### `gemapi cache clear`
+### `grove-gemini cache clear`
 
 Deletes caches from Google's servers and updates local records. By default, it marks the local record as cleared but does not delete the file.
 
@@ -95,13 +95,13 @@ Deletes caches from Google's servers and updates local records. By default, it m
 
 ```bash
 # Clear a specific cache from the remote API and update the local record
-gemapi cache clear <cache-name>
+grove-gemini cache clear <cache-name>
 
 # Clear all caches and delete the local files
-gemapi cache clear --all --with-local
+grove-gemini cache clear --all --with-local
 ```
 
-### `gemapi cache prune`
+### `grove-gemini cache prune`
 
 Identifies expired local cache records, deletes them from Google's servers, and marks them as cleared locally.
 
@@ -112,14 +112,14 @@ Identifies expired local cache records, deletes them from Google's servers, and 
 **Example**
 
 ```bash
-gemapi cache prune
+grove-gemini cache prune
 ```
 
-## `gemapi query`
+## `grove-gemini query`
 
 Provides a suite of commands to inspect Gemini API usage and costs from various sources.
 
-### `gemapi query local`
+### `grove-gemini query local`
 
 Queries the detailed request logs stored on the local machine, displaying token usage, costs, and performance metrics with a summary.
 
@@ -134,10 +134,10 @@ Queries the detailed request logs stored on the local machine, displaying token 
 
 ```bash
 # View all requests from the last 12 hours
-gemapi query local --hours 12
+grove-gemini query local --hours 12
 ```
 
-### `gemapi query requests`
+### `grove-gemini query requests`
 
 Displays a table of individual Gemini API requests from local logs with details like timestamp, method, tokens, latency, and status.
 
@@ -152,10 +152,10 @@ Displays a table of individual Gemini API requests from local logs with details 
 
 ```bash
 # View the last 20 requests
-gemapi query requests --limit 20
+grove-gemini query requests --limit 20
 ```
 
-### `gemapi query metrics`
+### `grove-gemini query metrics`
 
 Fetches aggregate metrics, such as request counts and error rates, from Google Cloud Monitoring.
 
@@ -168,10 +168,10 @@ Fetches aggregate metrics, such as request counts and error rates, from Google C
 **Example**
 
 ```bash
-gemapi query metrics --project-id my-gcp-project --hours 48
+grove-gemini query metrics --project-id my-gcp-project --hours 48
 ```
 
-### `gemapi query tokens`
+### `grove-gemini query tokens`
 
 Fetches detailed token usage logs from Google Cloud Logging. This provides data on prompt tokens, completion tokens, and cache hits.
 
@@ -184,10 +184,10 @@ Fetches detailed token usage logs from Google Cloud Logging. This provides data 
 **Example**
 
 ```bash
-gemapi query tokens --project-id my-gcp-project
+grove-gemini query tokens --project-id my-gcp-project
 ```
 
-### `gemapi query billing`
+### `grove-gemini query billing`
 
 Queries cost data directly from a BigQuery billing export. This requires a BigQuery "Detailed usage cost" export to be configured for your GCP billing account.
 
@@ -201,13 +201,13 @@ Queries cost data directly from a BigQuery billing export. This requires a BigQu
 **Example**
 
 ```bash
-gemapi query billing \
+grove-gemini query billing \
   --project-id my-gcp-project \
   --dataset-id my_billing_dataset \
   --table-id gcp_billing_export_v1_XXXX
 ```
 
-### `gemapi query explore`
+### `grove-gemini query explore`
 
 Explores Cloud Logging to find available logs for the Gemini API service, which can help discover resource types and payload structures.
 
@@ -220,10 +220,10 @@ Explores Cloud Logging to find available logs for the Gemini API service, which 
 **Example**
 
 ```bash
-gemapi query explore --project-id my-gcp-project --hours 2
+grove-gemini query explore --project-id my-gcp-project --hours 2
 ```
 
-## `gemapi count-tokens`
+## `grove-gemini count-tokens`
 
 Counts the number of tokens in a given text using the Gemini API tokenizer. Input can be provided as an argument or via stdin.
 
@@ -235,39 +235,39 @@ Counts the number of tokens in a given text using the Gemini API tokenizer. Inpu
 
 ```bash
 # Count tokens from an argument
-gemapi count-tokens "How many tokens is this string?"
+grove-gemini count-tokens "How many tokens is this string?"
 
 # Count tokens from a file
-cat my_file.txt | gemapi count-tokens
+cat my_file.txt | grove-gemini count-tokens
 ```
 
-## `gemapi config`
+## `grove-gemini config`
 
-Manages the local configuration for `gemapi`.
+Manages the local configuration for `grove-gemini`.
 
-### `gemapi config get project`
+### `grove-gemini config get project`
 
 Displays the resolution order and the currently configured default GCP project ID.
 
 **Example**
 
 ```bash
-gemapi config get project
+grove-gemini config get project
 ```
 
-### `gemapi config set project`
+### `grove-gemini config set project`
 
 Sets a default GCP project ID in the local configuration file.
 
 **Example**
 
 ```bash
-gemapi config set project my-gcp-project-id
+grove-gemini config set project my-gcp-project-id
 ```
 
-## `gemapi version`
+## `grove-gemini version`
 
-Prints version information for the `gemapi` binary.
+Prints version information for the `grove-gemini` binary.
 
 | Flag     | Description                              |
 | -------- | ---------------------------------------- |
@@ -276,5 +276,5 @@ Prints version information for the `gemapi` binary.
 **Example**
 
 ```bash
-gemapi version
+grove-gemini version
 ```

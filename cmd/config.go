@@ -12,8 +12,8 @@ import (
 func newConfigCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "config",
-		Short: "Manage gemapi configuration",
-		Long:  `Configure default settings for gemapi, such as the default GCP project.`,
+		Short: "Manage grove-gemini configuration",
+		Long:  `Configure default settings for grove-gemini, such as the default GCP project.`,
 	}
 
 	cmd.AddCommand(newConfigSetCmd())

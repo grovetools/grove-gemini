@@ -46,25 +46,25 @@ This command works similarly to grove-flow's oneshot executor:
 
 Examples:
   # Simple prompt
-  gemapi request -p "Explain the main function"
-  
+  grove-gemini request -p "Explain the main function"
+
   # From file
-  gemapi request -f prompt.md
-  
+  grove-gemini request -f prompt.md
+
   # With specific model and output file
-  gemapi request -m gemini-2.0-flash -f prompt.md -o response.md
-  
+  grove-gemini request -m gemini-2.0-flash -f prompt.md -o response.md
+
   # Regenerate context before request
-  gemapi request --regenerate -p "Review the codebase architecture"
-  
+  grove-gemini request --regenerate -p "Review the codebase architecture"
+
   # Force recreation of cache
-  gemapi request --recache -p "Review the codebase architecture"
-  
+  grove-gemini request --recache -p "Review the codebase architecture"
+
   # Use a specific cache
-  gemapi request --use-cache 53f364cda78e82a8 -p "Review using old context"
-  
+  grove-gemini request --use-cache 53f364cda78e82a8 -p "Review using old context"
+
   # With custom working directory
-  gemapi request -w /path/to/project -p "Analyze this project"`,
+  grove-gemini request -w /path/to/project -p "Analyze this project"`,
 		RunE: runRequest,
 	}
 
@@ -196,7 +196,7 @@ func runRequest(cmd *cobra.Command, args []string) error {
 }
 
 // isNonInteractive returns true if stdout is being captured (not a TTY)
-// This allows gemapi to output the response to stdout when being piped,
+// This allows grove-gemini to output the response to stdout when being piped,
 // while using ulog (stderr) when running interactively to avoid corrupting TUIs
 func isNonInteractive() bool {
 	fileInfo, err := os.Stdout.Stat()

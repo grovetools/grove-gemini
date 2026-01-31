@@ -74,15 +74,15 @@ func runQueryBilling(cmd *cobra.Command, args []string) error {
 
 	// Validate required fields
 	if billingProjectID == "" {
-		return fmt.Errorf("no GCP project specified. Use --project-id flag or set a default with 'gemapi config set project PROJECT_ID'")
+		return fmt.Errorf("no GCP project specified. Use --project-id flag or set a default with 'grove-gemini config set project PROJECT_ID'")
 	}
 
 	if billingDatasetID == "" {
-		return fmt.Errorf("no billing dataset specified. Use --dataset-id flag or set a default with 'gemapi config set billing DATASET_ID TABLE_ID'")
+		return fmt.Errorf("no billing dataset specified. Use --dataset-id flag or set a default with 'grove-gemini config set billing DATASET_ID TABLE_ID'")
 	}
 
 	if billingTableID == "" {
-		return fmt.Errorf("no billing table specified. Use --table-id flag or set a default with 'gemapi config set billing DATASET_ID TABLE_ID'")
+		return fmt.Errorf("no billing table specified. Use --table-id flag or set a default with 'grove-gemini config set billing DATASET_ID TABLE_ID'")
 	}
 
 	// Create BigQuery client

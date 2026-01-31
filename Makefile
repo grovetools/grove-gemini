@@ -99,11 +99,11 @@ build-all:
 
 # --- E2E Testing ---
 # Build the custom tend binary for grove-gemini E2E tests.
-# Run E2E tests. Depends on the main 'gemapi' binary and the test runner.
+# Run E2E tests. Depends on the main 'grove-gemini' binary and the test runner.
 # Pass arguments via ARGS, e.g., make test-e2e ARGS="run -i"
 test-e2e: build
 	@echo "Running E2E tests..."
-	@GEMAPI_BINARY=$(abspath $(BIN_DIR)/$(BINARY_NAME)) tend run $(ARGS)
+	@GROVE_GEMINI_BINARY=$(abspath $(BIN_DIR)/$(BINARY_NAME)) tend run $(ARGS)
 
 # Show available targets
 help:
@@ -120,4 +120,4 @@ help:
 	@echo "  make build-all   - Build for multiple platforms"
 	@echo "  make generate-docs     - Generate documentation using docgen"
 	@echo "  make test-e2e ARGS=...- Run E2E test runner binary"
-	@echo "  make test-e2e ARGS=...- Run E2E tests (e.g., ARGS=\"run -i gemapi-basic-generation\")"
+	@echo "  make test-e2e ARGS=...- Run E2E tests (e.g., ARGS=\"run -i grove-gemini-basic-generation\")"

@@ -13,12 +13,12 @@ import (
 	"github.com/grovetools/tend/pkg/verify"
 )
 
-// QueryTUIComprehensiveScenario tests the primary features of `gemapi query tui`.
+// QueryTUIComprehensiveScenario tests the primary features of `grove-gemini query tui`.
 func QueryTUIComprehensiveScenario() *harness.Scenario {
 	return harness.NewScenario(
 		"query-tui-comprehensive",
-		"Verifies core features of the `gemapi query tui` command.",
-		[]string{"gemapi", "query", "tui", "e2e"},
+		"Verifies core features of the `grove-gemini query tui` command.",
+		[]string{"grove-gemini", "query", "tui", "e2e"},
 		[]harness.Step{
 			harness.NewStep("Setup TUI test environment with logs", setupQueryTUIEnvironment),
 			harness.NewStep("Launch TUI and verify initial display", launchTUIAndVerifyDisplay),
@@ -303,7 +303,7 @@ func QueryTUINoLogsScenario() *harness.Scenario {
 	return harness.NewScenario(
 		"query-tui-no-logs",
 		"Verifies the TUI handles the no logs case gracefully.",
-		[]string{"gemapi", "query", "tui", "edge-case"},
+		[]string{"grove-gemini", "query", "tui", "edge-case"},
 		[]harness.Step{
 			harness.NewStep("Launch TUI with no logs", func(ctx *harness.Context) error {
 				binary, err := FindBinary()

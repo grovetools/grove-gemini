@@ -60,7 +60,7 @@ The release process is now more robust, with the release workflow updated to ext
 
 ## v0.1.0 (2025-09-26)
 
-This release introduces new features for controlling API output and standardizes the logging system. The `gemapi request` command now supports generation parameters, allowing for fine-grained control over the Gemini API's output. Users can specify temperature, top-p, top-k, and maximum output tokens via new command-line flags to influence the creativity and length of responses (9c2fc0d).
+This release introduces new features for controlling API output and standardizes the logging system. The `grove-gemini request` command now supports generation parameters, allowing for fine-grained control over the Gemini API's output. Users can specify temperature, top-p, top-k, and maximum output tokens via new command-line flags to influence the creativity and length of responses (9c2fc0d).
 
 The logging infrastructure has been refactored to align with the `grove-core` ecosystem (3c6b23d). The custom pretty logger has been replaced with a wrapper around the `grove-core` logger, enabling a dual-logging system that provides both human-readable UI feedback and structured data logs (185c115, 7c99199). This change preserves all Gemini-specific logging functionality while standardizing log output across Grove tools. Housekeeping updates include improvements to the `.gitignore` file (50e3fff).
 
@@ -95,7 +95,7 @@ The logging infrastructure has been refactored to align with the `grove-core` ec
 
 ## v0.1.0 (2025-09-26)
 
-This release introduces new features for controlling API output and standardizes the logging system. The `gemapi request` command now supports generation parameters, allowing for fine-grained control over the Gemini API's output. Users can specify temperature, top-p, top-k, and maximum output tokens via new command-line flags to influence the creativity and length of responses (9c2fc0d).
+This release introduces new features for controlling API output and standardizes the logging system. The `grove-gemini request` command now supports generation parameters, allowing for fine-grained control over the Gemini API's output. Users can specify temperature, top-p, top-k, and maximum output tokens via new command-line flags to influence the creativity and length of responses (9c2fc0d).
 
 The logging infrastructure has been refactored to align with the `grove-core` ecosystem (3c6b23d). The custom pretty logger has been replaced with a wrapper around the `grove-core` logger, enabling a dual-logging system that provides both human-readable UI feedback and structured data logs (185c115, 7c99199). This change preserves all Gemini-specific logging functionality while standardizing log output across Grove tools. Housekeeping updates include improvements to the `.gitignore` file (50e3fff).
 
@@ -164,7 +164,7 @@ The logging infrastructure has been refactored to align with the `grove-core` ec
 
 * add comprehensive cache analytics and insights
 * add regeneration counter to track cache recreations
-* add interactive TUI for gemapi cache management
+* add interactive TUI for grove-gemini cache management
 * enhance cache management with API integration and usage tracking
 
 ### Chores

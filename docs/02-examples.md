@@ -1,17 +1,17 @@
 # Examples
 
-This document provides examples for using `gemapi` for API calls and development workflows.
+This document provides examples for using `grove-gemini` for API calls and development workflows.
 
 ## Example 1: Basic API Requests
 
-This example shows how to use the `gemapi request` command for direct interaction with the Gemini API.
+This example shows how to use the `grove-gemini request` command for direct interaction with the Gemini API.
 
 ### Making a Simple Request
 
 A prompt can be provided as an argument. The tool sends the request to the default model and prints the response to standard output.
 
 ```bash
-gemapi request "What is the Go programming language?"
+grove-gemini request "What is the Go programming language?"
 ```
 
 ### Using Files for Prompts and Outputs
@@ -28,7 +28,7 @@ Files can be used for longer prompts or to save output.
     This command uses the `-f` flag to read the prompt from `prompt.md` and saves the generated code to `main.go` using the `-o` flag.
 
     ```bash
-    gemapi request -f prompt.md -o main.go -m gemini-2.0-flash
+    grove-gemini request -f prompt.md -o main.go -m gemini-2.0-flash
     ```
 
 3.  **Verify the output:**
@@ -49,7 +49,7 @@ Files can be used for longer prompts or to save output.
 
 ## Example 2: Requests with Codebase Context
 
-When a `.grove/rules` file is present, `gemapi` reads it to determine which project files to include in the request. This provides the model with the contents of the matched files.
+When a `.grove/rules` file is present, `grove-gemini` reads it to determine which project files to include in the request. This provides the model with the contents of the matched files.
 
 1.  **Set up the project:**
     Create a Go project with two files.
@@ -84,10 +84,10 @@ When a `.grove/rules` file is present, `gemapi` reads it to determine which proj
     ```
 
 3.  **Make a context-aware request:**
-    `gemapi` finds the `.grove/rules` file, gathers all `.go` files, and attaches them to the request.
+    `grove-gemini` finds the `.grove/rules` file, gathers all `.go` files, and attaches them to the request.
 
     ```bash
-    gemapi request "Based on the provided code, what will be printed when the program is run?"
+    grove-gemini request "Based on the provided code, what will be printed when the program is run?"
     ```
 
     The model receives the content of both `main.go` and `greeting.go` and can determine the output.
@@ -100,10 +100,10 @@ When a `.grove/rules` file is present, `gemapi` reads it to determine which proj
     ```
 
 4.  **Regenerating Context:**
-    If the `.grove/rules` file is modified, the `--regenerate` flag forces `gemapi` to re-process the rules and update the context files before making a request.
+    If the `.grove/rules` file is modified, the `--regenerate` flag forces `grove-gemini` to re-process the rules and update the context files before making a request.
 
     ```bash
-    gemapi request --regenerate "Summarize the project based on the new rules."
+    grove-gemini request --regenerate "Summarize the project based on the new rules."
     ```
 
 ## Example 3: Caching and Observability
@@ -111,10 +111,10 @@ When a `.grove/rules` file is present, `gemapi` reads it to determine which proj
 **WARNING: ALPHA FEATURE**
 The Gemini Caching API is an alpha feature and can incur costs. Monitor your Google Cloud billing when using caching.
 
-For requests involving large, unchanging sets of files, `gemapi` can use the Gemini Caching API to store the context. This is an opt-in feature.
+For requests involving large, unchanging sets of files, `grove-gemini` can use the Gemini Caching API to store the context. This is an opt-in feature.
 
 1.  **Enable Caching:**
-    Caching is enabled by adding the `@enable-cache` directive to a `.grove/rules` file. This instructs `gemapi` to treat files matched by the rules as "cold context" for caching.
+    Caching is enabled by adding the `@enable-cache` directive to a `.grove/rules` file. This instructs `grove-gemini` to treat files matched by the rules as "cold context" for caching.
 
     `.grove/rules`:
     ```
@@ -126,35 +126,35 @@ For requests involving large, unchanging sets of files, `gemapi` can use the Gem
     The first request with a new context will create a cache on Google's servers. The `--yes` flag skips the confirmation prompt.
 
     ```bash
-    gemapi request --yes "What is the purpose of the GetGreeting function?"
+    grove-gemini request --yes "What is the purpose of the GetGreeting function?"
     ```
 
 3.  **Run a second request to use the cache:**
     Subsequent requests will reuse the existing cache if it is still valid. The token usage summary will show a count for `Cold (Cached)` tokens.
 
     ```bash
-    gemapi request "How is the greeting message generated?"
+    grove-gemini request "How is the greeting message generated?"
     ```
 
 4.  **Observability Commands:**
-    `gemapi` provides commands to inspect API usage.
+    `grove-gemini` provides commands to inspect API usage.
 
     *   **Inspect Caches**: Launches a terminal interface for viewing cache records, their status, and usage statistics.
 
         ```bash
-        gemapi cache tui
+        grove-gemini cache tui
         ```
 
     *   **Query Local Logs**: The `query local` command reads logs stored on the local machine. This command displays a table of requests made in the last hour.
 
         ```bash
-        gemapi query local --hours 1
+        grove-gemini query local --hours 1
         ```
 
     *   **Query Billing Data**: The `query billing` command can read cost data from a BigQuery billing export. This requires a one-time setup in a GCP account to export billing data to a BigQuery table.
 
         ```bash
-        gemapi query billing \
+        grove-gemini query billing \
           --project-id your-gcp-project \
           --dataset-id your_billing_dataset \
           --table-id your_billing_table

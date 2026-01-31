@@ -8,7 +8,7 @@ import (
 var rootCmd *cobra.Command
 
 func init() {
-	rootCmd = cli.NewStandardCommand("gemapi", "Tools for Google's Gemini API")
+	rootCmd = cli.NewStandardCommand("grove-gemini", "Tools for Google's Gemini API")
 
 	// Add commands
 	rootCmd.AddCommand(newVersionCmd())

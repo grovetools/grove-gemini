@@ -1,6 +1,6 @@
 # Binaries
 bin/
-gemapi
+grove-gemini
 
 # Go
 *.exe
