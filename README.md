@@ -41,5 +41,6 @@
 
 See the [documentation](docs/) for detailed usage instructions:
 - [Overview](docs/01-overview.md)
+- [Configuration](docs/03-configuration.md)
 
 <!-- DOCGEN:TOC:END -->

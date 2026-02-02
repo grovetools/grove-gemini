@@ -2,23 +2,19 @@
   "sections": {
     "overview": {
       "title": "Overview",
-      "content": "Grove Gemini (`grove-gemini`) is a command-line interface for Google's Gemini API. It is designed to manage codebase context for API requests and includes commands to query API usage.\n\n\u003c!-- placeholder for animated gif --\u003e",
+      "content": "`grove-gemini` is a command-line tool for interacting with Google's Gemini models. It provides infrastructure for managing context caching, executing prompts, and monitoring API usage through local logs and remote GCP metrics.",
       "subsections": [
         {
-          "title": "Key Features",
-          "content": "*   **Context Management**: Builds prompt context by reading a `.grove/rules` file and passing matching files to the API. This process is handled by `grove-context`.\n\n*   **Caching (experimental)**: Caches \"cold context\" files using the Gemini Caching API. This feature is opt-in via an `@enable-cache` directive in the rules file. A terminal interface (`grove-gemini cache tui`) is available for cache management.\n\n*   **API Usage Querying**: Includes a `query` command to inspect API usage from multiple sources: `query local` for local request logs, `query metrics` for Google Cloud Monitoring, `query tokens` for Google Cloud Logging, and `query billing` for BigQuery exports.\n\n*   **Token Utilities**: Provides a `count-tokens` command to estimate the token count and cost for a given text before making an API call."
+          "title": "Core Mechanisms",
+          "content": "**Context Caching Lifecycle**: The tool automates the management of Gemini's context caching feature. It distinguishes between:\n*   **Cold Context**: Static files defined in `.grove/cached-context` or via `.grove/rules`. The tool hashes these files; if the content changes, a new cache is created. If the hash matches an existing active cache on Google's servers, that cache is reused.\n*   **Hot Context**: Dynamic files passed at runtime which are sent with every request.\n\n**Dual-Layer Observability**:\n*   **Local Logging**: Every request made through the CLI is logged to JSONL files in `~/.local/state/grove/logs/gemini/`. This provides immediate access to request parameters, token usage, and response latency.\n*   **Remote Analytics**: The `query` command suite interfaces with Google Cloud Monitoring and BigQuery. It aggregates billing data and service-level metrics to provide cost analysis and usage trends across the organization.\n\n**Configuration Resolution**: Project settings (GCP Project ID, Billing datasets) are resolved hierarchically from command-line flags, environment variables, and the `grove.yml` configuration file."
         },
         {
-          "title": "How It Works",
-          "content": "When `grove-gemini request` is executed, it performs the following steps:\n1.  It checks for a `.grove/rules` file in the current project. If found, it uses `grove-context` to generate `hot-context` and `cached-context` files based on the defined patterns.\n2.  If caching is enabled via an `@enable-cache` directive, the tool attempts to find a valid cache for the static `cached-context` file. If a valid cache is not found or if file contents have changed, it creates a new cache using the Gemini Caching API.\n3.  A request is sent to the Gemini API containing the user's prompt, any `hot-context` files, and a reference to the cached content (if used).\n4.  The tool logs request metrics locally and prints the API response to standard output."
+          "title": "Features",
+          "content": "### Request Execution\n*   **`gemini request`**: Sends prompts to Gemini models. It parses `.grove/rules` to automatically assemble context, handles cache creation/lookup transparently, and supports output redirection.\n*   **`gemini count-tokens`**: Calculates token counts for input text using the model's tokenizer to estimate usage against context window limits.\n\n### Cache Management\n*   **`gemini cache list`**: Displays local and remote status of context caches, including expiration times and token counts.\n*   **`gemini cache prune`**: Identifies and removes expired caches from the local state tracking.\n*   **`gemini cache tui`**: An interactive terminal interface for managing caches. It provides views for inspecting cache metadata, viewing usage efficiency scores, and manually deleting entries.\n\n### Analytics \u0026 Monitoring\n*   **`gemini query local`**: Displays a tabular view of recent requests initiated from the local machine, including estimated costs and response times.\n*   **`gemini query billing`**: Queries BigQuery exports to show actual accrued costs by SKU (e.g., Input Tokens, Output Tokens).\n*   **`gemini query dashboard`**: Launches a terminal dashboard visualizing cost trends, request volume, and SKU breakdowns over time."
         },
         {
-          "title": "Ecosystem Integration",
-          "content": "Grove Gemini functions as a component of the Grove tool suite and executes other tools as subprocesses.\n\n*   **Grove Meta-CLI (`grove`)**: Handles installation, updates, and version management of `grove-gemini` and other tools.\n\n*   **Grove Context (`cx`)**: Before a request, `grove-gemini` can call `grove-context` to read `.grove/rules` and generate file-based context. This context is then provided to the Gemini API.\n\n### Installation\n\nInstall via the Grove meta-CLI:\n\nVerify installation:\n\nRequires the `grove` meta-CLI. See the [Grove Installation Guide](https://github.com/mattsolo1/grove-meta/blob/main/docs/02-installation.md) if you don't have it installed.",
-          "code_blocks": [
-            "grove install gemini",
-            "grove-gemini version"
-          ]
+          "title": "Integrations",
+          "content": "*   **`grove-flow`**: Acts as the execution engine for Gemini-based jobs within Flow plans.\n*   **`grove cx`**: Uses context rules defined by `cx` to determine which files should be included in the cached context."
         }
       ]
     }
