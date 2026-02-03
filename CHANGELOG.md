@@ -1,3 +1,73 @@
+## v0.6.0 (2026-02-02)
+
+This release improves configuration management by migrating to TOML format (44bba64) and adopting XDG-compliant paths for GCP settings (d748c8d) and logs (6d25b22). CLI output handling has been fixed to route logging to stderr (a0a7e5c), facilitating easier output piping. Additionally, the project has been updated with an MIT License (79daf3d), restored release workflows (04ad7c9), and migrated dependencies to the grovetools namespace (8ccdcc8).
+
+### Features
+- Add configuration/readme update (b8ab33b)
+
+### Bug Fixes
+- Use XDG config path for GCP configuration (d748c8d)
+- Route logging to stderr so stdout can be piped (a0a7e5c)
+- Update VERSION_PKG to grovetools/core path (46657ce)
+
+### Code Refactoring
+- Migrate logging to XDG-compliant paths (6d25b22)
+- Update docgen title to match package name (03f54f1)
+
+### Documentation
+- Add concept lookup instructions to CLAUDE.md (c8b339d)
+
+### Chores
+- Add MIT License (79daf3d)
+- Migrate grove.yml to grove.toml (44bba64)
+- Update go.mod for grovetools migration (8ccdcc8)
+- Gemapi replacements, update readme (de59582)
+
+### CI
+- Restore release workflow (04ad7c9)
+
+### File Changes
+```
+ .cx/docs.rules                   |  16 ++++
+ .github/workflows/release.yml    | 114 ++++++++++-------------------
+ .gitignore                       |   2 +-
+ CHANGELOG.md                     |   6 +-
+ CLAUDE.md                        |  17 ++++-
+ LICENSE                          |  21 ++++++
+ Makefile                         |   8 +-
+ README.md                        |  65 +++++++----------
+ cmd/cache.go                     |   2 +-
+ cmd/config.go                    |   4 +-
+ cmd/count_tokens.go              |   8 +-
+ cmd/query_billing.go             |   6 +-
+ cmd/query_dashboard.go           |   6 +-
+ cmd/query_explore.go             |   2 +-
+ cmd/query_metrics.go             |   2 +-
+ cmd/query_tokens.go              |   2 +-
+ cmd/request.go                   |  28 +++----
+ cmd/root.go                      |   2 +-
+ docs/01-overview.md              |  58 ++++++---------
+ docs/02-examples.md              |  34 ++++-----
+ docs/03-configuration.md         |  15 ++++
+ docs/03-experimental.md          |   2 +-
+ docs/04-configuration.md         |  18 ++---
+ docs/05-command-reference.md     |  86 +++++++++++-----------
+ docs/docgen.config.yml           |   4 +-
+ gemini.schema.json               |   2 +-
+ go.mod                           |  10 ++-
+ go.sum                           |  47 ++++++++++--
+ grove.toml                       |  11 +++
+ grove.yml                        |  10 ---
+ main.go                          |   4 +-
+ pkg/config/gcp.go                |  12 +--
+ pkg/docs/docs.json               | 154 ++-------------------------------------
+ pkg/gemini/request.go            |   2 +-
+ pkg/logging/query_log.go         |  16 ++--
+ tests/e2e/scenarios_query_tui.go |  16 ++--
+ tests/e2e/test_utils.go          |  16 ++--
+ 37 files changed, 368 insertions(+), 460 deletions(-)
+```
+
 ## v0.2.1-nightly.655550b (2025-10-03)
 
 ## v0.2.0 (2025-10-01)
