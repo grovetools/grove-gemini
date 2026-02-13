@@ -14,8 +14,8 @@ import (
 
 // GeminiConfig defines the structure for the 'gemini' extension in grove.yml
 type GeminiConfig struct {
-	APIKey        string `yaml:"api_key"`
-	APIKeyCommand string `yaml:"api_key_command"`
+	APIKey        string `yaml:"api_key" jsonschema:"description=Direct API key for Google Gemini" jsonschema_extras:"x-layer=global,x-priority=200,x-sensitive=true,x-hint=Consider using api_key_command to fetch from a secrets manager"`
+	APIKeyCommand string `yaml:"api_key_command" jsonschema:"description=Shell command to retrieve API key (e.g. gcloud secrets or 1password)" jsonschema_extras:"x-layer=global,x-priority=60"`
 }
 
 // ResolveAPIKey resolves the Gemini API key from multiple sources in order of precedence:

@@ -3,10 +3,18 @@
   "$id": "https://github.com/grovetools/grove-gemini/pkg/config/gemini-config",
   "properties": {
     "api_key": {
-      "type": "string"
+      "type": "string",
+      "description": "Direct API key for Google Gemini",
+      "x-hint": "Consider using api_key_command to fetch from a secrets manager",
+      "x-layer": "global",
+      "x-priority": "200",
+      "x-sensitive": true
     },
     "api_key_command": {
-      "type": "string"
+      "type": "string",
+      "description": "Shell command to retrieve API key (e.g. gcloud secrets or 1password)",
+      "x-layer": "global",
+      "x-priority": "60"
     }
   },
   "type": "object",
