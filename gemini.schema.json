@@ -6,6 +6,7 @@
       "type": "string",
       "description": "Direct API key for Google Gemini",
       "x-hint": "Consider using api_key_command to fetch from a secrets manager",
+      "x-important": true,
       "x-layer": "global",
       "x-priority": "200",
       "x-sensitive": true
@@ -13,6 +14,7 @@
     "api_key_command": {
       "type": "string",
       "description": "Shell command to retrieve API key (e.g. gcloud secrets or 1password)",
+      "x-important": true,
       "x-layer": "global",
       "x-priority": "60"
     }
