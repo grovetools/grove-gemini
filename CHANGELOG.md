@@ -1,3 +1,27 @@
+## v0.6.1 (2026-02-19)
+
+Configuration schema capabilities have been enhanced with new UI metadata extensions (ce0e279) and importance markers for API key fields (aa02bfe). Documentation for configuration has been migrated to a new structured config-reference component (6f00ef5) to support these improvements.
+
+### Features
+- Add x-* schema extensions for config UI metadata (ce0e279)
+- Add x-important marker to api_key and api_key_command fields (aa02bfe)
+
+### Documentation
+- Migrate configuration documentation to config-reference component (6f00ef5)
+
+### File Changes
+```
+ docs/02-cli-reference.md      | 534 ++++++++++++++++++++++++++++++++++++++++++
+ docs/03-configuration.json    |  22 ++
+ docs/03-configuration.md      |  18 +-
+ docs/gemini.descriptions.json |   4 +
+ docs/gemini.examples.json     |  10 +
+ gemini.schema.json            |  14 +-
+ pkg/config/api_key.go         |   4 +-
+ pkg/docs/docs.json            |  13 +
+ 8 files changed, 601 insertions(+), 18 deletions(-)
+```
+
 ## v0.6.0 (2026-02-02)
 
 This release improves configuration management by migrating to TOML format (44bba64) and adopting XDG-compliant paths for GCP settings (d748c8d) and logs (6d25b22). CLI output handling has been fixed to route logging to stderr (a0a7e5c), facilitating easier output piping. Additionally, the project has been updated with an MIT License (79daf3d), restored release workflows (04ad7c9), and migrated dependencies to the grovetools namespace (8ccdcc8).
