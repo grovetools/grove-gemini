@@ -1,0 +1,4 @@
+{
+  "api_key": "Specifies the Google Gemini API authentication key directly as a string. Use this for local, private configuration files (`grove.override.yml`) where convenience is prioritized over strict secret management, ensuring you do not commit actual credentials to version control.",
+  "api_key_command": "Defines a shell command that outputs the Gemini API key to standard output (e.g., `gcloud secrets versions access latest ...` or `op read ...`). This is the recommended method for shared configuration files, as it retrieves credentials dynamically from a secure store like Google Secret Manager or 1Password without hardcoding secrets."
+}

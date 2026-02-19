@@ -1,0 +1,10 @@
+{
+  "api_key": {
+    "example": "[gemini]\napi_key = \"AIzaSyD-ExampleKey123456789\"",
+    "description": "Sets the Google Gemini API key directly in the configuration file. Note: Using `api_key_command` or environment variables is recommended for security."
+  },
+  "api_key_command": {
+    "example": "[gemini]\n# Retrieve key from 1Password\napi_key_command = \"op read 'op://Private/Gemini API Key/credential'\"",
+    "description": "Specifies a shell command to retrieve the API key at runtime, allowing integration with secret managers like 1Password or Google Secret Manager."
+  }
+}
