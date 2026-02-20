@@ -9,11 +9,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/grovetools/core/tui/components/help"
+	"github.com/grovetools/core/tui/keymap"
 	"github.com/grovetools/core/tui/theme"
 	"github.com/grovetools/grove-gemini/pkg/gemini"
 )
@@ -47,6 +50,8 @@ type cacheTUIModel struct {
 	table            table.Model
 	inspectViewport  viewport.Model
 	filterInput      textinput.Model
+	help             help.Model
+	keys             cacheKeyMap
 	currentView      viewState
 	isLoading        bool
 	err              error
@@ -63,37 +68,49 @@ type cacheWipedMsg struct{}
 type errMsg struct{ err error }
 type tickMsg time.Time
 
-// Key bindings
-type keyMap struct {
-	Up        string
-	Down      string
-	Filter    string
-	Inspect   string
-	Delete    string
-	Wipe      string
-	Refresh   string
-	Help      string
-	Analytics string
-	Quit      string
-	Back      string
-	Confirm   string
-	Cancel    string
+// cacheKeyMap extends keymap.Base with cache-specific bindings
+type cacheKeyMap struct {
+	keymap.Base
+	Inspect   key.Binding
+	Analytics key.Binding
+	Delete    key.Binding
+	Wipe      key.Binding
+	Refresh   key.Binding
 }
 
-var keys = keyMap{
-	Up:        "k",
-	Down:      "j",
-	Filter:    "/",
-	Inspect:   "i",
-	Delete:    "d",
-	Wipe:      "w",
-	Refresh:   "r",
-	Help:      "?",
-	Analytics: "a",
-	Quit:      "q",
-	Back:      "esc",
-	Confirm:   "y",
-	Cancel:    "n",
+func newCacheKeyMap() cacheKeyMap {
+	return cacheKeyMap{
+		Base: keymap.NewBase(),
+		Inspect: key.NewBinding(
+			key.WithKeys("i", "enter"),
+			key.WithHelp("i", "inspect"),
+		),
+		Analytics: key.NewBinding(
+			key.WithKeys("a"),
+			key.WithHelp("a", "analytics"),
+		),
+		Delete: key.NewBinding(
+			key.WithKeys("d"),
+			key.WithHelp("d", "delete from API"),
+		),
+		Wipe: key.NewBinding(
+			key.WithKeys("w"),
+			key.WithHelp("w", "wipe local"),
+		),
+		Refresh: key.NewBinding(
+			key.WithKeys("r"),
+			key.WithHelp("r", "refresh"),
+		),
+	}
+}
+
+func (k cacheKeyMap) Sections() []keymap.Section {
+	return append(k.Base.Sections(),
+		keymap.Section{
+			Name:     "Cache Actions",
+			Bindings: []key.Binding{k.Inspect, k.Analytics, k.Delete, k.Wipe, k.Refresh},
+		},
+	)
 }
 
 // getStatusStyle returns the appropriate theme style for a given status
@@ -175,11 +192,18 @@ func newCacheTUIModel() (*cacheTUIModel, error) {
 	// Inspect viewport
 	vp := viewport.New(80, 20)
 
+	// Initialize keymap and help
+	keys := newCacheKeyMap()
+	helpModel := help.New(keys)
+	helpModel.Title = "Cache Manager Help"
+
 	return &cacheTUIModel{
 		client:          client,
 		table:           tbl,
 		filterInput:     ti,
 		inspectViewport: vp,
+		help:            helpModel,
+		keys:            keys,
 		isLoading:       true,
 		workDir:         workDir,
 		currentView:     listView,
@@ -389,6 +413,7 @@ func (m *cacheTUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.inspectViewport.Width = m.width - 4
 		m.inspectViewport.Height = m.height - 8
 		m.filterInput.Width = m.width / 2
+		m.help.SetSize(m.width, m.height)
 		return m, nil
 
 	case cachesLoadedMsg:
@@ -417,7 +442,7 @@ func (m *cacheTUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyMsg:
 		if m.filterInput.Focused() {
-			if msg.String() == "enter" || msg.String() == "esc" {
+			if key.Matches(msg, m.keys.Confirm) || key.Matches(msg, m.keys.Back) {
 				m.filterInput.Blur()
 			} else {
 				m.filterInput, cmd = m.filterInput.Update(msg)
@@ -427,96 +452,90 @@ func (m *cacheTUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		if m.confirmingDelete {
-			switch msg.String() {
-			case keys.Confirm:
+			switch {
+			case key.Matches(msg, m.keys.Confirm):
 				if len(m.filteredCaches) > 0 {
 					selectedCache := m.filteredCaches[m.table.Cursor()]
 					return m, deleteCacheCmd(m.client, selectedCache)
 				}
 				return m, nil
-			case keys.Cancel, keys.Back:
+			case key.Matches(msg, m.keys.Cancel), key.Matches(msg, m.keys.Back):
 				m.confirmingDelete = false
 				return m, nil
 			}
 		}
-		
+
 		if m.confirmingWipe {
-			switch msg.String() {
-			case keys.Confirm:
+			switch {
+			case key.Matches(msg, m.keys.Confirm):
 				if len(m.filteredCaches) > 0 {
 					selectedCache := m.filteredCaches[m.table.Cursor()]
 					return m, wipeCacheCmd(selectedCache, m.workDir)
 				}
 				return m, nil
-			case keys.Cancel, keys.Back:
+			case key.Matches(msg, m.keys.Cancel), key.Matches(msg, m.keys.Back):
 				m.confirmingWipe = false
 				return m, nil
 			}
 		}
-		
+
 		switch m.currentView {
 		case listView:
-			switch msg.String() {
-			case keys.Quit:
+			switch {
+			case key.Matches(msg, m.keys.Quit):
 				return m, tea.Quit
-			case keys.Help:
+			case key.Matches(msg, m.keys.Help):
+				m.help.Toggle()
 				m.currentView = helpView
 				return m, nil
-			case keys.Filter:
+			case key.Matches(msg, m.keys.Search):
 				m.filterInput.Focus()
 				return m, textinput.Blink
-			case keys.Inspect, "enter":
+			case key.Matches(msg, m.keys.Inspect):
 				if len(m.filteredCaches) > 0 {
 					m.currentView = inspectView
 					m.prepareInspectView()
 				}
 				return m, nil
-			case keys.Delete:
+			case key.Matches(msg, m.keys.Delete):
 				if len(m.filteredCaches) > 0 {
 					m.confirmingDelete = true
 				}
 				return m, nil
-			case keys.Wipe:
+			case key.Matches(msg, m.keys.Wipe):
 				if len(m.filteredCaches) > 0 {
 					m.confirmingWipe = true
 				}
 				return m, nil
-			case keys.Refresh:
+			case key.Matches(msg, m.keys.Refresh):
 				m.isLoading = true
 				return m, fetchCachesCmd(m.client, m.workDir)
-			case keys.Analytics:
+			case key.Matches(msg, m.keys.Analytics):
 				m.currentView = analyticsView
 				m.prepareAnalyticsView()
 				return m, nil
-			case "ctrl+c":
-				return m, tea.Quit
 			}
 
 		case inspectView:
-			switch msg.String() {
-			case keys.Back, keys.Quit:
+			switch {
+			case key.Matches(msg, m.keys.Back), key.Matches(msg, m.keys.Quit):
 				m.currentView = listView
 				return m, nil
-			case "ctrl+c":
-				return m, tea.Quit
 			}
-			
+
 		case helpView:
-			switch msg.String() {
-			case keys.Help, keys.Back, keys.Quit:
+			switch {
+			case key.Matches(msg, m.keys.Help), key.Matches(msg, m.keys.Back), key.Matches(msg, m.keys.Quit):
+				m.help.Toggle()
 				m.currentView = listView
 				return m, nil
-			case "ctrl+c":
-				return m, tea.Quit
 			}
-			
+
 		case analyticsView:
-			switch msg.String() {
-			case keys.Back, keys.Quit:
+			switch {
+			case key.Matches(msg, m.keys.Back), key.Matches(msg, m.keys.Quit):
 				m.currentView = listView
 				return m, nil
-			case "ctrl+c":
-				return m, tea.Quit
 			}
 		}
 	}
@@ -545,7 +564,7 @@ func (m *cacheTUIModel) View() string {
 	}
 
 	if m.currentView == helpView {
-		return m.helpViewRender()
+		return m.help.View()
 	}
 
 	var s strings.Builder
@@ -625,38 +644,6 @@ func (m *cacheTUIModel) footerView() string {
 	default: // listView
 		return theme.DefaultTheme.Muted.Render("Press ? for help")
 	}
-}
-
-func (m *cacheTUIModel) helpViewRender() string {
-	help := fmt.Sprintf(`╭─ Cache Manager Help ─────────────────────────────────────────────────────────────────────╮
-│                                                                                         │
-│  Navigation:                        Status Icons:                                       │
-│    j/k or ↑/↓  Move up/down        %s Active   Cache is valid and accessible         │
-│    enter or i  Inspect cache        %s Expired  Cache has exceeded TTL                 │
-│    a           Analytics view       %s Cleared  Cache was manually deleted             │
-│    /           Filter caches        %s Missing  Local record but not in API           │
-│    esc         Exit view/cancel     %s Local    Local-only view status                 │
-│                                                                                         │
-│  Actions:                           Other:                                              │
-│    d           Delete from GCP      r           Refresh cache list                      │
-│    w           Wipe local file      ?           Show/hide this help                     │
-│    y/n         Confirm/cancel       q           Quit the application                    │
-╰─────────────────────────────────────────────────────────────────────────────────────────╯`,
-		theme.IconSuccess,
-		theme.IconWarning,
-		theme.IconError,
-		theme.IconInfo,
-		theme.IconInfo,
-	)
-	
-	// Center the help box
-	return lipgloss.Place(
-		m.width,
-		m.height,
-		lipgloss.Center,
-		lipgloss.Center,
-		theme.DefaultTheme.Box.Render(help),
-	)
 }
 
 func (m *cacheTUIModel) prepareInspectView() {

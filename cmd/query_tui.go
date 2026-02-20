@@ -39,6 +39,31 @@ func (k queryTuiKeyMap) FullHelp() [][]key.Binding {
 	return append(baseHelp, customKeys)
 }
 
+// Sections returns grouped sections of key bindings for the full help view.
+// Only includes sections that the query TUI actually implements.
+func (k queryTuiKeyMap) Sections() []keymap.Section {
+	// Customize navigation for table-based TUI
+	nav := k.Base.NavigationSection()
+	nav.Bindings = []key.Binding{k.Up, k.Down, k.PageUp, k.PageDown, k.Top, k.Bottom}
+
+	return []keymap.Section{
+		nav,
+		{
+			Name:     "Time Frame",
+			Bindings: []key.Binding{k.DailyView, k.WeeklyView, k.MonthlyView},
+		},
+		{
+			Name:     "Period Navigation",
+			Bindings: []key.Binding{k.PrevPeriod, k.NextPeriod},
+		},
+		{
+			Name:     "Display",
+			Bindings: []key.Binding{k.ToggleMetric},
+		},
+		k.Base.SystemSection(),
+	}
+}
+
 // Main model for the TUI
 type queryTuiModel struct {
 	isLoading   bool
