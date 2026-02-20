@@ -168,12 +168,38 @@ func EstimateCostWithCache(model string, promptTokens, completionTokens, cachedT
 
 	modelLower := strings.ToLower(model)
 
-	// Determine if this is a long context request (>128K tokens)
+	// Determine if this is a long context request (>200K tokens for Gemini 3.x pricing)
 	// We use total prompt tokens (including cached) for this determination
 	totalPromptTokens := promptTokens
 	isLongContext := totalPromptTokens > 128000
+	isLongContextGemini3 := totalPromptTokens > 200000
 
 	switch {
+	// Gemini 3.1 Pro models
+	case contains(modelLower, "gemini-3.1-pro"):
+		if isLongContextGemini3 {
+			inputPrice = 4.00
+			outputPrice = 18.00
+		} else {
+			inputPrice = 2.00
+			outputPrice = 12.00
+		}
+
+	// Gemini 3 Pro models
+	case contains(modelLower, "gemini-3-pro"):
+		if isLongContextGemini3 {
+			inputPrice = 4.00
+			outputPrice = 18.00
+		} else {
+			inputPrice = 2.00
+			outputPrice = 12.00
+		}
+
+	// Gemini 3 Flash models
+	case contains(modelLower, "gemini-3-flash"):
+		inputPrice = 0.50
+		outputPrice = 3.00
+
 	// Gemini 2.5 Pro models
 	case contains(modelLower, "gemini-2.5-pro"):
 		if isLongContext {

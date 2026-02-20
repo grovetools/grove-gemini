@@ -20,9 +20,19 @@ const DefaultModel = "gemini-2.5-pro"
 const LongContextThreshold int32 = 200_000
 
 // Models returns all available Google Gemini models.
-// Pricing as of Jan 2026 - see https://ai.google.dev/gemini-api/docs/pricing
+// Pricing as of Feb 2026 - see https://ai.google.dev/gemini-api/docs/pricing
 func Models() []Model {
 	return []Model{
+		// Gemini 3.1 models (preview)
+		{
+			ID:       "gemini-3.1-pro-preview",
+			Alias:    "",
+			Provider: "Google",
+			Note:     "Latest intelligent multimodal and agentic model",
+			Input:    2.00,  // $2.00 <=200k, $4.00 >200k
+			Output:   12.00, // $12.00 <=200k, $18.00 >200k
+			Legacy:   false,
+		},
 		// Gemini 3 models (preview)
 		{
 			ID:       "gemini-3-pro-preview",
