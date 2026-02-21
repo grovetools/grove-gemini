@@ -98,8 +98,8 @@ func newCacheKeyMap() cacheKeyMap {
 			key.WithHelp("w", "wipe local"),
 		),
 		Refresh: key.NewBinding(
-			key.WithKeys("r"),
-			key.WithHelp("r", "refresh"),
+			key.WithKeys("ctrl+r"),
+			key.WithHelp("ctrl+r", "refresh"),
 		),
 	}
 }
