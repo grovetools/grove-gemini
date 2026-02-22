@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/charmbracelet/lipgloss"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/grovetools/core/config"
 	"github.com/grovetools/core/tui/components/help"
 	"github.com/grovetools/core/tui/keymap"
 	"github.com/grovetools/core/tui/theme"
@@ -104,9 +105,9 @@ func loadLogsCmd(timeFrame time.Duration, offset int) tea.Cmd {
 }
 
 // newQueryTuiKeyMap creates a new keymap with custom bindings
-func newQueryTuiKeyMap() queryTuiKeyMap {
-	return queryTuiKeyMap{
-		Base: keymap.NewBase(),
+func newQueryTuiKeyMap(cfg *config.Config) queryTuiKeyMap {
+	km := queryTuiKeyMap{
+		Base: keymap.Load(cfg, "grove-gemini.gemini-query"),
 		DailyView: key.NewBinding(
 			key.WithKeys("d"),
 			key.WithHelp("d", "daily view"),
@@ -132,9 +133,24 @@ func newQueryTuiKeyMap() queryTuiKeyMap {
 			key.WithHelp("→/l", "next period"),
 		),
 	}
+
+	// Apply TUI-specific overrides from config
+	if cfg != nil && cfg.TUI != nil && cfg.TUI.Keybindings != nil {
+		tuiOverrides := cfg.TUI.Keybindings.GetTUIOverrides()
+		if geminiOverrides, ok := tuiOverrides["grove-gemini"]; ok {
+			if overrides, ok := geminiOverrides["gemini-query"]; ok {
+				keymap.ApplyOverrides(&km, overrides)
+			}
+		}
+	}
+
+	return km
 }
 
 func initialModel() queryTuiModel {
+	// Load config for keybinding overrides
+	cfg, _ := config.LoadDefault()
+
 	// Define table columns
 	columns := []table.Column{
 		{Title: "Timestamp", Width: 15},
@@ -148,7 +164,7 @@ func initialModel() queryTuiModel {
 	tbl := table.New(table.WithColumns(columns), table.WithFocused(true), table.WithHeight(10))
 
 	// Setup keys and help
-	keys := newQueryTuiKeyMap()
+	keys := newQueryTuiKeyMap(cfg)
 	helpModel := help.New(keys)
 
 	return queryTuiModel{

@@ -11,7 +11,7 @@ func QueryTuiKeymapInfo() keymap.TUIInfo {
 		"gemini-query",
 		"grove-gemini",
 		"Query usage analytics and logs viewer",
-		newQueryTuiKeyMap(),
+		newQueryTuiKeyMap(nil),
 	)
 }
 
@@ -22,7 +22,7 @@ func DashboardKeymapInfo() keymap.TUIInfo {
 		"gemini-dashboard",
 		"grove-gemini",
 		"BigQuery billing dashboard viewer",
-		newDashboardKeyMap(),
+		newDashboardKeyMap(nil),
 	)
 }
 
@@ -33,6 +33,6 @@ func CacheKeymapInfo() keymap.TUIInfo {
 		"gemini-cache",
 		"grove-gemini",
 		"Response cache browser and manager",
-		newCacheKeyMap(),
+		newCacheKeyMap(nil),
 	)
 }

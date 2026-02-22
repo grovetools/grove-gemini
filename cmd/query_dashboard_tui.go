@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/charmbracelet/lipgloss"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/grovetools/core/config"
 	"github.com/grovetools/core/tui/components/help"
 	"github.com/grovetools/core/tui/keymap"
 	"github.com/grovetools/core/tui/theme"
@@ -102,9 +103,9 @@ func loadBillingDataCmd(projectID, datasetID, tableID string, timeFrame time.Dur
 }
 
 // newDashboardKeyMap creates a new keymap with custom bindings
-func newDashboardKeyMap() dashboardKeyMap {
-	return dashboardKeyMap{
-		Base: keymap.NewBase(),
+func newDashboardKeyMap(cfg *config.Config) dashboardKeyMap {
+	km := dashboardKeyMap{
+		Base: keymap.Load(cfg, "grove-gemini.gemini-dashboard"),
 		DailyView: key.NewBinding(
 			key.WithKeys("d"),
 			key.WithHelp("d", "daily view"),
@@ -134,9 +135,24 @@ func newDashboardKeyMap() dashboardKeyMap {
 			key.WithHelp("→/l", "next period"),
 		),
 	}
+
+	// Apply TUI-specific overrides from config
+	if cfg != nil && cfg.TUI != nil && cfg.TUI.Keybindings != nil {
+		tuiOverrides := cfg.TUI.Keybindings.GetTUIOverrides()
+		if geminiOverrides, ok := tuiOverrides["grove-gemini"]; ok {
+			if overrides, ok := geminiOverrides["gemini-dashboard"]; ok {
+				keymap.ApplyOverrides(&km, overrides)
+			}
+		}
+	}
+
+	return km
 }
 
 func newDashboardModel(projectID, datasetID, tableID string, days int) dashboardModel {
+	// Load config for keybinding overrides
+	cfg, _ := config.LoadDefault()
+
 	// Define table columns
 	columns := []table.Column{
 		{Title: "SKU", Width: 60},
@@ -147,7 +163,7 @@ func newDashboardModel(projectID, datasetID, tableID string, days int) dashboard
 	tbl := table.New(table.WithColumns(columns), table.WithFocused(true), table.WithHeight(10))
 
 	// Setup keys and help
-	keys := newDashboardKeyMap()
+	keys := newDashboardKeyMap(cfg)
 	helpModel := help.New(keys)
 
 	// Convert days to timeFrame, default to monthly if days is 30

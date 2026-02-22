@@ -15,6 +15,7 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/grovetools/core/config"
 	"github.com/grovetools/core/tui/components/help"
 	"github.com/grovetools/core/tui/keymap"
 	"github.com/grovetools/core/tui/theme"
@@ -78,9 +79,9 @@ type cacheKeyMap struct {
 	Refresh   key.Binding
 }
 
-func newCacheKeyMap() cacheKeyMap {
-	return cacheKeyMap{
-		Base: keymap.NewBase(),
+func newCacheKeyMap(cfg *config.Config) cacheKeyMap {
+	km := cacheKeyMap{
+		Base: keymap.Load(cfg, "grove-gemini.gemini-cache"),
 		Inspect: key.NewBinding(
 			key.WithKeys("i", "enter"),
 			key.WithHelp("i", "inspect"),
@@ -102,6 +103,18 @@ func newCacheKeyMap() cacheKeyMap {
 			key.WithHelp("ctrl+r", "refresh"),
 		),
 	}
+
+	// Apply TUI-specific overrides from config
+	if cfg != nil && cfg.TUI != nil && cfg.TUI.Keybindings != nil {
+		tuiOverrides := cfg.TUI.Keybindings.GetTUIOverrides()
+		if geminiOverrides, ok := tuiOverrides["grove-gemini"]; ok {
+			if overrides, ok := geminiOverrides["gemini-cache"]; ok {
+				keymap.ApplyOverrides(&km, overrides)
+			}
+		}
+	}
+
+	return km
 }
 
 func (k cacheKeyMap) Sections() []keymap.Section {
@@ -151,6 +164,9 @@ func newCacheTUIModel() (*cacheTUIModel, error) {
 		return nil, fmt.Errorf("getting current directory: %w", err)
 	}
 
+	// Load config for keybinding overrides
+	cfg, _ := config.LoadDefault()
+
 	// Table columns
 	columns := []table.Column{
 		{Title: "STATUS", Width: 18},
@@ -187,12 +203,12 @@ func newCacheTUIModel() (*cacheTUIModel, error) {
 	ti.Placeholder = "Filter by name, repo, or model..."
 	ti.CharLimit = 156
 	ti.Width = 50
-	
+
 	// Inspect viewport
 	vp := viewport.New(80, 20)
 
 	// Initialize keymap and help
-	keys := newCacheKeyMap()
+	keys := newCacheKeyMap(cfg)
 	helpModel := help.New(keys)
 	helpModel.Title = "Cache Manager Help"
 
