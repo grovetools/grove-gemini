@@ -135,14 +135,7 @@ func newQueryTuiKeyMap(cfg *config.Config) queryTuiKeyMap {
 	}
 
 	// Apply TUI-specific overrides from config
-	if cfg != nil && cfg.TUI != nil && cfg.TUI.Keybindings != nil {
-		tuiOverrides := cfg.TUI.Keybindings.GetTUIOverrides()
-		if geminiOverrides, ok := tuiOverrides["grove-gemini"]; ok {
-			if overrides, ok := geminiOverrides["gemini-query"]; ok {
-				keymap.ApplyOverrides(&km, overrides)
-			}
-		}
-	}
+	keymap.ApplyTUIOverrides(cfg, "grove-gemini", "gemini-query", &km)
 
 	return km
 }

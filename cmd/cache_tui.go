@@ -105,14 +105,7 @@ func newCacheKeyMap(cfg *config.Config) cacheKeyMap {
 	}
 
 	// Apply TUI-specific overrides from config
-	if cfg != nil && cfg.TUI != nil && cfg.TUI.Keybindings != nil {
-		tuiOverrides := cfg.TUI.Keybindings.GetTUIOverrides()
-		if geminiOverrides, ok := tuiOverrides["grove-gemini"]; ok {
-			if overrides, ok := geminiOverrides["gemini-cache"]; ok {
-				keymap.ApplyOverrides(&km, overrides)
-			}
-		}
-	}
+	keymap.ApplyTUIOverrides(cfg, "grove-gemini", "gemini-cache", &km)
 
 	return km
 }
