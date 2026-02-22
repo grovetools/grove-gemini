@@ -106,10 +106,9 @@ func newCacheKeyMap() cacheKeyMap {
 
 func (k cacheKeyMap) Sections() []keymap.Section {
 	return append(k.Base.Sections(),
-		keymap.Section{
-			Name:     "Cache Actions",
-			Bindings: []key.Binding{k.Inspect, k.Analytics, k.Delete, k.Wipe, k.Refresh},
-		},
+		keymap.NewSectionWithIcon("Cache Actions", theme.IconArchive,
+			k.Inspect, k.Analytics, k.Delete, k.Wipe, k.Refresh,
+		),
 	)
 }
 
