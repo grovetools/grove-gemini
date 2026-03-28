@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/grovetools/core/pkg/workspace"
 	grovecontext "github.com/grovetools/cx/pkg/context"
 	"github.com/grovetools/core/tui/theme"
 	"github.com/grovetools/grove-gemini/pkg/pretty"
@@ -85,14 +84,10 @@ func (r *RequestRunner) Run(ctx context.Context, options RequestOptions) (string
 	r.logger.WorkingDirectoryCtx(ctx, workDir)
 
 	ctxMgr := grovecontext.NewManager(workDir)
-	node, _ := workspace.GetProjectByPath(workDir)
 
 	// Check for .grove/rules file or existing context files
 	// (context files may exist from a custom rules file used by grove-flow)
-	rulesPath := filepath.Join(workDir, ".grove", "rules")
-	if rp, err := ctxMgr.Locator().GetContextRulesFile(node); err == nil {
-		rulesPath = rp
-	}
+	rulesPath := ctxMgr.ResolveRulesPath()
 
 	hotContextFile := ctxMgr.ResolveContextPath()
 	coldContextFile := ctxMgr.ResolveCachedContextPath()
