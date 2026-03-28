@@ -13,10 +13,25 @@ import (
 	"strings"
 	"time"
 
+	"github.com/grovetools/core/pkg/workspace"
+	grovecontext "github.com/grovetools/cx/pkg/context"
 	"github.com/grovetools/grove-gemini/pkg/pretty"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/genai"
 )
+
+// ResolveGeminiCacheDir returns the path for the gemini-cache directory,
+// using the notebook locator if available, falling back to the local .grove directory.
+func ResolveGeminiCacheDir(workDir string) string {
+	node, _ := workspace.GetProjectByPath(workDir)
+	if node != nil {
+		ctxMgr := grovecontext.NewManager(workDir)
+		if cacheDir, err := ctxMgr.Locator().GetContextCacheDir(node); err == nil {
+			return filepath.Join(cacheDir, "gemini-cache")
+		}
+	}
+	return filepath.Join(workDir, ".grove", "gemini-cache")
+}
 
 // CacheInfo stores information about cached files.
 // It includes the cache ID, name, file hashes for validation,
@@ -68,7 +83,7 @@ type CacheManager struct {
 
 // NewCacheManager creates a new cache manager
 func NewCacheManager(workingDir string) *CacheManager {
-	cacheDir := filepath.Join(workingDir, ".grove", "gemini-cache")
+	cacheDir := ResolveGeminiCacheDir(workingDir)
 	return &CacheManager{
 		workingDir: workingDir,
 		cacheDir:   cacheDir,

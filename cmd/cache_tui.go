@@ -223,7 +223,7 @@ func fetchCachesCmd(client *gemini.Client, workDir string) tea.Cmd {
 	return func() tea.Msg {
 		// This logic is adapted from the original `listCachesCombined` function.
 		ctx := context.Background()
-		cacheDir := filepath.Join(workDir, ".grove", "gemini-cache")
+		cacheDir := gemini.ResolveGeminiCacheDir(workDir)
 		localCaches := make(map[string]*gemini.CacheInfo)
 
 		files, err := os.ReadDir(cacheDir)
@@ -360,7 +360,7 @@ func deleteCacheCmd(client *gemini.Client, cache combinedCacheInfo) tea.Cmd {
 		// Update local file if it exists
 		if cache.LocalInfo != nil {
 			workDir, _ := os.Getwd()
-			cacheDir := filepath.Join(workDir, ".grove", "gemini-cache")
+			cacheDir := gemini.ResolveGeminiCacheDir(workDir)
 			path := filepath.Join(cacheDir, "hybrid_"+cache.LocalInfo.CacheName+".json")
 
 			now := time.Now()
@@ -380,9 +380,9 @@ func wipeCacheCmd(cache combinedCacheInfo, workDir string) tea.Cmd {
 			return cacheWipedMsg{} // No local file to wipe
 		}
 		
-		cacheDir := filepath.Join(workDir, ".grove", "gemini-cache")
+		cacheDir := gemini.ResolveGeminiCacheDir(workDir)
 		path := filepath.Join(cacheDir, "hybrid_"+cache.LocalInfo.CacheName+".json")
-		
+
 		if err := os.Remove(path); err != nil {
 			if !os.IsNotExist(err) {
 				return errMsg{fmt.Errorf("failed to wipe local cache file: %w", err)}

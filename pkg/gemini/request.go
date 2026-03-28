@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/grovetools/core/pkg/workspace"
 	grovecontext "github.com/grovetools/cx/pkg/context"
 	"github.com/grovetools/core/tui/theme"
 	"github.com/grovetools/grove-gemini/pkg/pretty"
@@ -83,11 +84,25 @@ func (r *RequestRunner) Run(ctx context.Context, options RequestOptions) (string
 
 	r.logger.WorkingDirectoryCtx(ctx, workDir)
 
+	ctxMgr := grovecontext.NewManager(workDir)
+	node, _ := workspace.GetProjectByPath(workDir)
+
 	// Check for .grove/rules file or existing context files
 	// (context files may exist from a custom rules file used by grove-flow)
 	rulesPath := filepath.Join(workDir, ".grove", "rules")
+	if rp, err := ctxMgr.Locator().GetContextRulesFile(node); err == nil {
+		rulesPath = rp
+	}
+
 	hotContextFile := filepath.Join(workDir, ".grove", "context")
+	if genDir, err := ctxMgr.Locator().GetContextGeneratedDir(node); err == nil {
+		hotContextFile = filepath.Join(genDir, "context")
+	}
+
 	coldContextFile := filepath.Join(workDir, ".grove", "cached-context")
+	if cacheDir, err := ctxMgr.Locator().GetContextCacheDir(node); err == nil {
+		coldContextFile = filepath.Join(cacheDir, "cached-context")
+	}
 
 	hasRules := false
 	hasContextFiles := false
@@ -127,10 +142,8 @@ func (r *RequestRunner) Run(ctx context.Context, options RequestOptions) (string
 		}
 	}
 
-	// Initialize context manager
-	var ctxMgr *grovecontext.Manager
+	// Initialize context manager (ctxMgr already created above for path resolution)
 	if hasRules {
-		ctxMgr = grovecontext.NewManager(workDir)
 		
 		needsRegeneration := options.RegenerateCtx
 		if !needsRegeneration {

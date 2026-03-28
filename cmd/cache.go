@@ -98,8 +98,8 @@ Use --preserve-local to skip updating the local cache file.`,
 			if err != nil {
 				return fmt.Errorf("getting current directory: %w", err)
 			}
-			cacheDir := filepath.Join(workDir, ".grove", "gemini-cache")
-			
+			cacheDir := gemini.ResolveGeminiCacheDir(workDir)
+
 			// Always create client since we default to clearing remote
 			client, err := gemini.NewClient(ctx, "")
 			if err != nil {
@@ -256,8 +256,8 @@ Use --remove-local to also remove the local cache files.`,
 			if err != nil {
 				return fmt.Errorf("getting current directory: %w", err)
 			}
-			cacheDir := filepath.Join(workDir, ".grove", "gemini-cache")
-			
+			cacheDir := gemini.ResolveGeminiCacheDir(workDir)
+
 			files, err := os.ReadDir(cacheDir)
 			if err != nil {
 				if os.IsNotExist(err) {
@@ -356,7 +356,7 @@ func newCacheInspectCmd() *cobra.Command {
 				return fmt.Errorf("getting current directory: %w", err)
 			}
 			
-			cacheDir := filepath.Join(workDir, ".grove", "gemini-cache")
+			cacheDir := gemini.ResolveGeminiCacheDir(workDir)
 			cacheFile := filepath.Join(cacheDir, "hybrid_"+cacheName+".json")
 			
 			// Load cache info
@@ -493,7 +493,7 @@ func listCachesCombined() error {
 	}
 	
 	// Load local caches
-	cacheDir := filepath.Join(workDir, ".grove", "gemini-cache")
+	cacheDir := gemini.ResolveGeminiCacheDir(workDir)
 	localCaches := make(map[string]*gemini.CacheInfo)
 	
 	files, err := os.ReadDir(cacheDir)
@@ -759,7 +759,7 @@ func listLocalCachesOnly() error {
 	if err != nil {
 		return fmt.Errorf("getting current directory: %w", err)
 	}
-	cacheDir := filepath.Join(workDir, ".grove", "gemini-cache")
+	cacheDir := gemini.ResolveGeminiCacheDir(workDir)
 
 	files, err := os.ReadDir(cacheDir)
 	if err != nil {
