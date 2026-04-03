@@ -17,6 +17,7 @@ func init() {
 	rootCmd.AddCommand(newConfigCmd())
 	rootCmd.AddCommand(newRequestCmd())
 	rootCmd.AddCommand(newCacheCmd())
+	rootCmd.AddCommand(newEmbedCmd())
 }
 
 func Execute() error {

@@ -80,6 +80,16 @@ func Models() []Model {
 			Output:   0.40,
 			Legacy:   false,
 		},
+		// Embedding models
+		{
+			ID:       "gemini-embedding-001",
+			Alias:    "",
+			Provider: "Google",
+			Note:     "Text embedding model, 3072 dimensions",
+			Input:    0.00, // Free tier / usage-based
+			Output:   0.00,
+			Legacy:   false,
+		},
 		// Gemini 2.0 models (legacy)
 		{
 			ID:       "gemini-2.0-flash",
