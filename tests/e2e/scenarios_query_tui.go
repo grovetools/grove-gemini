@@ -6,12 +6,20 @@ import (
 	"strings"
 	"time"
 
-	"github.com/grovetools/core/pkg/paths"
 	"github.com/grovetools/tend/pkg/fs"
 	"github.com/grovetools/tend/pkg/harness"
 	"github.com/grovetools/tend/pkg/tui"
 	"github.com/grovetools/tend/pkg/verify"
 )
+
+// queryLogDir returns the gemini query-log directory inside the test's
+// sandboxed XDG_STATE_HOME. The tend harness injects ctx.StateDir() as
+// XDG_STATE_HOME for the spawned grove-gemini binary, so writing here
+// guarantees the binary reads exactly the logs the test wrote, with no
+// interleaving from the developer's real host state directory.
+func queryLogDir(ctx *harness.Context) string {
+	return filepath.Join(ctx.StateDir(), "grove", "logs", "gemini")
+}
 
 // QueryTUIComprehensiveScenario tests the primary features of `grove-gemini query tui`.
 func QueryTUIComprehensiveScenario() *harness.Scenario {
@@ -31,9 +39,7 @@ func QueryTUIComprehensiveScenario() *harness.Scenario {
 
 // setupQueryTUIEnvironment creates a test environment with mock query logs.
 func setupQueryTUIEnvironment(ctx *harness.Context) error {
-	// Use the paths package to get the XDG-compliant state directory
-	// The test harness sets HOME at ctx.RootDir/home, and paths.StateDir() will use that
-	logDir := filepath.Join(paths.StateDir(), "logs", "gemini")
+	logDir := queryLogDir(ctx)
 	if err := fs.CreateDir(logDir); err != nil {
 		return err
 	}
@@ -157,6 +163,17 @@ func testTimeFrameSwitching(ctx *harness.Context) error {
 		return err
 	}
 
+	// Logs render newest-first; the 5-days-ago entry is the oldest in the
+	// weekly window so it sits below the visible table viewport. Jump to the
+	// bottom so the assertion can see it.
+	if err := session.SendKeys("End"); err != nil {
+		return err
+	}
+	time.Sleep(200 * time.Millisecond)
+	if err := session.WaitStable(); err != nil {
+		return err
+	}
+
 	weeklyView, _ := session.Capture()
 	ctx.ShowCommandOutput("TUI Weekly View", weeklyView, "")
 
@@ -173,6 +190,15 @@ func testTimeFrameSwitching(ctx *harness.Context) error {
 		return err
 	}
 	time.Sleep(500 * time.Millisecond)
+	if err := session.WaitStable(); err != nil {
+		return err
+	}
+
+	// Same scroll-to-bottom as weekly: 5-days-ago is older than today's logs.
+	if err := session.SendKeys("End"); err != nil {
+		return err
+	}
+	time.Sleep(200 * time.Millisecond)
 	if err := session.WaitStable(); err != nil {
 		return err
 	}
@@ -232,14 +258,31 @@ func testMetricToggleAndHelp(ctx *harness.Context) error {
 		return err
 	}
 
-	helpView, _ := session.Capture()
-	ctx.ShowCommandOutput("TUI Help View", helpView, "")
+	// "daily view" sits in the Time Frame section near the top of the help
+	// viewport — assert it before scrolling.
+	helpTopView, _ := session.Capture()
+	ctx.ShowCommandOutput("TUI Help View (top)", helpTopView, "")
+	if err := ctx.Check("help shows daily view binding",
+		session.AssertContains("daily view")); err != nil {
+		return err
+	}
 
-	// Verify help view contains key bindings
-	if err := ctx.Verify(func(v *verify.Collector) {
-		v.Equal("help shows daily view binding", nil, session.AssertContains("daily view"))
-		v.Equal("help shows quit binding", nil, session.AssertContains("quit"))
-	}); err != nil {
+	// The System section (Help, Quit) lives below the visible area. Scroll
+	// the help viewport to bring it into view so we can assert "quit".
+	for range 15 {
+		if err := session.SendKeys("j"); err != nil {
+			return err
+		}
+	}
+	time.Sleep(300 * time.Millisecond)
+	if err := session.WaitStable(); err != nil {
+		return err
+	}
+
+	helpBottomView, _ := session.Capture()
+	ctx.ShowCommandOutput("TUI Help View (bottom)", helpBottomView, "")
+	if err := ctx.Check("help shows quit binding",
+		session.AssertContains("quit")); err != nil {
 		return err
 	}
 

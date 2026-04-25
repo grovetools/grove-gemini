@@ -2,12 +2,13 @@ package cmd
 
 import (
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/table"
-	"github.com/charmbracelet/lipgloss"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/grovetools/core/config"
 	"github.com/grovetools/core/tui/components/help"
 	"github.com/grovetools/core/tui/keymap"
@@ -67,20 +68,20 @@ func (k queryTuiKeyMap) Sections() []keymap.Section {
 
 // Main model for the TUI
 type queryTuiModel struct {
-	isLoading   bool
-	logs        []logging.QueryLog
-	buckets     []analytics.Bucket
-	totals      analytics.Totals
-	timeFrame   time.Duration
-	timeOffset  int // Number of periods back from now (0 = current period)
-	table       table.Model
-	plot        PlotModel
-	plotMetric  string // "cost" or "tokens"
-	keys        queryTuiKeyMap
-	help        help.Model
-	err         error
-	width       int
-	height      int
+	isLoading  bool
+	logs       []logging.QueryLog
+	buckets    []analytics.Bucket
+	totals     analytics.Totals
+	timeFrame  time.Duration
+	timeOffset int // Number of periods back from now (0 = current period)
+	table      table.Model
+	plot       PlotModel
+	plotMetric string // "cost" or "tokens"
+	keys       queryTuiKeyMap
+	help       help.Model
+	err        error
+	width      int
+	height     int
 }
 
 // Message for when logs are loaded
@@ -245,9 +246,9 @@ func (m queryTuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.plot.Width = m.width
 
 		// Calculate heights - 50% for table, rest for plot
-		titleHeight := 1    // "Gemini API Usage - X View"
-		summaryHeight := 1  // Single line summary
-		footerHeight := 1   // Help footer
+		titleHeight := 1   // "Gemini API Usage - X View"
+		summaryHeight := 1 // Single line summary
+		footerHeight := 1  // Help footer
 
 		availableHeight := m.height - titleHeight - summaryHeight - footerHeight - 2
 		plotHeight := availableHeight / 2
@@ -263,6 +264,11 @@ func (m queryTuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		m.logs = msg.logs
+
+		// Sort logs newest-first so the most recent entries render at top of table
+		sort.Slice(m.logs, func(i, j int) bool {
+			return m.logs[i].Timestamp.After(m.logs[j].Timestamp)
+		})
 
 		// Aggregate logs - use same time range as loadLogsCmd
 		endTime := time.Now().Add(-time.Duration(m.timeOffset) * m.timeFrame)
