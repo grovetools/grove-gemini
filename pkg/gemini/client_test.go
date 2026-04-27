@@ -19,8 +19,13 @@ func TestNewClient(t *testing.T) {
 		t.Fatal("Expected client to be created")
 	}
 
-	// Test without API key
+	// Test without API key — isolate from any grove.yml on disk by
+	// pointing HOME and XDG_CONFIG_HOME to an empty temp dir.
 	t.Setenv("GEMINI_API_KEY", "")
+	isolated := t.TempDir()
+	t.Chdir(isolated)
+	t.Setenv("HOME", isolated)
+	t.Setenv("XDG_CONFIG_HOME", isolated)
 	client, err = NewClient(ctx, "")
 	if err == nil {
 		t.Fatal("Expected error when API key is not set")
