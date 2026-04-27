@@ -93,7 +93,7 @@ func (ql *QueryLogger) Log(entry QueryLog) error {
 	defer ql.mu.Unlock()
 
 	// Open file in append mode
-	file, err := os.OpenFile(ql.logFile, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644) //nolint:gosec // log files need to be readable
+	file, err := os.OpenFile(ql.logFile, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644) //nolint:gosec // log files need to be readable
 	if err != nil {
 		return fmt.Errorf("failed to open log file: %w", err)
 	}

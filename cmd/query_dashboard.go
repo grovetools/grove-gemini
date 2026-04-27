@@ -8,9 +8,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
-	dashboardDays int
-)
+var dashboardDays int
 
 func newQueryDashboardCmd() *cobra.Command {
 	cmd := &cobra.Command{

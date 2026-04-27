@@ -63,11 +63,13 @@ type cacheTUIModel struct {
 }
 
 // Messages
-type cachesLoadedMsg struct{ caches []combinedCacheInfo }
-type cacheDeletedMsg struct{}
-type cacheWipedMsg struct{}
-type errMsg struct{ err error }
-type tickMsg time.Time
+type (
+	cachesLoadedMsg struct{ caches []combinedCacheInfo }
+	cacheDeletedMsg struct{}
+	cacheWipedMsg   struct{}
+	errMsg          struct{ err error }
+	tickMsg         time.Time
+)
 
 // cacheKeyMap extends keymap.Base with cache-specific bindings
 type cacheKeyMap struct {

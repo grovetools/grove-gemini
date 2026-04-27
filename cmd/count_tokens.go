@@ -13,9 +13,7 @@ import (
 	"google.golang.org/genai"
 )
 
-var (
-	countTokensModel string
-)
+var countTokensModel string
 
 func newCountTokensCmd() *cobra.Command {
 	cmd := &cobra.Command{
