@@ -7,11 +7,11 @@ import (
 	"path/filepath"
 	"time"
 
+	corelogging "github.com/grovetools/core/logging"
 	"github.com/grovetools/grove-gemini/pkg/config"
 	ctxinfo "github.com/grovetools/grove-gemini/pkg/context"
 	"github.com/grovetools/grove-gemini/pkg/logging"
 	"github.com/grovetools/grove-gemini/pkg/pretty"
-	corelogging "github.com/grovetools/core/logging"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/genai"
 )
@@ -76,11 +76,11 @@ func (c *Client) GenerateContentWithCacheAndOptions(ctx context.Context, model s
 
 	// Create pretty logger for UI output
 	logger := pretty.New()
-	
+
 	// Create a map to track uploaded files and prevent duplicates
 	uploadedFiles := make(map[string]bool)
 	allFilesToUpload := []string{}
-	
+
 	// Collect all files to upload (dynamic files + prompt files)
 	for _, filePath := range dynamicFilePaths {
 		absPath, err := filepath.Abs(filePath)
@@ -92,7 +92,7 @@ func (c *Client) GenerateContentWithCacheAndOptions(ctx context.Context, model s
 			uploadedFiles[absPath] = true
 		}
 	}
-	
+
 	// Add prompt files to the upload list (avoiding duplicates)
 	if opts != nil && len(opts.PromptFiles) > 0 {
 		for _, pFile := range opts.PromptFiles {
@@ -106,7 +106,7 @@ func (c *Client) GenerateContentWithCacheAndOptions(ctx context.Context, model s
 			}
 		}
 	}
-	
+
 	// Structured logging for Gemini requests using grove-core logging
 	// This logs detailed request information when log level is set to debug
 	if log.Logger.IsLevelEnabled(logrus.DebugLevel) {
@@ -187,16 +187,16 @@ func (c *Client) GenerateContentWithCacheAndOptions(ctx context.Context, model s
 			promptTokens = int(tokenResp.TotalTokens)
 		}
 		// Continue even if token counting fails - it's not critical
-		
+
 		requestParts = append(requestParts, &genai.Part{Text: prompt})
 	}
-	
+
 	// Create content object with all parts
 	userTurn := &genai.Content{
 		Role:  genai.RoleUser,
 		Parts: requestParts,
 	}
-	
+
 	// Create contents slice for API
 	contentsForAPI := []*genai.Content{userTurn}
 	// Generate content with optional cache
@@ -228,7 +228,7 @@ func (c *Client) GenerateContentWithCacheAndOptions(ctx context.Context, model s
 			config.TopK = &topKFloat
 		}
 		if opts.MaxOutputTokens != nil {
-			config.MaxOutputTokens = int32(*opts.MaxOutputTokens)
+			config.MaxOutputTokens = *opts.MaxOutputTokens
 		}
 	}
 
@@ -238,7 +238,6 @@ func (c *Client) GenerateContentWithCacheAndOptions(ctx context.Context, model s
 		contentsForAPI,
 		config,
 	)
-	
 	if err != nil {
 		// Gather context information
 		var contextInfo *ctxinfo.Info
@@ -247,22 +246,22 @@ func (c *Client) GenerateContentWithCacheAndOptions(ctx context.Context, model s
 		} else {
 			contextInfo = ctxinfo.GetContextInfo("")
 		}
-		
+
 		// Log the failed query
 		geminiLogger := logging.GetLogger()
 		logEntry := logging.QueryLog{
 			Timestamp:    startTime,
 			RequestID:    requestID,
-			Model:       model,
-			Method:      "GenerateContent",
+			Model:        model,
+			Method:       "GenerateContent",
 			ResponseTime: time.Since(startTime).Seconds(),
-			Error:       err.Error(),
-			CacheID:     cacheID,
-			Success:     false,
-			WorkingDir:  contextInfo.WorkingDir,
-			GitRepo:     contextInfo.GitRepo,
-			GitBranch:   contextInfo.GitBranch,
-			GitCommit:   contextInfo.GitCommit,
+			Error:        err.Error(),
+			CacheID:      cacheID,
+			Success:      false,
+			WorkingDir:   contextInfo.WorkingDir,
+			GitRepo:      contextInfo.GitRepo,
+			GitBranch:    contextInfo.GitBranch,
+			GitCommit:    contextInfo.GitCommit,
 		}
 		if opts != nil && opts.Caller != "" {
 			logEntry.Caller = opts.Caller
@@ -286,22 +285,22 @@ func (c *Client) GenerateContentWithCacheAndOptions(ctx context.Context, model s
 		cachedTokens := int(result.UsageMetadata.CachedContentTokenCount)
 		totalPromptTokens := int(result.UsageMetadata.PromptTokenCount)
 		completionTokens := int(result.UsageMetadata.CandidatesTokenCount)
-		
+
 		// Calculate actual dynamic tokens (prompt tokens minus cached tokens)
 		dynamicTokens := totalPromptTokens - cachedTokens
-		
+
 		// Extract isNewCache flag from options
 		isNewCache := false
 		if opts != nil {
 			isNewCache = opts.IsNewCache
 		}
-		
+
 		// Calculate cache hit rate for logging
 		cacheHitRate := float64(0)
 		if totalPromptTokens > 0 {
 			cacheHitRate = float64(cachedTokens) / float64(totalPromptTokens)
 		}
-		
+
 		logger.TokenUsageCtx(
 			ctx,
 			cachedTokens,
@@ -311,7 +310,7 @@ func (c *Client) GenerateContentWithCacheAndOptions(ctx context.Context, model s
 			duration,
 			isNewCache,
 		)
-		
+
 		// Gather context information
 		var contextInfo *ctxinfo.Info
 		if opts != nil && opts.WorkingDir != "" {
@@ -319,36 +318,36 @@ func (c *Client) GenerateContentWithCacheAndOptions(ctx context.Context, model s
 		} else {
 			contextInfo = ctxinfo.GetContextInfo("")
 		}
-		
+
 		// Log the query
 		geminiLogger := logging.GetLogger()
 		logEntry := logging.QueryLog{
 			Timestamp:        startTime,
 			RequestID:        requestID,
-			Model:           model,
-			Method:          "GenerateContent",
-			CachedTokens:    result.UsageMetadata.CachedContentTokenCount,
-			PromptTokens:    result.UsageMetadata.PromptTokenCount,
-			UserPromptTokens: int32(promptTokens),
+			Model:            model,
+			Method:           "GenerateContent",
+			CachedTokens:     result.UsageMetadata.CachedContentTokenCount,
+			PromptTokens:     result.UsageMetadata.PromptTokenCount,
+			UserPromptTokens: int32(promptTokens), //nolint:gosec // promptTokens is bounded by API limits
 			CompletionTokens: result.UsageMetadata.CandidatesTokenCount,
-			TotalTokens:     result.UsageMetadata.TotalTokenCount,
-			CacheHitRate:    cacheHitRate, // Store as decimal
-			ResponseTime:    duration.Seconds(),
-			EstimatedCost:   logging.EstimateCostWithCache(model, result.UsageMetadata.PromptTokenCount, result.UsageMetadata.CandidatesTokenCount, result.UsageMetadata.CachedContentTokenCount),
-			CacheID:         cacheID,
-			Success:         true,
-			WorkingDir:      contextInfo.WorkingDir,
-			GitRepo:         contextInfo.GitRepo,
-			GitBranch:       contextInfo.GitBranch,
-			GitCommit:       contextInfo.GitCommit,
+			TotalTokens:      result.UsageMetadata.TotalTokenCount,
+			CacheHitRate:     cacheHitRate, // Store as decimal
+			ResponseTime:     duration.Seconds(),
+			EstimatedCost:    logging.EstimateCostWithCache(model, result.UsageMetadata.PromptTokenCount, result.UsageMetadata.CandidatesTokenCount, result.UsageMetadata.CachedContentTokenCount),
+			CacheID:          cacheID,
+			Success:          true,
+			WorkingDir:       contextInfo.WorkingDir,
+			GitRepo:          contextInfo.GitRepo,
+			GitBranch:        contextInfo.GitBranch,
+			GitCommit:        contextInfo.GitCommit,
 		}
-		
+
 		if opts != nil && opts.Caller != "" {
 			logEntry.Caller = opts.Caller
 		} else {
 			logEntry.Caller = ctxinfo.GetCaller()
 		}
-		
+
 		if err := geminiLogger.Log(logEntry); err != nil {
 			// Don't fail the request if logging fails
 			ulog.Warn("Failed to log query").Err(err).Log(ctx)
@@ -399,19 +398,19 @@ type CachedContentInfo struct {
 
 // ListCachesFromAPI lists all cached contents from the Google API
 func (c *Client) ListCachesFromAPI(ctx context.Context) ([]CachedContentInfo, error) {
-	var caches []CachedContentInfo
-	
+	var caches []CachedContentInfo //nolint:prealloc // iterator-based, size unknown
+
 	// Iterate through all cached contents using the All method
 	for cache, err := range c.client.Caches.All(ctx) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to list caches from API: %w", err)
 		}
-		
+
 		tokenCount := int32(0)
 		if cache.UsageMetadata != nil {
 			tokenCount = cache.UsageMetadata.TotalTokenCount
 		}
-		
+
 		info := CachedContentInfo{
 			Name:        cache.Name,
 			Model:       cache.Model,
@@ -423,7 +422,7 @@ func (c *Client) ListCachesFromAPI(ctx context.Context) ([]CachedContentInfo, er
 		}
 		caches = append(caches, info)
 	}
-	
+
 	return caches, nil
 }
 
@@ -433,7 +432,7 @@ func (c *Client) DeleteCache(ctx context.Context, cacheID string) error {
 	if err != nil {
 		// Debug: log the error type
 		// fmt.Fprintf(os.Stderr, "DEBUG: DeleteCache error type: %T, error: %v\n", err, err)
-		
+
 		// If it's already deleted (404) or permission denied (403), don't return an error
 		// 403 often means the cache doesn't exist on GCP
 		if IsNotFoundError(err) || IsPermissionError(err) {

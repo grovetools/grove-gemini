@@ -38,29 +38,29 @@ func ResolveGeminiCacheDir(workDir string) string {
 // the model used, creation/expiration timestamps, token count, repo name,
 // clear tracking information, and usage statistics.
 type CacheInfo struct {
-	CacheID          string            `json:"cache_id"`
-	CacheName        string            `json:"cache_name"`
-	CachedFileHashes map[string]string `json:"cached_file_hashes"`
-	Model            string            `json:"model"`
-	CreatedAt        time.Time         `json:"created_at"`
-	ExpiresAt        time.Time         `json:"expires_at"`
-	TokenCount       int               `json:"token_count,omitempty"`
-	RepoName         string            `json:"repo_name,omitempty"`
-	ClearReason      string            `json:"clear_reason,omitempty"`
-	ClearedAt        *time.Time        `json:"cleared_at,omitempty"`
-	RegenerationCount int              `json:"regeneration_count,omitempty"`
-	
+	CacheID           string            `json:"cache_id"`
+	CacheName         string            `json:"cache_name"`
+	CachedFileHashes  map[string]string `json:"cached_file_hashes"`
+	Model             string            `json:"model"`
+	CreatedAt         time.Time         `json:"created_at"`
+	ExpiresAt         time.Time         `json:"expires_at"`
+	TokenCount        int               `json:"token_count,omitempty"`
+	RepoName          string            `json:"repo_name,omitempty"`
+	ClearReason       string            `json:"clear_reason,omitempty"`
+	ClearedAt         *time.Time        `json:"cleared_at,omitempty"`
+	RegenerationCount int               `json:"regeneration_count,omitempty"`
+
 	// Usage tracking fields
-	UsageStats       *CacheUsageStats  `json:"usage_stats,omitempty"`
+	UsageStats *CacheUsageStats `json:"usage_stats,omitempty"`
 }
 
 // CacheUsageStats tracks usage statistics for a cache
 type CacheUsageStats struct {
 	TotalQueries     int               `json:"total_queries"`
 	LastUsed         time.Time         `json:"last_used"`
-	TotalCacheHits   int64             `json:"total_cache_hits"`   // Total cached tokens served
-	TotalTokensSaved int64             `json:"total_tokens_saved"` // Tokens saved by using cache
-	AverageHitRate   float64           `json:"average_hit_rate"`   // Average cache hit rate across all queries
+	TotalCacheHits   int64             `json:"total_cache_hits"`        // Total cached tokens served
+	TotalTokensSaved int64             `json:"total_tokens_saved"`      // Tokens saved by using cache
+	AverageHitRate   float64           `json:"average_hit_rate"`        // Average cache hit rate across all queries
 	QueryHistory     []CacheQueryStats `json:"query_history,omitempty"` // Optional detailed history
 }
 
@@ -92,16 +92,16 @@ func NewCacheManager(workingDir string) *CacheManager {
 
 // LoadCacheInfo loads cache information from a JSON file
 func LoadCacheInfo(filePath string) (*CacheInfo, error) {
-	data, err := os.ReadFile(filePath)
+	data, err := os.ReadFile(filePath) //nolint:gosec // filePath is internal cache path, not user input
 	if err != nil {
 		return nil, fmt.Errorf("reading cache info file: %w", err)
 	}
-	
+
 	var info CacheInfo
 	if err := json.Unmarshal(data, &info); err != nil {
 		return nil, fmt.Errorf("parsing cache info: %w", err)
 	}
-	
+
 	return &info, nil
 }
 
@@ -111,20 +111,19 @@ func SaveCacheInfo(filePath string, info *CacheInfo) error {
 	if err != nil {
 		return fmt.Errorf("marshaling cache info: %w", err)
 	}
-	
+
 	// Write to temporary file first for atomic operation
 	tempFile := filePath + ".tmp"
-	if err := os.WriteFile(tempFile, data, 0644); err != nil {
+	if err := os.WriteFile(tempFile, data, 0o644); err != nil { //nolint:gosec // cache files need to be readable
 		return fmt.Errorf("writing to temp file: %w", err)
 	}
-	
+
 	// Rename temporary file to final location (atomic operation)
 	if err := os.Rename(tempFile, filePath); err != nil {
-		// Clean up temp file if rename fails
-		os.Remove(tempFile)
+		_ = os.Remove(tempFile) // best-effort cleanup
 		return fmt.Errorf("renaming temp file: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -133,10 +132,10 @@ func SaveCacheInfo(filePath string, info *CacheInfo) error {
 func (m *CacheManager) FindAndValidateCache(ctx context.Context, client *Client, cacheName string, disableExpiration bool) (*CacheInfo, error) {
 	// Create pretty logger
 	logger := pretty.New()
-	
+
 	// Construct path to cache info file
 	cacheInfoFile := filepath.Join(m.cacheDir, "hybrid_"+cacheName+".json")
-	
+
 	// Load cache info
 	info, err := LoadCacheInfo(cacheInfoFile)
 	if err != nil {
@@ -145,9 +144,9 @@ func (m *CacheManager) FindAndValidateCache(ctx context.Context, client *Client,
 		}
 		return nil, fmt.Errorf("loading cache info: %w", err)
 	}
-	
+
 	logger.Info(fmt.Sprintf("Found cache '%s' for model %s", cacheName, info.Model))
-	
+
 	// Verify cache exists on the server
 	exists, err := client.VerifyCacheExists(ctx, info.CacheID)
 	if err != nil {
@@ -156,19 +155,19 @@ func (m *CacheManager) FindAndValidateCache(ctx context.Context, client *Client,
 	if !exists {
 		return nil, fmt.Errorf("cache '%s' no longer exists on server", cacheName)
 	}
-	
+
 	// Check if cache has expired (unless expiration is disabled)
 	if !disableExpiration && time.Now().After(info.ExpiresAt) {
 		return nil, fmt.Errorf("cache '%s' has expired (expired at %s)", cacheName, info.ExpiresAt.Local().Format("2006-01-02 15:04:05 MST"))
 	}
-	
+
 	// Cache is valid
 	if disableExpiration {
 		logger.Success(fmt.Sprintf("Using specified cache '%s' (expiration check disabled)", cacheName))
 	} else {
 		logger.Success(fmt.Sprintf("Using specified cache '%s' (expires %s)", cacheName, info.ExpiresAt.Local().Format("2006-01-02 15:04:05 MST")))
 	}
-	
+
 	return info, nil
 }
 
@@ -188,7 +187,7 @@ func (m *CacheManager) GetOrCreateCache(ctx context.Context, client *Client, mod
 	}
 
 	// Ensure cache directory exists
-	if err := os.MkdirAll(m.cacheDir, 0755); err != nil {
+	if err := os.MkdirAll(m.cacheDir, 0o755); err != nil { //nolint:gosec // cache dir needs to be traversable
 		return nil, false, fmt.Errorf("creating cache directory: %w", err)
 	}
 
@@ -209,7 +208,7 @@ func (m *CacheManager) GetOrCreateCache(ctx context.Context, client *Client, mod
 	}
 
 	// Check for existing cache info to preserve regeneration count
-	if data, err := os.ReadFile(cacheInfoFile); err == nil {
+	if data, err := os.ReadFile(cacheInfoFile); err == nil { //nolint:gosec // cacheInfoFile is internal path
 		var existingInfo CacheInfo
 		if err := json.Unmarshal(data, &existingInfo); err == nil {
 			existingRegenerationCount = existingInfo.RegenerationCount
@@ -217,7 +216,7 @@ func (m *CacheManager) GetOrCreateCache(ctx context.Context, client *Client, mod
 	}
 
 	if !needNewCache {
-		if data, err := os.ReadFile(cacheInfoFile); err == nil {
+		if data, err := os.ReadFile(cacheInfoFile); err == nil { //nolint:gosec // cacheInfoFile is internal path
 			if err := json.Unmarshal(data, &cacheInfo); err == nil {
 				logger.CacheInfo("Found existing cache info")
 
@@ -264,7 +263,7 @@ func (m *CacheManager) GetOrCreateCache(ctx context.Context, client *Client, mod
 	// Create new cache if needed
 	if needNewCache {
 		// First, check if the file is large enough for caching
-		content, err := os.ReadFile(coldContextFilePath)
+		content, err := os.ReadFile(coldContextFilePath) //nolint:gosec // path from trusted config
 		if err != nil {
 			return nil, false, fmt.Errorf("failed to read %s: %w", coldContextFilePath, err)
 		}
@@ -329,29 +328,28 @@ func (m *CacheManager) GetOrCreateCache(ctx context.Context, client *Client, mod
 
 		// Save cache info
 		cacheInfo = CacheInfo{
-			CacheID:          cache.Name,
-			CacheName:        cacheKey,
-			CachedFileHashes: fileHashes,
-			Model:            model,
-			CreatedAt:        time.Now(),
-			ExpiresAt:        cache.ExpireTime,
-			TokenCount:       estimatedTokens,
-			RepoName:         getRepoName(m.workingDir),
+			CacheID:           cache.Name,
+			CacheName:         cacheKey,
+			CachedFileHashes:  fileHashes,
+			Model:             model,
+			CreatedAt:         time.Now(),
+			ExpiresAt:         cache.ExpireTime,
+			TokenCount:        estimatedTokens,
+			RepoName:          getRepoName(m.workingDir),
 			RegenerationCount: existingRegenerationCount + 1,
 		}
 
 		data, _ := json.MarshalIndent(cacheInfo, "", "  ")
-		
+
 		// Write to temporary file first for atomic operation
 		tempFile := cacheInfoFile + ".tmp"
-		if err := os.WriteFile(tempFile, data, 0644); err != nil {
+		if err := os.WriteFile(tempFile, data, 0o644); err != nil { //nolint:gosec // cache files need to be readable
 			return nil, false, fmt.Errorf("failed to save cache info to temp file: %w", err)
 		}
-		
+
 		// Rename temporary file to final location (atomic operation)
 		if err := os.Rename(tempFile, cacheInfoFile); err != nil {
-			// Clean up temp file if rename fails
-			os.Remove(tempFile)
+			_ = os.Remove(tempFile) // best-effort cleanup
 			return nil, false, fmt.Errorf("failed to rename cache info file: %w", err)
 		}
 
@@ -363,7 +361,7 @@ func (m *CacheManager) GetOrCreateCache(ctx context.Context, client *Client, mod
 
 // hashFile calculates SHA256 hash of a file
 func hashFile(filePath string) (string, error) {
-	content, err := os.ReadFile(filePath)
+	content, err := os.ReadFile(filePath) //nolint:gosec // filePath is from trusted rules config
 	if err != nil {
 		return "", err
 	}
@@ -376,7 +374,7 @@ func generateCacheKey(files []string) (string, error) {
 	h := sha256.New()
 	h.Write([]byte("hybrid_v2")) // v2 indicates content-based hashing
 	for _, f := range files {
-		content, err := os.ReadFile(f)
+		content, err := os.ReadFile(f) //nolint:gosec // f is from trusted rules config
 		if err != nil {
 			return "", fmt.Errorf("failed to read file %s: %w", f, err)
 		}
@@ -448,13 +446,13 @@ func getRepoName(workingDir string) string {
 		// Not a git repo or git command failed
 		return ""
 	}
-	
+
 	// Get the repository root path
 	gitRoot := strings.TrimSpace(string(output))
 	if gitRoot == "" {
 		return ""
 	}
-	
+
 	// Extract the directory name as the repo name
 	return filepath.Base(gitRoot)
 }
@@ -466,7 +464,7 @@ func (m *CacheManager) UpdateCacheUsageStats(cacheID string, cachedTokens, dynam
 	if err != nil {
 		return fmt.Errorf("reading cache directory: %w", err)
 	}
-	
+
 	var cacheFile string
 	for _, file := range files {
 		if strings.HasSuffix(file.Name(), ".json") && strings.HasPrefix(file.Name(), "hybrid_") {
@@ -481,31 +479,31 @@ func (m *CacheManager) UpdateCacheUsageStats(cacheID string, cachedTokens, dynam
 			}
 		}
 	}
-	
+
 	if cacheFile == "" {
 		// Cache file not found, which is OK - it might be in a different project
 		return nil
 	}
-	
+
 	// Load current cache info
 	info, err := LoadCacheInfo(cacheFile)
 	if err != nil {
 		return fmt.Errorf("loading cache info: %w", err)
 	}
-	
+
 	// Initialize usage stats if needed
 	if info.UsageStats == nil {
 		info.UsageStats = &CacheUsageStats{
 			QueryHistory: []CacheQueryStats{},
 		}
 	}
-	
+
 	// Update statistics
 	info.UsageStats.TotalQueries++
 	info.UsageStats.LastUsed = time.Now()
 	info.UsageStats.TotalCacheHits += int64(cachedTokens)
 	info.UsageStats.TotalTokensSaved += int64(cachedTokens) // Tokens saved by not re-processing
-	
+
 	// Update average hit rate
 	if info.UsageStats.TotalQueries == 1 {
 		info.UsageStats.AverageHitRate = cacheHitRate
@@ -513,36 +511,36 @@ func (m *CacheManager) UpdateCacheUsageStats(cacheID string, cachedTokens, dynam
 		// Running average
 		info.UsageStats.AverageHitRate = ((info.UsageStats.AverageHitRate * float64(info.UsageStats.TotalQueries-1)) + cacheHitRate) / float64(info.UsageStats.TotalQueries)
 	}
-	
+
 	// Add to query history (limit to last 100 queries to avoid unbounded growth)
 	queryStats := CacheQueryStats{
 		Timestamp:        time.Now(),
-		CachedTokens:     int32(cachedTokens),
-		DynamicTokens:    int32(dynamicTokens),
-		CompletionTokens: int32(completionTokens),
+		CachedTokens:     int32(min(cachedTokens, math.MaxInt32)),     //nolint:gosec // token counts won't exceed int32
+		DynamicTokens:    int32(min(dynamicTokens, math.MaxInt32)),    //nolint:gosec // token counts won't exceed int32
+		CompletionTokens: int32(min(completionTokens, math.MaxInt32)), //nolint:gosec // token counts won't exceed int32
 		CacheHitRate:     cacheHitRate,
 	}
-	
+
 	info.UsageStats.QueryHistory = append(info.UsageStats.QueryHistory, queryStats)
 	if len(info.UsageStats.QueryHistory) > 100 {
 		// Keep only the last 100 queries
 		info.UsageStats.QueryHistory = info.UsageStats.QueryHistory[len(info.UsageStats.QueryHistory)-100:]
 	}
-	
+
 	// Save updated cache info
 	return SaveCacheInfo(cacheFile, info)
 }
 
 // CacheAnalytics represents aggregated analytics for a cache
 type CacheAnalytics struct {
-	EfficiencyScore   float64   // 0-100 score based on hit rate and cost savings
-	TotalSavings      float64   // Total cost savings in USD
-	AverageSavingsPerQuery float64 // Average savings per query
-	PeakUsageHour     int       // Hour of day with most usage (0-23)
-	PeakUsageDay      string    // Day of week with most usage
-	UsageByHour       [24]int   // Usage count by hour
-	UsageByDay        map[string]int // Usage count by day of week
-	HitRateTrend     []float64 // Recent hit rates for trending
+	EfficiencyScore        float64        // 0-100 score based on hit rate and cost savings
+	TotalSavings           float64        // Total cost savings in USD
+	AverageSavingsPerQuery float64        // Average savings per query
+	PeakUsageHour          int            // Hour of day with most usage (0-23)
+	PeakUsageDay           string         // Day of week with most usage
+	UsageByHour            [24]int        // Usage count by hour
+	UsageByDay             map[string]int // Usage count by day of week
+	HitRateTrend           []float64      // Recent hit rates for trending
 }
 
 // CalculateCacheAnalytics computes analytics for a given cache
@@ -552,51 +550,51 @@ func CalculateCacheAnalytics(info *CacheInfo) *CacheAnalytics {
 			UsageByDay: make(map[string]int),
 		}
 	}
-	
+
 	analytics := &CacheAnalytics{
 		UsageByDay: make(map[string]int),
 	}
-	
+
 	// Calculate cost savings based on model and token counts
 	costPerMillion := getCostPerMillionTokens(info.Model)
 	totalCachedTokens := float64(info.UsageStats.TotalCacheHits)
-	
+
 	// Savings = cached tokens cost - (cached tokens cost * 0.25 for cache discount)
 	// Gemini gives 75% discount on cached tokens
 	analytics.TotalSavings = (totalCachedTokens / 1_000_000) * costPerMillion * 0.75
-	
+
 	if info.UsageStats.TotalQueries > 0 {
 		analytics.AverageSavingsPerQuery = analytics.TotalSavings / float64(info.UsageStats.TotalQueries)
 	}
-	
+
 	// Calculate efficiency score (0-100)
 	// Based on: hit rate (50%), usage frequency (25%), cost savings (25%)
 	hitRateScore := info.UsageStats.AverageHitRate * 50
-	
+
 	// Usage frequency score (normalize to 0-25 based on queries per day)
 	daysSinceCreation := time.Since(info.CreatedAt).Hours() / 24
 	if daysSinceCreation < 1 {
 		daysSinceCreation = 1
 	}
 	queriesPerDay := float64(info.UsageStats.TotalQueries) / daysSinceCreation
-	usageScore := math.Min(queriesPerDay * 2.5, 25) // Cap at 25 points
-	
+	usageScore := math.Min(queriesPerDay*2.5, 25) // Cap at 25 points
+
 	// Cost savings score (normalize to 0-25 based on savings)
-	savingsScore := math.Min(analytics.TotalSavings * 5, 25) // Cap at 25 points
-	
+	savingsScore := math.Min(analytics.TotalSavings*5, 25) // Cap at 25 points
+
 	analytics.EfficiencyScore = hitRateScore + usageScore + savingsScore
-	
+
 	// Analyze usage patterns
 	if len(info.UsageStats.QueryHistory) > 0 {
 		// Count usage by hour and day
 		for _, query := range info.UsageStats.QueryHistory {
 			hour := query.Timestamp.Hour()
 			dayName := query.Timestamp.Weekday().String()
-			
+
 			analytics.UsageByHour[hour]++
 			analytics.UsageByDay[dayName]++
 		}
-		
+
 		// Find peak usage hour
 		maxHourUsage := 0
 		for hour, count := range analytics.UsageByHour {
@@ -605,7 +603,7 @@ func CalculateCacheAnalytics(info *CacheInfo) *CacheAnalytics {
 				analytics.PeakUsageHour = hour
 			}
 		}
-		
+
 		// Find peak usage day
 		maxDayUsage := 0
 		for day, count := range analytics.UsageByDay {
@@ -614,19 +612,19 @@ func CalculateCacheAnalytics(info *CacheInfo) *CacheAnalytics {
 				analytics.PeakUsageDay = day
 			}
 		}
-		
+
 		// Calculate hit rate trend (last 10 queries)
 		startIdx := len(info.UsageStats.QueryHistory) - 10
 		if startIdx < 0 {
 			startIdx = 0
 		}
-		
+
 		for i := startIdx; i < len(info.UsageStats.QueryHistory); i++ {
-			analytics.HitRateTrend = append(analytics.HitRateTrend, 
+			analytics.HitRateTrend = append(analytics.HitRateTrend,
 				info.UsageStats.QueryHistory[i].CacheHitRate)
 		}
 	}
-	
+
 	return analytics
 }
 
@@ -637,11 +635,10 @@ func getCostPerMillionTokens(model string) float64 {
 	case strings.Contains(model, "gemini-exp"):
 		return 2.50 // $2.50 per million input tokens
 	case strings.Contains(model, "pro"):
-		return 0.50 // $0.50 per million input tokens  
+		return 0.50 // $0.50 per million input tokens
 	case strings.Contains(model, "flash"):
 		return 0.15 // $0.15 per million input tokens
 	default:
 		return 0.50 // Default to pro pricing
 	}
 }
-

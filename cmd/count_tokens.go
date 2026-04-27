@@ -52,7 +52,7 @@ func runCountTokens(cmd *cobra.Command, args []string) error {
 		// Read from stdin
 		reader := bufio.NewReader(os.Stdin)
 		var builder strings.Builder
-		
+
 		// Check if stdin is available
 		stat, _ := os.Stdin.Stat()
 		if (stat.Mode() & os.ModeCharDevice) != 0 {

@@ -51,7 +51,7 @@ func runQueryExplore(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create logging client: %w", err)
 	}
-	defer client.Close()
+	defer func() { _ = client.Close() }()
 
 	startTime := time.Now().Add(-time.Duration(exploreHours) * time.Hour)
 
@@ -108,7 +108,7 @@ func runQueryExplore(cmd *cobra.Command, args []string) error {
 		fmt.Printf("Filter: %s\n", strings.TrimSpace(f.filter))
 
 		entries := client.Entries(ctx, logadmin.Filter(f.filter), logadmin.NewestFirst())
-		
+
 		count := 0
 		for {
 			entry, err := entries.Next()
@@ -123,10 +123,10 @@ func runQueryExplore(cmd *cobra.Command, args []string) error {
 			if count == 0 {
 				foundLogs = true
 				fmt.Println("\nFound logs! Sample entry structure:")
-				
+
 				// Log name
 				fmt.Printf("\nLog Name: %s\n", entry.LogName)
-				
+
 				// Resource
 				if entry.Resource != nil {
 					fmt.Printf("\nResource:\n")
@@ -136,13 +136,13 @@ func runQueryExplore(cmd *cobra.Command, args []string) error {
 						fmt.Printf("    %s: %s\n", k, v)
 					}
 				}
-				
+
 				// Severity
 				fmt.Printf("\nSeverity: %s\n", entry.Severity)
-				
+
 				// Payload type
 				fmt.Printf("\nPayload Type: %T\n", entry.Payload)
-				
+
 				// If it's a proto payload, show structure
 				if payload, ok := entry.Payload.(map[string]interface{}); ok {
 					fmt.Printf("\nPayload Structure:\n")

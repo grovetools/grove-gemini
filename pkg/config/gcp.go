@@ -14,9 +14,9 @@ const (
 )
 
 type GCPConfig struct {
-	DefaultProject    string `json:"default_project,omitempty"`
-	BillingDatasetID  string `json:"billing_dataset_id,omitempty"`
-	BillingTableID    string `json:"billing_table_id,omitempty"`
+	DefaultProject   string `json:"default_project,omitempty"`
+	BillingDatasetID string `json:"billing_dataset_id,omitempty"`
+	BillingTableID   string `json:"billing_table_id,omitempty"`
 }
 
 // GetConfigPath returns the path to the GCP config file
@@ -37,7 +37,7 @@ func LoadGCPConfig() (*GCPConfig, error) {
 		return nil, err
 	}
 
-	data, err := os.ReadFile(configPath)
+	data, err := os.ReadFile(configPath) //nolint:gosec // configPath is from trusted GetConfigPath()
 	if err != nil {
 		if os.IsNotExist(err) {
 			// Return empty config if file doesn't exist
@@ -63,7 +63,7 @@ func SaveGCPConfig(config *GCPConfig) error {
 
 	// Ensure directory exists
 	dir := filepath.Dir(configPath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0o750); err != nil { //nolint:gosec // config directory
 		return fmt.Errorf("failed to create config directory: %w", err)
 	}
 
@@ -72,7 +72,7 @@ func SaveGCPConfig(config *GCPConfig) error {
 		return err
 	}
 
-	return os.WriteFile(configPath, data, 0644)
+	return os.WriteFile(configPath, data, 0o600) //nolint:gosec // config file permissions
 }
 
 // GetDefaultProject returns the default GCP project, checking in order:

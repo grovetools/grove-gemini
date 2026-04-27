@@ -31,7 +31,7 @@ func newQueryMetricsCmd() *cobra.Command {
 
 	// Get default project from config
 	defaultProject := config.GetDefaultProject("")
-	
+
 	cmd.Flags().StringVarP(&metricsProjectID, "project-id", "p", defaultProject, "GCP project ID")
 	cmd.Flags().IntVarP(&metricsHours, "hours", "H", 24, "Number of hours to look back")
 	cmd.Flags().BoolVar(&metricsDebug, "debug", false, "Enable debug output")
@@ -52,7 +52,7 @@ func runQueryMetrics(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create monitoring client: %w", err)
 	}
-	defer client.Close()
+	defer func() { _ = client.Close() }()
 
 	// Set time range
 	endTime := time.Now()
@@ -106,7 +106,7 @@ func runQueryMetrics(cmd *cobra.Command, args []string) error {
 			}
 
 			hasData = true
-			
+
 			// Try different label keys for method
 			method := ""
 			if m, ok := series.Metric.Labels["method"]; ok {
@@ -116,7 +116,7 @@ func runQueryMetrics(cmd *cobra.Command, args []string) error {
 			} else if m, ok := series.Metric.Labels["api"]; ok {
 				method = m
 			}
-			
+
 			// If still no method, check resource labels
 			if method == "" {
 				if m, ok := series.Resource.Labels["method"]; ok {
@@ -125,7 +125,7 @@ func runQueryMetrics(cmd *cobra.Command, args []string) error {
 					method = m
 				}
 			}
-			
+
 			// If still no method, check all labels in debug mode
 			if method == "" && metricsDebug && seriesCount == 0 {
 				fmt.Printf("[DEBUG] Available metric labels:\n")
@@ -140,7 +140,7 @@ func runQueryMetrics(cmd *cobra.Command, args []string) error {
 			} else if method == "" {
 				method = "(unknown)"
 			}
-			
+
 			if methodMetrics[method] == nil {
 				methodMetrics[method] = make(map[string]int64)
 			}
@@ -198,7 +198,7 @@ func runQueryMetrics(cmd *cobra.Command, args []string) error {
 			} else {
 				method = "(unknown)"
 			}
-			
+
 			if methodMetrics[method] == nil {
 				methodMetrics[method] = make(map[string]int64)
 			}
@@ -259,7 +259,7 @@ func runQueryMetrics(cmd *cobra.Command, args []string) error {
 	for method, metrics := range methodMetrics {
 		fmt.Printf("Method: %s\n", method)
 		fmt.Printf("  Requests: %d\n", metrics["requests"])
-		
+
 		if errors, ok := metrics["errors"]; ok && metrics["requests"] > 0 {
 			errorRate := float64(errors) / float64(metrics["requests"]) * 100
 			fmt.Printf("  Errors: %d (%.2f%%)\n", errors, errorRate)
@@ -290,7 +290,7 @@ func runQueryMetrics(cmd *cobra.Command, args []string) error {
 // Helper function to list available metric descriptors
 func listMetricDescriptors(ctx context.Context, client *monitoring.MetricClient, projectID string) {
 	filter := `metric.type = starts_with("generativelanguage.googleapis.com/") OR metric.type = starts_with("serviceruntime.googleapis.com/")`
-	
+
 	req := &monitoringpb.ListMetricDescriptorsRequest{
 		Name:   fmt.Sprintf("projects/%s", projectID),
 		Filter: filter,

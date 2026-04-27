@@ -52,7 +52,7 @@ func ResolveAPIKey() (string, error) {
 
 	// Second priority: Command execution
 	if geminiCfg.APIKeyCommand != "" {
-		cmd := exec.Command("sh", "-c", geminiCfg.APIKeyCommand)
+		cmd := exec.Command("sh", "-c", geminiCfg.APIKeyCommand) //nolint:gosec // command comes from trusted grove.yml config
 		output, err := cmd.Output()
 		if err != nil {
 			return "", fmt.Errorf("failed to execute api_key_command '%s': %w", geminiCfg.APIKeyCommand, err)

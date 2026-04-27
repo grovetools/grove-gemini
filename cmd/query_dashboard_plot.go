@@ -34,7 +34,7 @@ func NewStackedPlot(summaries []analytics.DailyBillingSummary, timeFrame time.Du
 		sku  string
 		cost float64
 	}
-	var sorted []skuCost
+	sorted := make([]skuCost, 0, len(skuTotals))
 	for sku, cost := range skuTotals {
 		sorted = append(sorted, skuCost{sku, cost})
 	}
@@ -176,7 +176,7 @@ func (p StackedPlotModel) renderStackedChart() string {
 		}
 	}
 	lines = append(lines, xAxis)
-	lines = append(lines, "")                      // Add blank line for spacing
+	lines = append(lines, "")                     // Add blank line for spacing
 	lines = append(lines, "        "+labelString) // 8 spaces total
 
 	// Add legend
@@ -194,7 +194,7 @@ func (p StackedPlotModel) renderLegend() string {
 		return ""
 	}
 
-	var legendItems []string
+	legendItems := make([]string, 0, len(p.TopSKUs))
 	for i, sku := range p.TopSKUs {
 		color := getSKUColor(i)
 		style := lipgloss.NewStyle().Foreground(color)

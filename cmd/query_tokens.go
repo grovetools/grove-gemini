@@ -59,11 +59,11 @@ func runQueryTokens(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create logging client: %w", err)
 	}
-	defer client.Close()
+	defer func() { _ = client.Close() }()
 
 	// Build filter - include all the v1beta endpoints
 	startTime := time.Now().Add(-time.Duration(tokensHours) * time.Hour)
-	
+
 	// Try different filter approaches
 	filters := []string{
 		// Primary filter with all methods
@@ -109,7 +109,7 @@ func runQueryTokens(cmd *cobra.Command, args []string) error {
 		}
 
 		entries := client.Entries(ctx, logadmin.Filter(filter))
-		
+
 		entryCount := 0
 		for {
 			entry, err := entries.Next()
@@ -134,13 +134,13 @@ func runQueryTokens(cmd *cobra.Command, args []string) error {
 				usage := TokenUsage{
 					Timestamp: entry.Timestamp,
 				}
-				
+
 				// Extract method name
 				if protoPayload, ok := payload["protoPayload"].(map[string]interface{}); ok {
 					if methodName, ok := protoPayload["methodName"].(string); ok {
 						usage.Method = methodName
 					}
-					
+
 					// Extract response data
 					if response, ok := protoPayload["response"].(map[string]interface{}); ok {
 						if promptTokens, ok := getFloat64(response, "promptTokenCount"); ok {
@@ -156,13 +156,13 @@ func runQueryTokens(cmd *cobra.Command, args []string) error {
 							usage.CacheHit = true
 						}
 					}
-					
+
 					// Extract latency
 					if latency, ok := getFloat64(protoPayload, "latency"); ok {
 						usage.Latency = latency
 					}
 				}
-				
+
 				// Only add if we have token data
 				if usage.TotalTokens > 0 {
 					tokenUsages = append(tokenUsages, usage)
@@ -201,7 +201,7 @@ func printTokenSummary(usages []TokenUsage) {
 	var totalPrompt, totalCompletion, totalTokens int64
 	var cacheHits int
 	methodCounts := make(map[string]int)
-	
+
 	for _, u := range usages {
 		totalPrompt += u.PromptTokens
 		totalCompletion += u.CompletionTokens
@@ -211,47 +211,47 @@ func printTokenSummary(usages []TokenUsage) {
 		}
 		methodCounts[u.Method]++
 	}
-	
+
 	fmt.Println("=== Token Usage Summary ===")
 	fmt.Printf("Total Requests: %d\n", len(usages))
 	fmt.Printf("Total Prompt Tokens: %d\n", totalPrompt)
 	fmt.Printf("Total Completion Tokens: %d\n", totalCompletion)
 	fmt.Printf("Total Tokens: %d\n", totalTokens)
-	
+
 	if len(usages) > 0 {
 		cacheHitRate := float64(cacheHits) / float64(len(usages)) * 100
 		fmt.Printf("Cache Hit Rate: %.2f%% (%d/%d)\n", cacheHitRate, cacheHits, len(usages))
-		
+
 		// Method breakdown
 		fmt.Println("\nBreakdown by Method:")
 		for method, count := range methodCounts {
 			fmt.Printf("  %s: %d requests\n", method, count)
 		}
-		
+
 		// Estimated costs (using Gemini 1.5 Flash pricing as default)
 		const (
-			pricePerKInput  = 0.075 / 1000   // $0.075 per million tokens
-			pricePerKOutput = 0.30 / 1000    // $0.30 per million tokens
+			pricePerKInput  = 0.075 / 1000 // $0.075 per million tokens
+			pricePerKOutput = 0.30 / 1000  // $0.30 per million tokens
 		)
-		
+
 		inputCost := float64(totalPrompt) / 1000 * pricePerKInput
 		outputCost := float64(totalCompletion) / 1000 * pricePerKOutput
-		
+
 		fmt.Printf("\n=== Estimated Costs (Gemini 1.5 Flash) ===\n")
 		fmt.Printf("Input: $%.6f\n", inputCost)
 		fmt.Printf("Output: $%.6f\n", outputCost)
 		fmt.Printf("Total: $%.6f\n", inputCost+outputCost)
-		
+
 		// Per-request averages
 		avgPrompt := float64(totalPrompt) / float64(len(usages))
 		avgCompletion := float64(totalCompletion) / float64(len(usages))
 		avgTotal := float64(totalTokens) / float64(len(usages))
-		
+
 		fmt.Printf("\n=== Per-Request Averages ===\n")
 		fmt.Printf("Avg Prompt Tokens: %.0f\n", avgPrompt)
 		fmt.Printf("Avg Completion Tokens: %.0f\n", avgCompletion)
 		fmt.Printf("Avg Total Tokens: %.0f\n", avgTotal)
-		
+
 		// Latency statistics
 		var totalLatency float64
 		var latencyCount int

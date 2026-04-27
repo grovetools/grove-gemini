@@ -38,10 +38,10 @@ Features:
 
 	// Only mark as required if no defaults are available
 	if defaultDataset == "" {
-		cmd.MarkFlagRequired("dataset-id")
+		_ = cmd.MarkFlagRequired("dataset-id")
 	}
 	if defaultTable == "" {
-		cmd.MarkFlagRequired("table-id")
+		_ = cmd.MarkFlagRequired("table-id")
 	}
 
 	return cmd

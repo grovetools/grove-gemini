@@ -42,7 +42,7 @@ func newCacheCmd() *cobra.Command {
 
 func newCacheListCmd() *cobra.Command {
 	var localOnly, apiOnly bool
-	
+
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List all caches with both local and API status",
@@ -53,29 +53,29 @@ Use --local-only or --api-only to filter the view.`,
 			if localOnly && apiOnly {
 				return fmt.Errorf("cannot use both --local-only and --api-only flags")
 			}
-			
+
 			if apiOnly {
 				return listCachesFromAPI()
 			}
-			
+
 			if localOnly {
 				return listLocalCachesOnly()
 			}
-			
+
 			// Default: show combined view
 			return listCachesCombined()
 		},
 	}
-	
+
 	cmd.Flags().BoolVar(&localOnly, "local-only", false, "Show only local cache information")
 	cmd.Flags().BoolVar(&apiOnly, "api-only", false, "Show only caches from Google's API servers")
-	
+
 	return cmd
 }
 
 func newCacheClearCmd() *cobra.Command {
 	var withLocal, preserveLocal bool
-	
+
 	cmd := &cobra.Command{
 		Use:   "clear [cache-name...] | --all",
 		Short: "Clear caches from Google's servers (default: remote-only)",
@@ -88,11 +88,11 @@ Use --preserve-local to skip updating the local cache file.`,
 			if !all && len(args) == 0 {
 				return fmt.Errorf("must specify a cache name to clear, or use the --all flag")
 			}
-			
+
 			if withLocal && preserveLocal {
 				return fmt.Errorf("cannot use both --with-local and --preserve-local flags")
 			}
-			
+
 			ctx := context.Background()
 			workDir, err := os.Getwd()
 			if err != nil {
@@ -105,7 +105,7 @@ Use --preserve-local to skip updating the local cache file.`,
 			if err != nil {
 				return fmt.Errorf("creating client: %w", err)
 			}
-			
+
 			if all {
 				files, err := os.ReadDir(cacheDir)
 				if err != nil {
@@ -115,25 +115,25 @@ Use --preserve-local to skip updating the local cache file.`,
 					}
 					return fmt.Errorf("reading cache directory: %w", err)
 				}
-				
+
 				clearedCount := 0
 				apiDeletedCount := 0
 				for _, file := range files {
 					if strings.HasSuffix(file.Name(), ".json") && strings.HasPrefix(file.Name(), "hybrid_") {
 						path := filepath.Join(cacheDir, file.Name())
-						
+
 						// Load cache info to get the cache ID
 						info, err := gemini.LoadCacheInfo(path)
 						if err != nil {
 							fmt.Fprintf(os.Stderr, "Warning: could not read cache info for %s: %v\n", file.Name(), err)
 							continue
 						}
-						
+
 						// Skip if already cleared
 						if info.ClearedAt != nil {
 							continue
 						}
-						
+
 						// Delete from API
 						if client != nil {
 							if err := client.DeleteCache(ctx, info.CacheID); err != nil {
@@ -143,7 +143,7 @@ Use --preserve-local to skip updating the local cache file.`,
 								fmt.Printf("Deleted from API: %s\n", info.CacheName)
 							}
 						}
-						
+
 						// Update or remove local file based on flags
 						if withLocal {
 							// Remove the local file entirely
@@ -158,9 +158,9 @@ Use --preserve-local to skip updating the local cache file.`,
 							now := time.Now()
 							info.ClearReason = "user-cleared"
 							info.ClearedAt = &now
-							
+
 							data, _ := json.MarshalIndent(info, "", "  ")
-							if err := os.WriteFile(path, data, 0644); err != nil {
+							if err := os.WriteFile(path, data, 0o600); err != nil { //nolint:gosec // cache info file
 								fmt.Fprintf(os.Stderr, "Failed to update cache info: %v\n", err)
 							} else {
 								fmt.Printf("Marked as cleared: %s\n", info.CacheName)
@@ -169,7 +169,7 @@ Use --preserve-local to skip updating the local cache file.`,
 						}
 					}
 				}
-				
+
 				if withLocal {
 					fmt.Printf("\nDeleted %d cache(s) from API and removed %d local file(s).\n", apiDeletedCount, clearedCount)
 				} else if preserveLocal {
@@ -181,7 +181,7 @@ Use --preserve-local to skip updating the local cache file.`,
 				for _, cacheName := range args {
 					fileName := "hybrid_" + cacheName + ".json"
 					path := filepath.Join(cacheDir, fileName)
-					
+
 					// Load cache info to get the cache ID
 					info, err := gemini.LoadCacheInfo(path)
 					if err != nil {
@@ -192,13 +192,13 @@ Use --preserve-local to skip updating the local cache file.`,
 						}
 						continue
 					}
-					
+
 					// Skip if already cleared
 					if info.ClearedAt != nil {
 						fmt.Printf("Cache '%s' already marked as cleared.\n", cacheName)
 						continue
 					}
-					
+
 					// Delete from API
 					if client != nil {
 						if err := client.DeleteCache(ctx, info.CacheID); err != nil {
@@ -207,7 +207,7 @@ Use --preserve-local to skip updating the local cache file.`,
 							fmt.Printf("Deleted from API: %s\n", cacheName)
 						}
 					}
-					
+
 					// Update or remove local file based on flags
 					if withLocal {
 						// Remove the local file entirely
@@ -221,9 +221,9 @@ Use --preserve-local to skip updating the local cache file.`,
 						now := time.Now()
 						info.ClearReason = "user-cleared"
 						info.ClearedAt = &now
-						
+
 						data, _ := json.MarshalIndent(info, "", "  ")
-						if err := os.WriteFile(path, data, 0644); err != nil {
+						if err := os.WriteFile(path, data, 0o600); err != nil { //nolint:gosec // cache info file
 							fmt.Fprintf(os.Stderr, "Failed to update cache info: %v\n", err)
 						} else {
 							fmt.Printf("Marked as cleared: %s\n", cacheName)
@@ -237,13 +237,13 @@ Use --preserve-local to skip updating the local cache file.`,
 	cmd.Flags().Bool("all", false, "Clear all caches in the current project")
 	cmd.Flags().BoolVar(&withLocal, "with-local", false, "Also remove local cache files (default: mark as cleared)")
 	cmd.Flags().BoolVar(&preserveLocal, "preserve-local", false, "Don't update local cache files at all")
-	
+
 	return cmd
 }
 
 func newCachePruneCmd() *cobra.Command {
 	var removeLocal bool
-	
+
 	cmd := &cobra.Command{
 		Use:   "prune",
 		Short: "Mark expired caches as cleared and optionally clean up",
@@ -266,16 +266,16 @@ Use --remove-local to also remove the local cache files.`,
 				}
 				return fmt.Errorf("reading cache directory: %w", err)
 			}
-			
+
 			// Create client for API operations
 			client, err := gemini.NewClient(ctx, "")
 			if err != nil {
 				return fmt.Errorf("creating client: %w", err)
 			}
-			
+
 			prunedCount := 0
 			apiDeletedCount := 0
-			
+
 			for _, file := range files {
 				if strings.HasSuffix(file.Name(), ".json") && strings.HasPrefix(file.Name(), "hybrid_") {
 					path := filepath.Join(cacheDir, file.Name())
@@ -284,12 +284,12 @@ Use --remove-local to also remove the local cache files.`,
 						fmt.Fprintf(os.Stderr, "Warning: could not read cache info for %s: %v\n", file.Name(), err)
 						continue
 					}
-					
+
 					// Skip if already cleared
 					if info.ClearedAt != nil {
 						continue
 					}
-					
+
 					if time.Now().After(info.ExpiresAt) {
 						// Try to delete from API (it might already be gone)
 						if client != nil {
@@ -297,7 +297,7 @@ Use --remove-local to also remove the local cache files.`,
 								apiDeletedCount++
 							}
 						}
-						
+
 						if removeLocal {
 							// Remove the file
 							if err := os.Remove(path); err != nil {
@@ -311,9 +311,9 @@ Use --remove-local to also remove the local cache files.`,
 							now := time.Now()
 							info.ClearReason = "expired"
 							info.ClearedAt = &now
-							
+
 							data, _ := json.MarshalIndent(info, "", "  ")
-							if err := os.WriteFile(path, data, 0644); err != nil {
+							if err := os.WriteFile(path, data, 0o600); err != nil { //nolint:gosec // cache info file
 								fmt.Fprintf(os.Stderr, "Failed to update cache info: %v\n", err)
 							} else {
 								fmt.Printf("Marked as expired: %s\n", info.CacheName)
@@ -323,7 +323,7 @@ Use --remove-local to also remove the local cache files.`,
 					}
 				}
 			}
-			
+
 			if prunedCount == 0 {
 				fmt.Println("No expired caches to prune.")
 			} else {
@@ -333,13 +333,13 @@ Use --remove-local to also remove the local cache files.`,
 					fmt.Printf("\nMarked %d cache(s) as expired and deleted %d from API.\n", prunedCount, apiDeletedCount)
 				}
 			}
-			
+
 			return nil
 		},
 	}
-	
+
 	cmd.Flags().BoolVar(&removeLocal, "remove-local", false, "Remove local cache files instead of marking them")
-	
+
 	return cmd
 }
 
@@ -350,15 +350,15 @@ func newCacheInspectCmd() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cacheName := args[0]
-			
+
 			workDir, err := os.Getwd()
 			if err != nil {
 				return fmt.Errorf("getting current directory: %w", err)
 			}
-			
+
 			cacheDir := gemini.ResolveGeminiCacheDir(workDir)
 			cacheFile := filepath.Join(cacheDir, "hybrid_"+cacheName+".json")
-			
+
 			// Load cache info
 			info, err := gemini.LoadCacheInfo(cacheFile)
 			if err != nil {
@@ -367,25 +367,25 @@ func newCacheInspectCmd() *cobra.Command {
 				}
 				return fmt.Errorf("loading cache info: %w", err)
 			}
-			
+
 			// Determine status
 			status := "Valid"
 			if time.Now().After(info.ExpiresAt) {
 				status = "Expired"
 			}
-			
+
 			// Print header
 			fmt.Println("╭─────────────────────────────────────────────────────────────────╮")
 			fmt.Printf("│ Cache Details: %s%s │\n", info.CacheName, strings.Repeat(" ", 48-len(info.CacheName)))
 			fmt.Println("├─────────────────────────────────────────────────────────────────┤")
-			
+
 			// Print basic info
 			fmt.Printf("│ Server Cache ID: %-46s │\n", info.CacheID)
 			fmt.Printf("│ Model:           %-46s │\n", info.Model)
 			fmt.Printf("│ Status:          %-46s │\n", status)
 			fmt.Printf("│ Created:         %-46s │\n", info.CreatedAt.Local().Format("2006-01-02 15:04:05 MST"))
 			fmt.Printf("│ Expires:         %-46s │\n", info.ExpiresAt.Local().Format("2006-01-02 15:04:05 MST"))
-			
+
 			// Print usage statistics
 			if info.UsageStats != nil && info.UsageStats.TotalQueries > 0 {
 				fmt.Println("├─────────────────────────────────────────────────────────────────┤")
@@ -396,7 +396,7 @@ func newCacheInspectCmd() *cobra.Command {
 				fmt.Printf("│ Tokens Served:   %-46s │\n", fmt.Sprintf("%d", info.UsageStats.TotalCacheHits))
 				fmt.Printf("│ Tokens Saved:    %-46s │\n", fmt.Sprintf("%d", info.UsageStats.TotalTokensSaved))
 			}
-			
+
 			// Print cached files
 			if len(info.CachedFileHashes) > 0 {
 				fmt.Println("├─────────────────────────────────────────────────────────────────┤")
@@ -411,9 +411,9 @@ func newCacheInspectCmd() *cobra.Command {
 					fmt.Printf("│     SHA256: %-51s │\n", hash[:16]+"...")
 				}
 			}
-			
+
 			fmt.Println("╰─────────────────────────────────────────────────────────────────╯")
-			
+
 			return nil
 		},
 	}
@@ -423,11 +423,11 @@ func formatDuration(d time.Duration) string {
 	if d < 0 {
 		return "expired"
 	}
-	
+
 	days := int(d.Hours()) / 24
 	hours := int(d.Hours()) % 24
 	minutes := int(d.Minutes()) % 60
-	
+
 	if days > 0 {
 		return fmt.Sprintf("%dd %dh", days, hours)
 	} else if hours > 0 {
@@ -445,10 +445,10 @@ func calculateCacheCost(tokenCount int32, duration time.Duration, model string) 
 	if tokenCount <= 0 || duration <= 0 {
 		return "-"
 	}
-	
+
 	// Cost per million tokens per hour in USD
 	var costPerMillionTokensPerHour float64
-	
+
 	// Set pricing based on model
 	switch {
 	case strings.Contains(model, "gemini-2.0"):
@@ -461,12 +461,12 @@ func calculateCacheCost(tokenCount int32, duration time.Duration, model string) 
 		// Default pricing
 		costPerMillionTokensPerHour = 1.00
 	}
-	
+
 	// Calculate cost
 	tokens := float64(tokenCount)
 	hours := duration.Hours()
 	cost := (tokens / 1_000_000) * hours * costPerMillionTokensPerHour
-	
+
 	// Format cost
 	if cost < 0.01 {
 		return "<$0.01"
@@ -491,11 +491,11 @@ func listCachesCombined() error {
 	if err != nil {
 		return fmt.Errorf("getting current directory: %w", err)
 	}
-	
+
 	// Load local caches
 	cacheDir := gemini.ResolveGeminiCacheDir(workDir)
 	localCaches := make(map[string]*gemini.CacheInfo)
-	
+
 	files, err := os.ReadDir(cacheDir)
 	if err == nil {
 		for _, file := range files {
@@ -507,13 +507,13 @@ func listCachesCombined() error {
 			}
 		}
 	}
-	
+
 	// Query API caches
 	client, err := gemini.NewClient(ctx, "")
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
-	
+
 	fmt.Println("Querying caches from Google API...")
 	apiCaches, err := client.ListCachesFromAPI(ctx)
 	if err != nil {
@@ -521,25 +521,25 @@ func listCachesCombined() error {
 		fmt.Fprintf(os.Stderr, "Warning: Could not query API (%v), showing local caches only\n", err)
 		return listLocalCachesOnly()
 	}
-	
+
 	// Create a map of API caches for easy lookup
 	apiCacheMap := make(map[string]*gemini.CachedContentInfo)
 	for i := range apiCaches {
 		apiCacheMap[apiCaches[i].Name] = &apiCaches[i]
 	}
-	
+
 	// Create table data
-	var cacheRows []cacheRow
+	var cacheRows []cacheRow //nolint:prealloc // conditionally appended
 	shown := make(map[string]bool)
-	
+
 	// First add local caches
 	for cacheID, localInfo := range localCaches {
 		shown[cacheID] = true
-		
+
 		// Determine overall status
 		var status string
 		var isValid bool
-		
+
 		// Check if manually cleared
 		if localInfo.ClearedAt != nil {
 			status = theme.IconError + " Cleared"
@@ -563,21 +563,21 @@ func listCachesCombined() error {
 				isValid = false
 			}
 		}
-		
+
 		// Format values based on validity
 		var usesStr, tokenStr, expiresInStr, expireTimeStr, costStr string
-		
+
 		// Get usage count
 		if localInfo.UsageStats != nil && localInfo.UsageStats.TotalQueries > 0 {
 			usesStr = fmt.Sprintf("%d", localInfo.UsageStats.TotalQueries)
 		} else {
 			usesStr = "0"
 		}
-		
+
 		if isValid {
 			// Check if we have API data
 			apiCache, existsInAPI := apiCacheMap[cacheID]
-			
+
 			if existsInAPI {
 				// Valid cache - show all data from API
 				if apiCache.TokenCount > 0 {
@@ -587,11 +587,11 @@ func listCachesCombined() error {
 				} else {
 					tokenStr = "-"
 				}
-				
+
 				expiresIn := time.Until(apiCache.ExpireTime).Round(time.Second)
 				expiresInStr = formatDuration(expiresIn)
 				expireTimeStr = apiCache.ExpireTime.Local().Format("15:04")
-				
+
 				// Calculate cost
 				if apiCache.TokenCount > 0 {
 					totalDuration := apiCache.ExpireTime.Sub(apiCache.CreateTime)
@@ -616,7 +616,7 @@ func listCachesCombined() error {
 			expireTimeStr = "-"
 			costStr = "-"
 		}
-		
+
 		// Get repo name, truncate if needed
 		repoName := localInfo.RepoName
 		if repoName == "" {
@@ -624,16 +624,16 @@ func listCachesCombined() error {
 		} else if len(repoName) > 15 {
 			repoName = repoName[:12] + "..."
 		}
-		
+
 		// Determine if cache is active
 		isActive := status == theme.IconSuccess+" Active"
-		
+
 		// Get creation time from local info or API
 		createTime := localInfo.CreatedAt
 		if apiCache, ok := apiCacheMap[cacheID]; ok && !createTime.After(apiCache.CreateTime) {
 			createTime = apiCache.CreateTime
 		}
-		
+
 		cacheRows = append(cacheRows, cacheRow{
 			data: []string{
 				localInfo.CacheName,
@@ -651,7 +651,7 @@ func listCachesCombined() error {
 			isActive:   isActive,
 		})
 	}
-	
+
 	// Then add API-only caches (not in local)
 	for _, apiCache := range apiCaches {
 		if !shown[apiCache.Name] {
@@ -662,7 +662,7 @@ func listCachesCombined() error {
 			if len(cacheName) > 16 {
 				cacheName = cacheName[:16]
 			}
-			
+
 			// These are API-only, so no local file
 			var status string
 			var isValid bool
@@ -674,13 +674,13 @@ func listCachesCombined() error {
 				status = theme.IconSuccess + " Active"
 				isValid = true
 			}
-			
+
 			// Format values based on validity
 			var usesStr, tokenStr, expiresInStr, expireTimeStr, costStr string
-			
+
 			// API-only caches don't have local usage stats
 			usesStr = "0"
-			
+
 			if isValid {
 				// Valid cache - show all data
 				if apiCache.TokenCount > 0 {
@@ -688,11 +688,11 @@ func listCachesCombined() error {
 				} else {
 					tokenStr = "-"
 				}
-				
+
 				expiresIn := time.Until(apiCache.ExpireTime).Round(time.Second)
 				expiresInStr = formatDuration(expiresIn)
 				expireTimeStr = apiCache.ExpireTime.Local().Format("15:04")
-				
+
 				// Calculate cost
 				totalDuration := apiCache.ExpireTime.Sub(apiCache.CreateTime)
 				costStr = calculateCacheCost(apiCache.TokenCount, totalDuration, apiCache.Model)
@@ -703,10 +703,10 @@ func listCachesCombined() error {
 				expireTimeStr = "-"
 				costStr = "-"
 			}
-			
+
 			// Determine if cache is active
 			isActive := status == theme.IconSuccess+" Active"
-			
+
 			cacheRows = append(cacheRows, cacheRow{
 				data: []string{
 					cacheName,
@@ -725,7 +725,7 @@ func listCachesCombined() error {
 			})
 		}
 	}
-	
+
 	// Sort caches: active first, then by creation time (newest first)
 	sort.Slice(cacheRows, func(i, j int) bool {
 		// First priority: active caches come first
@@ -735,22 +735,22 @@ func listCachesCombined() error {
 		// Second priority: newer caches come first
 		return cacheRows[i].createTime.After(cacheRows[j].createTime)
 	})
-	
+
 	// Convert sorted cacheRows back to rows for table
-	var rows [][]string
+	rows := make([][]string, 0, len(cacheRows))
 	for _, cr := range cacheRows {
 		rows = append(rows, cr.data)
 	}
-	
+
 	// Create styled table
 	t := tablecomponent.NewStyledTable().
 		Headers("CACHE NAME", "REPO", "MODEL", "STATUS", "USES", "TOKENS", "TTL", "EXPIRES", "COST").
 		Rows(rows...)
-	
+
 	fmt.Println()
 	fmt.Println(t)
 	fmt.Printf("\nLocal caches: %d, API caches: %d\n", len(localCaches), len(apiCaches))
-	
+
 	return nil
 }
 
@@ -771,7 +771,7 @@ func listLocalCachesOnly() error {
 	}
 
 	var cacheRows []cacheRow
-	
+
 	for _, file := range files {
 		if strings.HasSuffix(file.Name(), ".json") && strings.HasPrefix(file.Name(), "hybrid_") {
 			info, err := gemini.LoadCacheInfo(filepath.Join(cacheDir, file.Name()))
@@ -779,21 +779,21 @@ func listLocalCachesOnly() error {
 				fmt.Fprintf(os.Stderr, "Warning: could not read cache info for %s: %v\n", file.Name(), err)
 				continue
 			}
-			
+
 			// Note: Local-only view doesn't check API, so we show local status
 			status := theme.IconInfo + " Local"
 			isValid := !time.Now().After(info.ExpiresAt)
-			
+
 			// Format values based on local validity
 			var usesStr, tokenStr, expiresInStr, expireTimeStr, costStr string
-			
+
 			// Get usage count
 			if info.UsageStats != nil && info.UsageStats.TotalQueries > 0 {
 				usesStr = fmt.Sprintf("%d", info.UsageStats.TotalQueries)
 			} else {
 				usesStr = "0"
 			}
-			
+
 			if isValid {
 				// Valid locally - show all data
 				if info.TokenCount > 0 {
@@ -801,14 +801,14 @@ func listLocalCachesOnly() error {
 				} else {
 					tokenStr = "-"
 				}
-				
+
 				expiresIn := time.Until(info.ExpiresAt).Round(time.Second)
 				expiresInStr = formatDuration(expiresIn)
 				expireTimeStr = info.ExpiresAt.Local().Format("15:04")
-				
+
 				// Calculate cost
 				totalDuration := info.ExpiresAt.Sub(info.CreatedAt)
-				costStr = calculateCacheCost(int32(info.TokenCount), totalDuration, info.Model)
+				costStr = calculateCacheCost(int32(info.TokenCount), totalDuration, info.Model) //nolint:gosec // TokenCount is bounded by API limits
 			} else {
 				// Expired locally
 				status = theme.IconWarning + " Expired"
@@ -817,7 +817,7 @@ func listLocalCachesOnly() error {
 				expireTimeStr = "-"
 				costStr = "-"
 			}
-			
+
 			// Get repo name, truncate if needed
 			repoName := info.RepoName
 			if repoName == "" {
@@ -825,10 +825,10 @@ func listLocalCachesOnly() error {
 			} else if len(repoName) > 15 {
 				repoName = repoName[:12] + "..."
 			}
-			
+
 			// Determine if cache is active (for local-only, active means not expired and not cleared)
 			isActive := isValid && info.ClearedAt == nil && status != theme.IconWarning+" Expired"
-			
+
 			cacheRows = append(cacheRows, cacheRow{
 				data: []string{
 					info.CacheName,
@@ -847,12 +847,12 @@ func listLocalCachesOnly() error {
 			})
 		}
 	}
-	
+
 	if len(cacheRows) == 0 {
 		fmt.Println("No caches found in this project.")
 		return nil
 	}
-	
+
 	// Sort caches: active first, then by creation time (newest first)
 	sort.Slice(cacheRows, func(i, j int) bool {
 		// First priority: active caches come first
@@ -862,18 +862,18 @@ func listLocalCachesOnly() error {
 		// Second priority: newer caches come first
 		return cacheRows[i].createTime.After(cacheRows[j].createTime)
 	})
-	
+
 	// Convert sorted cacheRows back to rows for table
-	var rows [][]string
+	rows := make([][]string, 0, len(cacheRows))
 	for _, cr := range cacheRows {
 		rows = append(rows, cr.data)
 	}
-	
+
 	// Create styled table
 	t := tablecomponent.NewStyledTable().
 		Headers("CACHE NAME", "REPO", "MODEL", "STATUS", "USES", "TOKENS", "TTL", "EXPIRES", "COST").
 		Rows(rows...)
-	
+
 	fmt.Println(t)
 
 	return nil
@@ -881,34 +881,34 @@ func listLocalCachesOnly() error {
 
 func listCachesFromAPI() error {
 	ctx := context.Background()
-	
+
 	// Create client
 	client, err := gemini.NewClient(ctx, "")
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
-	
+
 	// List caches from API
 	fmt.Println("Querying caches from Google API...")
 	caches, err := client.ListCachesFromAPI(ctx)
 	if err != nil {
 		return fmt.Errorf("listing caches from API: %w", err)
 	}
-	
+
 	if len(caches) == 0 {
 		fmt.Println("No caches found on Google's servers.")
 		return nil
 	}
-	
+
 	// Build table rows
-	var cacheRows []cacheRow
+	var cacheRows []cacheRow //nolint:prealloc // conditionally appended
 	for _, cache := range caches {
 		// Extract cache ID from the full name (format: cachedContents/abc123...)
 		cacheName := cache.Name
 		if parts := strings.Split(cache.Name, "/"); len(parts) > 1 {
 			cacheName = parts[len(parts)-1]
 		}
-		
+
 		// Determine status
 		status := theme.IconSuccess + " Valid"
 		expiresIn := time.Until(cache.ExpireTime).Round(time.Second)
@@ -917,34 +917,34 @@ func listCachesFromAPI() error {
 			status = theme.IconWarning + " Expired"
 			expiresInStr = "expired"
 		}
-		
+
 		// Truncate cache name if too long
 		if len(cacheName) > 20 {
 			cacheName = cacheName[:17] + "..."
 		}
-		
+
 		// Format token count from API
 		tokenStr := "-"
 		if cache.TokenCount > 0 {
 			tokenStr = fmt.Sprintf("%dk", cache.TokenCount/1000)
 		}
-		
+
 		// API-only caches don't have local usage stats
 		usesStr := "0"
-		
+
 		// Format expire time
 		expireTimeStr := cache.ExpireTime.Local().Format("15:04")
 		if time.Now().After(cache.ExpireTime) {
 			expireTimeStr = "expired"
 		}
-		
+
 		// Calculate cost
 		totalDuration := cache.ExpireTime.Sub(cache.CreateTime)
 		costStr := calculateCacheCost(cache.TokenCount, totalDuration, cache.Model)
-		
+
 		// Determine if cache is active
 		isActive := status == theme.IconSuccess+" Valid"
-		
+
 		cacheRows = append(cacheRows, cacheRow{
 			data: []string{
 				cacheName,
@@ -962,7 +962,7 @@ func listCachesFromAPI() error {
 			isActive:   isActive,
 		})
 	}
-	
+
 	// Sort caches: active first, then by creation time (newest first)
 	sort.Slice(cacheRows, func(i, j int) bool {
 		// First priority: active caches come first
@@ -972,21 +972,21 @@ func listCachesFromAPI() error {
 		// Second priority: newer caches come first
 		return cacheRows[i].createTime.After(cacheRows[j].createTime)
 	})
-	
+
 	// Convert sorted cacheRows back to rows for table
-	var rows [][]string
+	rows := make([][]string, 0, len(cacheRows))
 	for _, cr := range cacheRows {
 		rows = append(rows, cr.data)
 	}
-	
+
 	// Create styled table
 	t := tablecomponent.NewStyledTable().
 		Headers("CACHE NAME", "REPO", "MODEL", "STATUS", "USES", "TOKENS", "TTL", "EXPIRES", "COST").
 		Rows(rows...)
-	
+
 	fmt.Println()
 	fmt.Println(t)
 	fmt.Printf("\nTotal: %d cache(s) found on Google's servers\n", len(caches))
-	
+
 	return nil
 }

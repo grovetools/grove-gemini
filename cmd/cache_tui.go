@@ -188,7 +188,7 @@ func newCacheTUIModel() (*cacheTUIModel, error) {
 		BorderBottom(true).
 		Bold(false)
 	// Remove background highlighting - use same style as unselected rows
-	s.Selected = s.Cell.Copy()
+	s.Selected = s.Cell
 	tbl.SetStyles(s)
 
 	// Filter input
@@ -297,7 +297,7 @@ func fetchCachesCmd(client *gemini.Client, workDir string) tea.Cmd {
 					status = theme.IconWarning + " Expired"
 					isActive = false
 				}
-				
+
 				cacheName := apiInfo.Name
 				if parts := strings.Split(apiInfo.Name, "/"); len(parts) > 1 {
 					cacheName = parts[len(parts)-1]
@@ -305,7 +305,6 @@ func fetchCachesCmd(client *gemini.Client, workDir string) tea.Cmd {
 				if len(cacheName) > 16 {
 					cacheName = cacheName[:16]
 				}
-
 
 				combined = append(combined, combinedCacheInfo{
 					APIInfo:    &apiInfo,
@@ -332,12 +331,12 @@ func fetchCachesCmd(client *gemini.Client, workDir string) tea.Cmd {
 func deleteCacheCmd(client *gemini.Client, cache combinedCacheInfo) tea.Cmd {
 	return func() tea.Msg {
 		ctx := context.Background()
-		
+
 		// Check if cache is already cleared or missing
 		if cache.Status == theme.IconError+" Cleared" {
 			return cacheDeletedMsg{} // Already cleared, nothing to do
 		}
-		
+
 		cacheIDToDelete := ""
 		if cache.APIInfo != nil {
 			cacheIDToDelete = cache.APIInfo.Name
@@ -379,7 +378,7 @@ func wipeCacheCmd(cache combinedCacheInfo, workDir string) tea.Cmd {
 		if cache.LocalInfo == nil {
 			return cacheWipedMsg{} // No local file to wipe
 		}
-		
+
 		cacheDir := gemini.ResolveGeminiCacheDir(workDir)
 		path := filepath.Join(cacheDir, "hybrid_"+cache.LocalInfo.CacheName+".json")
 
@@ -388,7 +387,7 @@ func wipeCacheCmd(cache combinedCacheInfo, workDir string) tea.Cmd {
 				return errMsg{fmt.Errorf("failed to wipe local cache file: %w", err)}
 			}
 		}
-		
+
 		return cacheWipedMsg{}
 	}
 }
@@ -547,7 +546,7 @@ func (m *cacheTUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 	}
-	
+
 	switch m.currentView {
 	case listView:
 		m.table, cmd = m.table.Update(msg)
@@ -589,10 +588,10 @@ func (m *cacheTUIModel) View() string {
 	case analyticsView:
 		s.WriteString(m.inspectViewport.View())
 	}
-	
+
 	s.WriteString("\n")
 	s.WriteString(m.footerView())
-	
+
 	return s.String()
 }
 
@@ -660,13 +659,13 @@ func (m *cacheTUIModel) prepareInspectView() {
 		return
 	}
 	cache := m.filteredCaches[m.table.Cursor()]
-	
+
 	var b strings.Builder
 	b.WriteString(theme.DefaultTheme.Title.Render(fmt.Sprintf("Details for Cache: %s", cache.Name)))
 	b.WriteString("\n\n")
 
 	if cache.LocalInfo != nil {
-		b.WriteString(theme.DefaultTheme.Header.Copy().Underline(false).MarginBottom(0).Render("--- Local Info ---"))
+		b.WriteString(theme.DefaultTheme.Header.Underline(false).MarginBottom(0).Render("--- Local Info ---"))
 		b.WriteString(fmt.Sprintf("\nCache ID: %s", cache.LocalInfo.CacheID))
 		b.WriteString(fmt.Sprintf("\nRepo: %s", cache.LocalInfo.RepoName))
 		b.WriteString(fmt.Sprintf("\nModel: %s", cache.LocalInfo.Model))
@@ -676,7 +675,7 @@ func (m *cacheTUIModel) prepareInspectView() {
 		if cache.LocalInfo.ClearedAt != nil {
 			b.WriteString(fmt.Sprintf("\nCleared: %s (%s)", cache.LocalInfo.ClearedAt.Local().Format(time.RFC1123), cache.LocalInfo.ClearReason))
 		}
-		
+
 		if cache.LocalInfo.UsageStats != nil {
 			b.WriteString("\n\nUsage Statistics:")
 			b.WriteString(fmt.Sprintf("\n  Total Queries: %d", cache.LocalInfo.UsageStats.TotalQueries))
@@ -685,7 +684,7 @@ func (m *cacheTUIModel) prepareInspectView() {
 			b.WriteString(fmt.Sprintf("\n  Tokens Served: %d", cache.LocalInfo.UsageStats.TotalCacheHits))
 			b.WriteString(fmt.Sprintf("\n  Tokens Saved: %d", cache.LocalInfo.UsageStats.TotalTokensSaved))
 		}
-		
+
 		if len(cache.LocalInfo.CachedFileHashes) > 0 {
 			b.WriteString("\n\nCached Files:")
 			for file, hash := range cache.LocalInfo.CachedFileHashes {
@@ -697,7 +696,7 @@ func (m *cacheTUIModel) prepareInspectView() {
 	}
 
 	if cache.APIInfo != nil {
-		b.WriteString(theme.DefaultTheme.Header.Copy().Underline(false).MarginBottom(0).Render("\n--- API Info ---"))
+		b.WriteString(theme.DefaultTheme.Header.Underline(false).MarginBottom(0).Render("\n--- API Info ---"))
 		b.WriteString(fmt.Sprintf("\nID: %s", cache.APIInfo.Name))
 		b.WriteString(fmt.Sprintf("\nModel: %s", cache.APIInfo.Model))
 		b.WriteString(fmt.Sprintf("\nToken Count: %d", cache.APIInfo.TokenCount))
@@ -706,7 +705,7 @@ func (m *cacheTUIModel) prepareInspectView() {
 		b.WriteString(fmt.Sprintf("\nUpdate Time: %s", cache.APIInfo.UpdateTime.Local().Format(time.RFC1123)))
 		b.WriteString("\n")
 	}
-	
+
 	m.inspectViewport.SetContent(b.String())
 	m.inspectViewport.GotoTop()
 }
@@ -714,7 +713,7 @@ func (m *cacheTUIModel) prepareInspectView() {
 // updateFilteredCaches applies the filter text to the cache list.
 func (m *cacheTUIModel) updateFilteredCaches() {
 	filter := strings.ToLower(m.filterInput.Value())
-	
+
 	var filtered []combinedCacheInfo
 	if filter == "" {
 		filtered = m.allCaches
@@ -738,9 +737,9 @@ func (m *cacheTUIModel) updateFilteredCaches() {
 			}
 		}
 	}
-	
+
 	m.filteredCaches = filtered
-	
+
 	// If the cursor is now out of bounds, reset it.
 	if m.table.Cursor() >= len(filtered) {
 		m.table.SetCursor(max(0, len(filtered)-1))
@@ -774,7 +773,7 @@ func (m *cacheTUIModel) updateTableRows() {
 			if cache.LocalInfo.RegenerationCount > 0 {
 				regen = fmt.Sprintf("%d", cache.LocalInfo.RegenerationCount)
 			}
-			
+
 			// Calculate efficiency and savings
 			if cache.LocalInfo.UsageStats != nil && cache.LocalInfo.UsageStats.TotalQueries > 0 {
 				analytics := gemini.CalculateCacheAnalytics(cache.LocalInfo)
@@ -797,7 +796,7 @@ func (m *cacheTUIModel) updateTableRows() {
 				tokenCount = cache.APIInfo.TokenCount
 				expireTime = cache.APIInfo.ExpireTime
 			} else if cache.LocalInfo != nil {
-				tokenCount = int32(cache.LocalInfo.TokenCount)
+				tokenCount = int32(cache.LocalInfo.TokenCount) //nolint:gosec // TokenCount is bounded by API limits
 				expireTime = cache.LocalInfo.ExpiresAt
 			}
 
@@ -807,7 +806,7 @@ func (m *cacheTUIModel) updateTableRows() {
 			ttl = formatDuration(time.Until(expireTime))
 			expires = expireTime.Local().Format("15:04")
 		}
-		
+
 		statusStyle := getStatusStyle(cache.Status)
 
 		rows[i] = table.Row{
@@ -827,23 +826,22 @@ func (m *cacheTUIModel) updateTableRows() {
 	m.table.SetRows(rows)
 }
 
-
 func (m *cacheTUIModel) prepareAnalyticsView() {
 	var b strings.Builder
 	b.WriteString(theme.DefaultTheme.Title.Render("Cache Analytics Dashboard"))
 	b.WriteString("\n\n")
-	
+
 	// Calculate total stats across all caches
 	totalSavings := 0.0
 	totalQueries := 0
 	totalCachedTokens := int64(0)
 	avgEfficiency := 0.0
 	cacheCount := 0
-	
+
 	// Hour usage histogram
 	hourlyUsage := [24]int{}
 	dayUsage := make(map[string]int)
-	
+
 	for _, cache := range m.allCaches {
 		if cache.LocalInfo != nil && cache.LocalInfo.UsageStats != nil {
 			analytics := gemini.CalculateCacheAnalytics(cache.LocalInfo)
@@ -852,7 +850,7 @@ func (m *cacheTUIModel) prepareAnalyticsView() {
 			totalCachedTokens += cache.LocalInfo.UsageStats.TotalCacheHits
 			avgEfficiency += analytics.EfficiencyScore
 			cacheCount++
-			
+
 			// Aggregate usage patterns
 			for hour, count := range analytics.UsageByHour {
 				hourlyUsage[hour] += count
@@ -862,60 +860,60 @@ func (m *cacheTUIModel) prepareAnalyticsView() {
 			}
 		}
 	}
-	
+
 	if cacheCount > 0 {
 		avgEfficiency /= float64(cacheCount)
 	}
-	
+
 	// Overall Statistics
-	b.WriteString(theme.DefaultTheme.Header.Copy().Underline(false).MarginBottom(0).Render(theme.IconChart + " Overall Statistics"))
+	b.WriteString(theme.DefaultTheme.Header.Underline(false).MarginBottom(0).Render(theme.IconChart + " Overall Statistics"))
 	b.WriteString(fmt.Sprintf("\n\nTotal Cost Savings: $%.2f", totalSavings))
 	b.WriteString(fmt.Sprintf("\nTotal Queries: %d", totalQueries))
 	b.WriteString(fmt.Sprintf("\nTotal Cached Tokens: %s", formatTokenCount(totalCachedTokens)))
 	b.WriteString(fmt.Sprintf("\nAverage Efficiency Score: %.1f/100", avgEfficiency))
 	b.WriteString(fmt.Sprintf("\nActive Caches: %d", cacheCount))
-	
+
 	// Top Performing Caches
 	b.WriteString("\n\n")
-	b.WriteString(theme.DefaultTheme.Header.Copy().Underline(false).MarginBottom(0).Render(theme.IconTrophy + " Top Performing Caches"))
+	b.WriteString(theme.DefaultTheme.Header.Underline(false).MarginBottom(0).Render(theme.IconTrophy + " Top Performing Caches"))
 	b.WriteString("\n\n")
-	
+
 	// Sort caches by efficiency
 	type cacheWithScore struct {
-		cache combinedCacheInfo
-		score float64
+		cache   combinedCacheInfo
+		score   float64
 		savings float64
 	}
-	
+
 	var scoredCaches []cacheWithScore
 	for _, cache := range m.allCaches {
 		if cache.LocalInfo != nil && cache.LocalInfo.UsageStats != nil && cache.LocalInfo.UsageStats.TotalQueries > 0 {
 			analytics := gemini.CalculateCacheAnalytics(cache.LocalInfo)
 			scoredCaches = append(scoredCaches, cacheWithScore{
-				cache: cache,
-				score: analytics.EfficiencyScore,
+				cache:   cache,
+				score:   analytics.EfficiencyScore,
 				savings: analytics.TotalSavings,
 			})
 		}
 	}
-	
+
 	// Sort by efficiency score
 	sort.Slice(scoredCaches, func(i, j int) bool {
 		return scoredCaches[i].score > scoredCaches[j].score
 	})
-	
+
 	// Show top 5
 	for i := 0; i < len(scoredCaches) && i < 5; i++ {
 		sc := scoredCaches[i]
 		b.WriteString(fmt.Sprintf("%d. %s (Score: %.1f, Saved: $%.2f)\n",
 			i+1, sc.cache.Name, sc.score, sc.savings))
 	}
-	
+
 	// Usage Patterns
 	b.WriteString("\n")
-	b.WriteString(theme.DefaultTheme.Header.Copy().Underline(false).MarginBottom(0).Render("📈 Usage Patterns"))
+	b.WriteString(theme.DefaultTheme.Header.Underline(false).MarginBottom(0).Render("📈 Usage Patterns"))
 	b.WriteString("\n\n")
-	
+
 	// Find peak hour
 	maxHour := 0
 	maxHourCount := 0
@@ -925,9 +923,9 @@ func (m *cacheTUIModel) prepareAnalyticsView() {
 			maxHourCount = count
 		}
 	}
-	
+
 	b.WriteString(fmt.Sprintf("Peak Usage Hour: %02d:00 (%d queries)\n", maxHour, maxHourCount))
-	
+
 	// Find peak day
 	maxDay := ""
 	maxDayCount := 0
@@ -937,11 +935,11 @@ func (m *cacheTUIModel) prepareAnalyticsView() {
 			maxDayCount = count
 		}
 	}
-	
+
 	if maxDay != "" {
 		b.WriteString(fmt.Sprintf("Peak Usage Day: %s (%d queries)\n", maxDay, maxDayCount))
 	}
-	
+
 	// Hourly distribution chart
 	b.WriteString("\nHourly Usage Distribution:\n")
 	for hour := 0; hour < 24; hour++ {
@@ -952,12 +950,12 @@ func (m *cacheTUIModel) prepareAnalyticsView() {
 		}
 		b.WriteString(fmt.Sprintf("%02d:00 %s %d\n", hour, bar, count))
 	}
-	
+
 	// Cache Hit Rate Trends
 	b.WriteString("\n")
-	b.WriteString(theme.DefaultTheme.Header.Copy().Underline(false).MarginBottom(0).Render("📉 Cache Hit Rate Trends"))
+	b.WriteString(theme.DefaultTheme.Header.Underline(false).MarginBottom(0).Render("📉 Cache Hit Rate Trends"))
 	b.WriteString("\n\n")
-	
+
 	// Collect recent hit rates from all caches
 	var recentHitRates []float64
 	for _, cache := range m.allCaches {
@@ -966,7 +964,7 @@ func (m *cacheTUIModel) prepareAnalyticsView() {
 			recentHitRates = append(recentHitRates, analytics.HitRateTrend...)
 		}
 	}
-	
+
 	if len(recentHitRates) > 0 {
 		// Calculate average hit rate trend
 		avgTrend := 0.0
@@ -974,9 +972,9 @@ func (m *cacheTUIModel) prepareAnalyticsView() {
 			avgTrend += rate
 		}
 		avgTrend /= float64(len(recentHitRates))
-		
+
 		b.WriteString(fmt.Sprintf("Average Recent Hit Rate: %.1f%%\n", avgTrend*100))
-		
+
 		// Show visual trend with sparkline
 		b.WriteString("\nRecent Hit Rate Trend:\n")
 		sparkline := generateSparkline(recentHitRates)
@@ -984,7 +982,7 @@ func (m *cacheTUIModel) prepareAnalyticsView() {
 	} else {
 		b.WriteString("No hit rate data available yet.\n")
 	}
-	
+
 	m.inspectViewport.SetContent(b.String())
 	m.inspectViewport.GotoTop()
 }
@@ -994,10 +992,10 @@ func generateSparkline(data []float64) string {
 	if len(data) == 0 {
 		return ""
 	}
-	
+
 	// Sparkline characters from low to high
 	sparks := []string{"▁", "▂", "▃", "▄", "▅", "▆", "▇", "█"}
-	
+
 	// Find min and max
 	min, max := data[0], data[0]
 	for _, v := range data {
@@ -1008,12 +1006,12 @@ func generateSparkline(data []float64) string {
 			max = v
 		}
 	}
-	
+
 	// Handle case where all values are the same
 	if max == min {
 		return strings.Repeat("▄", len(data))
 	}
-	
+
 	// Build sparkline
 	var result strings.Builder
 	for _, v := range data {
@@ -1025,7 +1023,7 @@ func generateSparkline(data []float64) string {
 		}
 		result.WriteString(sparks[index])
 	}
-	
+
 	return result.String()
 }
 

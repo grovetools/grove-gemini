@@ -13,18 +13,18 @@ import (
 )
 
 var (
-	requestModel          string
-	requestPrompt         string
-	requestPromptFile     string
-	requestWorkDir        string
-	requestCacheTTL       string
-	requestNoCache        bool
-	requestRegenerateCtx  bool
-	requestRecache        bool
-	requestUseCache       string
-	requestOutputFile     string
-	requestContextFiles   []string
-	requestYes            bool
+	requestModel         string
+	requestPrompt        string
+	requestPromptFile    string
+	requestWorkDir       string
+	requestCacheTTL      string
+	requestNoCache       bool
+	requestRegenerateCtx bool
+	requestRecache       bool
+	requestUseCache      string
+	requestOutputFile    string
+	requestContextFiles  []string
+	requestYes           bool
 	// Generation parameters
 	requestTemperature     float32
 	requestTopP            float32
@@ -80,7 +80,7 @@ Examples:
 	cmd.Flags().StringVarP(&requestOutputFile, "output", "o", "", "Write response to file instead of stdout")
 	cmd.Flags().StringSliceVar(&requestContextFiles, "context", nil, "Additional context files to include")
 	cmd.Flags().BoolVarP(&requestYes, "yes", "y", false, "Skip cache creation confirmation prompt")
-	
+
 	// Generation parameters
 	cmd.Flags().Float32Var(&requestTemperature, "temperature", -1, "Temperature for randomness (0.0-2.0, -1 to use default)")
 	cmd.Flags().Float32Var(&requestTopP, "top-p", -1, "Top-p nucleus sampling (0.0-1.0, -1 to use default)")
@@ -97,13 +97,13 @@ func runRequest(cmd *cobra.Command, args []string) error {
 	if requestPrompt == "" && requestPromptFile == "" && len(args) == 0 {
 		return fmt.Errorf("must provide prompt via -p, -f, or as argument")
 	}
-	
+
 	// Get prompt text
 	var promptText string
 	if requestPrompt != "" {
 		promptText = requestPrompt
 	} else if requestPromptFile != "" {
-		content, err := os.ReadFile(requestPromptFile)
+		content, err := os.ReadFile(requestPromptFile) //nolint:gosec // requestPromptFile is user-provided path
 		if err != nil {
 			return fmt.Errorf("reading prompt file: %w", err)
 		}
@@ -142,7 +142,7 @@ func runRequest(cmd *cobra.Command, args []string) error {
 		ContextFiles:     requestContextFiles,
 		SkipConfirmation: requestYes,
 	}
-	
+
 	// Add generation parameters if specified
 	if cmd.Flags().Changed("temperature") {
 		options.Temperature = &requestTemperature
@@ -167,7 +167,7 @@ func runRequest(cmd *cobra.Command, args []string) error {
 	// Output the response
 	if requestOutputFile != "" {
 		// Write to file
-		if err := os.WriteFile(requestOutputFile, []byte(response), 0644); err != nil {
+		if err := os.WriteFile(requestOutputFile, []byte(response), 0o600); err != nil { //nolint:gosec // output file
 			return fmt.Errorf("writing output file: %w", err)
 		}
 		logger := pretty.New()

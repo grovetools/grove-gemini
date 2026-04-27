@@ -170,7 +170,7 @@ func (l *Logger) FilesIncludedCtx(ctx context.Context, files []string) {
 
 	pathStyle := lipgloss.NewStyle().Italic(true)
 	promptStyle := l.theme.Muted
-	var prettyLines []string
+	prettyLines := make([]string, 0, len(files)+1)
 	prettyLines = append(prettyLines, fmt.Sprintf("%s Files attached to request:", theme.IconFile))
 
 	for _, file := range files {
@@ -304,11 +304,11 @@ func (l *Logger) CacheInfo(message string) {
 func (l *Logger) CacheCreated(cacheID string, expires time.Time) {
 	relativeTime := formatRelativeTime(expires)
 	pathStyle := lipgloss.NewStyle().Foreground(theme.Cyan).Italic(true)
-	fmt.Fprintf(l.writer, "%s %s %s\n",
+	_, _ = fmt.Fprintf(l.writer, "%s %s %s\n",
 		l.theme.Success.Render(theme.IconSuccess),
 		l.theme.Success.Render("Cache created:"),
 		pathStyle.Render(cacheID))
-	fmt.Fprintf(l.writer, "%s %s %s\n",
+	_, _ = fmt.Fprintf(l.writer, "%s %s %s\n",
 		theme.IconCalendar,
 		l.theme.Muted.Render("Expires"),
 		l.theme.Muted.Render(relativeTime))
@@ -316,11 +316,11 @@ func (l *Logger) CacheCreated(cacheID string, expires time.Time) {
 
 // ChangedFiles logs files that have changed
 func (l *Logger) ChangedFiles(files []string) {
-	fmt.Fprintf(l.writer, "%s\n",
+	_, _ = fmt.Fprintf(l.writer, "%s\n",
 		l.theme.Warning.Render(theme.IconSync+" Cached files have changed:"))
 	pathStyle := lipgloss.NewStyle().Foreground(theme.Cyan).Italic(true)
 	for _, file := range files {
-		fmt.Fprintf(l.writer, "%s %s\n",
+		_, _ = fmt.Fprintf(l.writer, "%s %s\n",
 			l.theme.Highlight.Render(theme.IconBullet),
 			pathStyle.Render(file))
 	}
@@ -328,20 +328,20 @@ func (l *Logger) ChangedFiles(files []string) {
 
 // CreatingCache logs cache creation start
 func (l *Logger) CreatingCache() {
-	fmt.Fprintf(l.writer, "\n%s\n",
+	_, _ = fmt.Fprintf(l.writer, "\n%s\n",
 		l.theme.Warning.Render(theme.IconMoney+" Creating new cache (one-time operation)..."))
 }
 
 // NoCache logs when no cache is found
 func (l *Logger) NoCache() {
-	fmt.Fprintf(l.writer, "%s\n",
+	_, _ = fmt.Fprintf(l.writer, "%s\n",
 		l.theme.Info.Render(theme.IconSparkle+" No existing cache found"))
 }
 
 // CacheValid logs when cache is valid
 func (l *Logger) CacheValid(until time.Time) {
 	relativeTime := formatRelativeTime(until)
-	fmt.Fprintf(l.writer, "%s %s (%s %s)\n",
+	_, _ = fmt.Fprintf(l.writer, "%s %s (%s %s)\n",
 		l.theme.Success.Render(theme.IconSuccess),
 		l.theme.Success.Render("Cache is valid"),
 		l.theme.Muted.Render("expires"),
@@ -351,35 +351,35 @@ func (l *Logger) CacheValid(until time.Time) {
 // CacheExpired logs when cache has expired
 func (l *Logger) CacheExpired(at time.Time) {
 	relativeTime := formatRelativeTime(at)
-	fmt.Fprintf(l.writer, "%s (%s)\n",
+	_, _ = fmt.Fprintf(l.writer, "%s (%s)\n",
 		l.theme.Warning.Render(theme.IconClock+" Cache expired"),
 		l.theme.Muted.Render(relativeTime))
 }
 
 // CacheFrozen logs when cache is frozen
 func (l *Logger) CacheFrozen() {
-	fmt.Fprintf(l.writer, "%s\n",
+	_, _ = fmt.Fprintf(l.writer, "%s\n",
 		l.theme.Info.Render(theme.IconSnowflake+" Cache is frozen by @freeze-cache directive"))
 }
 
 // CacheDisabled logs when cache is disabled
 func (l *Logger) CacheDisabled() {
-	fmt.Fprintf(l.writer, "%s\n",
+	_, _ = fmt.Fprintf(l.writer, "%s\n",
 		l.theme.Warning.Render(theme.IconStop+" Cache disabled by @disable-cache directive"))
 }
 
 // TTL logs the cache TTL
 func (l *Logger) TTL(ttl string) {
-	fmt.Fprintf(l.writer, "%s %s\n",
+	_, _ = fmt.Fprintf(l.writer, "%s %s\n",
 		l.theme.Info.Render(theme.IconClock+" Using cache TTL from @expire-time directive:"),
 		l.theme.Muted.Render(ttl))
 }
 
 // CacheDisabledByDefault logs when cache is disabled by default (opt-in model)
 func (l *Logger) CacheDisabledByDefault() {
-	fmt.Fprintf(l.writer, "%s\n",
+	_, _ = fmt.Fprintf(l.writer, "%s\n",
 		l.theme.Info.Render(theme.IconInfo+" Caching is disabled by default"))
-	fmt.Fprintf(l.writer, "%s\n",
+	_, _ = fmt.Fprintf(l.writer, "%s\n",
 		l.theme.Muted.Render(theme.IconBullet+" To enable caching, add @enable-cache to your .grove/rules file"))
 }
 
@@ -403,7 +403,7 @@ func (l *Logger) CacheWarningCtx(ctx context.Context) {
 			"Please monitor your Google Cloud billing closely to avoid unexpected charges.\n\n" +
 			"You can disable caching with the --no-cache flag or by removing @enable-cache from your rules.")
 
-	fmt.Fprintln(writer, warningBox.Render(warningContent))
+	_, _ = fmt.Fprintln(writer, warningBox.Render(warningContent))
 }
 
 // CacheWarning displays a prominent warning about experimental caching and costs
@@ -413,7 +413,7 @@ func (l *Logger) CacheWarning() {
 
 // EstimatedTokens logs estimated token count
 func (l *Logger) EstimatedTokens(count int) {
-	fmt.Fprintf(l.writer, "   %s %s\n",
+	_, _ = fmt.Fprintf(l.writer, "   %s %s\n",
 		l.theme.Muted.Render("Estimated tokens:"),
 		l.theme.Normal.Render(fmt.Sprintf("%d", count)))
 }
@@ -421,7 +421,7 @@ func (l *Logger) EstimatedTokens(count int) {
 // ResponseWritten logs successful response write
 func (l *Logger) ResponseWritten(path string) {
 	pathStyle := lipgloss.NewStyle().Foreground(theme.Cyan).Italic(true)
-	fmt.Fprintf(l.writer, "%s %s %s\n",
+	_, _ = fmt.Fprintf(l.writer, "%s %s %s\n",
 		l.theme.Success.Render(theme.IconSuccess),
 		l.theme.Success.Render("Response written to:"),
 		pathStyle.Render(path))
@@ -429,7 +429,7 @@ func (l *Logger) ResponseWritten(path string) {
 
 // Tip logs a helpful tip
 func (l *Logger) Tip(message string) {
-	fmt.Fprintf(l.writer, "%s\n",
+	_, _ = fmt.Fprintf(l.writer, "%s\n",
 		l.theme.Info.Render(theme.IconLightbulb+" "+message))
 }
 
@@ -442,23 +442,23 @@ func (l *Logger) RulesFileContent(content string) {
 		MarginTop(1).
 		MarginBottom(1)
 
-	fmt.Fprintf(l.writer, "%s\n",
+	_, _ = fmt.Fprintf(l.writer, "%s\n",
 		l.theme.Header.Render(theme.IconChecklist+" Rules file content:"))
 
 	// Apply box styling to the content
 	box := rulesBox.Render(content)
-	fmt.Fprintln(l.writer, box)
+	_, _ = fmt.Fprintln(l.writer, box)
 }
 
 // ContextSummary logs a context summary with styled formatting
 func (l *Logger) ContextSummary(cold, hot int) {
-	fmt.Fprintf(l.writer, "%s\n",
+	_, _ = fmt.Fprintf(l.writer, "%s\n",
 		l.theme.Header.Render(theme.IconChart+" Context Summary:"))
-	fmt.Fprintf(l.writer, "%s %s %s\n",
+	_, _ = fmt.Fprintf(l.writer, "%s %s %s\n",
 		l.theme.Highlight.Render(theme.IconBullet),
 		l.theme.Muted.Render("Cold files:"),
 		l.theme.Normal.Render(fmt.Sprintf("%d", cold)))
-	fmt.Fprintf(l.writer, "%s %s %s\n",
+	_, _ = fmt.Fprintf(l.writer, "%s %s %s\n",
 		l.theme.Highlight.Render(theme.IconBullet),
 		l.theme.Muted.Render("Hot files:"),
 		l.theme.Normal.Render(fmt.Sprintf("%d", hot)))
@@ -492,11 +492,11 @@ func (l *Logger) CacheCreationPrompt(tokens int, sizeBytes int64, ttl time.Durat
 	}
 
 	box := warningBox.Render(strings.Join(content, "\n"))
-	fmt.Fprintln(l.writer)
-	fmt.Fprintln(l.writer, box)
+	_, _ = fmt.Fprintln(l.writer)
+	_, _ = fmt.Fprintln(l.writer, box)
 
 	// Prompt for confirmation
-	fmt.Fprintf(l.writer, "\n%s %s",
+	_, _ = fmt.Fprintf(l.writer, "\n%s %s",
 		theme.IconHelp,
 		l.theme.Warning.Render("Do you want to create this cache? [y/N]: "))
 

@@ -10,65 +10,65 @@ import (
 
 func TestCacheOptInLogic(t *testing.T) {
 	tests := []struct {
-		name           string
-		rulesContent   string
-		hasRules       bool
-		noCache        bool
+		name            string
+		rulesContent    string
+		hasRules        bool
+		noCache         bool
 		expectedEnabled bool
 	}{
 		{
-			name:           "No rules file - caching disabled",
-			hasRules:       false,
-			noCache:        false,
+			name:            "No rules file - caching disabled",
+			hasRules:        false,
+			noCache:         false,
 			expectedEnabled: false,
 		},
 		{
-			name:           "Rules file without @enable-cache - caching disabled",
-			rulesContent:   "**/*.go\n!*_test.go",
-			hasRules:       true,
-			noCache:        false,
+			name:            "Rules file without @enable-cache - caching disabled",
+			rulesContent:    "**/*.go\n!*_test.go",
+			hasRules:        true,
+			noCache:         false,
 			expectedEnabled: false,
 		},
 		{
-			name:           "Rules file with @enable-cache - caching enabled",
-			rulesContent:   "@enable-cache\n**/*.go",
-			hasRules:       true,
-			noCache:        false,
+			name:            "Rules file with @enable-cache - caching enabled",
+			rulesContent:    "@enable-cache\n**/*.go",
+			hasRules:        true,
+			noCache:         false,
 			expectedEnabled: true,
 		},
 		{
-			name:           "Rules file with commented @enable-cache - caching disabled",
-			rulesContent:   "# @enable-cache\n**/*.go",
-			hasRules:       true,
-			noCache:        false,
+			name:            "Rules file with commented @enable-cache - caching disabled",
+			rulesContent:    "# @enable-cache\n**/*.go",
+			hasRules:        true,
+			noCache:         false,
 			expectedEnabled: false,
 		},
 		{
-			name:           "Rules file with @enable-cache and spaces - caching enabled",
-			rulesContent:   "  @enable-cache  \n**/*.go",
-			hasRules:       true,
-			noCache:        false,
+			name:            "Rules file with @enable-cache and spaces - caching enabled",
+			rulesContent:    "  @enable-cache  \n**/*.go",
+			hasRules:        true,
+			noCache:         false,
 			expectedEnabled: true,
 		},
 		{
-			name:           "@enable-cache present but --no-cache flag set - caching disabled",
-			rulesContent:   "@enable-cache\n**/*.go",
-			hasRules:       true,
-			noCache:        true,
+			name:            "@enable-cache present but --no-cache flag set - caching disabled",
+			rulesContent:    "@enable-cache\n**/*.go",
+			hasRules:        true,
+			noCache:         true,
 			expectedEnabled: false,
 		},
 		{
-			name:           "@enable-cache in middle of file - caching enabled",
-			rulesContent:   "**/*.go\n@enable-cache\n!*_test.go",
-			hasRules:       true,
-			noCache:        false,
+			name:            "@enable-cache in middle of file - caching enabled",
+			rulesContent:    "**/*.go\n@enable-cache\n!*_test.go",
+			hasRules:        true,
+			noCache:         false,
 			expectedEnabled: true,
 		},
 		{
-			name:           "@enable-cache with comment on same line - caching disabled",
-			rulesContent:   "**/*.go\n@enable-cache # Enable caching\n",
-			hasRules:       true,
-			noCache:        false,
+			name:            "@enable-cache with comment on same line - caching disabled",
+			rulesContent:    "**/*.go\n@enable-cache # Enable caching\n",
+			hasRules:        true,
+			noCache:         false,
 			expectedEnabled: false, // Line contains more than just @enable-cache
 		},
 	}
@@ -80,18 +80,18 @@ func TestCacheOptInLogic(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Failed to create temp dir: %v", err)
 			}
-			defer os.RemoveAll(tempDir)
+			defer func() { _ = os.RemoveAll(tempDir) }()
 
 			// Create .grove directory if needed
 			if tt.hasRules {
 				groveDir := filepath.Join(tempDir, ".grove")
-				if err := os.MkdirAll(groveDir, 0755); err != nil {
+				if err := os.MkdirAll(groveDir, 0o755); err != nil { //nolint:gosec // test directory
 					t.Fatalf("Failed to create .grove dir: %v", err)
 				}
 
 				// Create rules file
 				rulesPath := filepath.Join(groveDir, "rules")
-				if err := os.WriteFile(rulesPath, []byte(tt.rulesContent), 0644); err != nil {
+				if err := os.WriteFile(rulesPath, []byte(tt.rulesContent), 0o600); err != nil { //nolint:gosec // test file
 					t.Fatalf("Failed to write rules file: %v", err)
 				}
 			}
@@ -103,20 +103,20 @@ func TestCacheOptInLogic(t *testing.T) {
 			// We can't easily test the full Run method without mocking,
 			// but we can at least verify the file was created correctly
 			// and would be parsed as expected
-			
+
 			// For now, let's verify the rules file exists as expected
 			rulesPath := filepath.Join(tempDir, ".grove", "rules")
 			if tt.hasRules {
 				if _, err := os.Stat(rulesPath); os.IsNotExist(err) {
 					t.Errorf("Expected rules file to exist")
 				}
-				
+
 				// Read and verify content
-				content, err := os.ReadFile(rulesPath)
+				content, err := os.ReadFile(rulesPath) //nolint:gosec // test file path
 				if err != nil {
 					t.Fatalf("Failed to read rules file: %v", err)
 				}
-				
+
 				if string(content) != tt.rulesContent {
 					t.Errorf("Rules content mismatch: got %q, want %q", string(content), tt.rulesContent)
 				}
@@ -135,11 +135,11 @@ func TestCacheManager_CachingDisabledByDefault(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tempDir)
+	defer func() { _ = os.RemoveAll(tempDir) }()
 
 	// Create .grove directory with rules but NO @enable-cache
 	groveDir := filepath.Join(tempDir, ".grove")
-	if err := os.MkdirAll(groveDir, 0755); err != nil {
+	if err := os.MkdirAll(groveDir, 0o755); err != nil { //nolint:gosec // test directory
 		t.Fatalf("Failed to create .grove dir: %v", err)
 	}
 
@@ -149,13 +149,13 @@ func TestCacheManager_CachingDisabledByDefault(t *testing.T) {
 **/*.go
 !*_test.go
 `
-	if err := os.WriteFile(rulesPath, []byte(rulesContent), 0644); err != nil {
+	if err := os.WriteFile(rulesPath, []byte(rulesContent), 0o600); err != nil { //nolint:gosec // test file
 		t.Fatalf("Failed to write rules file: %v", err)
 	}
 
 	// Create a dummy cold context file with small content
 	coldContextPath := filepath.Join(groveDir, "cached-context")
-	if err := os.WriteFile(coldContextPath, []byte("test content"), 0644); err != nil {
+	if err := os.WriteFile(coldContextPath, []byte("test content"), 0o600); err != nil { //nolint:gosec // test file
 		t.Fatalf("Failed to write cold context file: %v", err)
 	}
 
@@ -165,7 +165,7 @@ func TestCacheManager_CachingDisabledByDefault(t *testing.T) {
 	// Without @enable-cache, GetOrCreateCache should not be called
 	// in the actual request flow, but if it is called, it should
 	// still work (the gating happens in request.go)
-	
+
 	// Mock client (would need a proper mock in real implementation)
 	var mockClient *Client
 
@@ -187,7 +187,7 @@ func TestCacheManager_CachingDisabledByDefault(t *testing.T) {
 	if cacheInfo != nil {
 		t.Errorf("Expected nil cache info for small content, got: %+v", cacheInfo)
 	}
-	
+
 	// Error is expected to be nil (not an error, just no cache created)
 	if err != nil {
 		t.Errorf("Expected no error for small content, got: %v", err)

@@ -20,32 +20,32 @@ func GetContextInfo(workDir string) *Info {
 	info := &Info{
 		WorkingDir: workDir,
 	}
-	
+
 	// If workDir is empty, use current directory
 	if workDir == "" {
 		if cwd, err := os.Getwd(); err == nil {
 			info.WorkingDir = cwd
 		}
 	}
-	
+
 	// Get Git information
 	if info.WorkingDir != "" {
 		// Get remote URL (repo)
 		if output, err := runGitCommand(info.WorkingDir, "remote", "get-url", "origin"); err == nil {
 			info.GitRepo = cleanGitURL(strings.TrimSpace(output))
 		}
-		
+
 		// Get current branch
 		if output, err := runGitCommand(info.WorkingDir, "branch", "--show-current"); err == nil {
 			info.GitBranch = strings.TrimSpace(output)
 		}
-		
+
 		// Get current commit hash (short)
 		if output, err := runGitCommand(info.WorkingDir, "rev-parse", "--short", "HEAD"); err == nil {
 			info.GitCommit = strings.TrimSpace(output)
 		}
 	}
-	
+
 	return info
 }
 
@@ -61,7 +61,7 @@ func runGitCommand(dir string, args ...string) (string, error) {
 func cleanGitURL(url string) string {
 	// Remove .git suffix
 	url = strings.TrimSuffix(url, ".git")
-	
+
 	// Handle SSH URLs (git@github.com:user/repo)
 	if strings.HasPrefix(url, "git@") {
 		parts := strings.Split(url, ":")
@@ -70,7 +70,7 @@ func cleanGitURL(url string) string {
 			return host + "/" + parts[1]
 		}
 	}
-	
+
 	// Handle HTTPS URLs
 	if strings.HasPrefix(url, "https://") {
 		url = strings.TrimPrefix(url, "https://")
@@ -79,7 +79,7 @@ func cleanGitURL(url string) string {
 			url = url[atIndex+1:]
 		}
 	}
-	
+
 	return url
 }
 
@@ -91,13 +91,13 @@ func GetCaller() string {
 		if baseName == "grove" || strings.HasPrefix(baseName, "grove-") {
 			return baseName
 		}
-		
+
 		// Check parent process name if possible
 		// This is platform-specific and would need different implementations
-		
+
 		// Default to the executable name
 		return baseName
 	}
-	
+
 	return "unknown"
 }

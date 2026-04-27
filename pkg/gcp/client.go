@@ -3,9 +3,9 @@ package gcp
 import (
 	"context"
 
-	monitoring "cloud.google.com/go/monitoring/apiv3/v2"
 	"cloud.google.com/go/bigquery"
 	"cloud.google.com/go/logging/logadmin"
+	monitoring "cloud.google.com/go/monitoring/apiv3/v2"
 )
 
 // NewMonitoringClient creates a new Cloud Monitoring client

@@ -7,8 +7,8 @@ import (
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/table"
-	"github.com/charmbracelet/lipgloss"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/grovetools/core/config"
 	"github.com/grovetools/core/tui/components/help"
 	"github.com/grovetools/core/tui/keymap"
@@ -64,20 +64,20 @@ func (k dashboardKeyMap) Sections() []keymap.Section {
 
 // dashboardModel for the billing dashboard TUI
 type dashboardModel struct {
-	isLoading      bool
-	projectID      string
-	datasetID      string
-	tableID        string
-	timeFrame      time.Duration
-	timeOffset     int // Number of periods back from now (0 = current period)
-	billingData    *analytics.BillingData
-	table          table.Model
-	plot           StackedPlotModel
-	keys           dashboardKeyMap
-	help           help.Model
-	err            error
-	width          int
-	height         int
+	isLoading   bool
+	projectID   string
+	datasetID   string
+	tableID     string
+	timeFrame   time.Duration
+	timeOffset  int // Number of periods back from now (0 = current period)
+	billingData *analytics.BillingData
+	table       table.Model
+	plot        StackedPlotModel
+	keys        dashboardKeyMap
+	help        help.Model
+	err         error
+	width       int
+	height      int
 }
 
 // Message for when billing data is loaded
@@ -256,9 +256,9 @@ func (m dashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.plot.Width = m.width
 
 		// Calculate heights - 50% for table, rest for plot
-		titleHeight := 1    // "GCP Billing Dashboard"
-		summaryHeight := 1  // Single line summary
-		footerHeight := 1   // Help footer
+		titleHeight := 1   // "GCP Billing Dashboard"
+		summaryHeight := 1 // Single line summary
+		footerHeight := 1  // Help footer
 
 		availableHeight := m.height - titleHeight - summaryHeight - footerHeight - 2
 		plotHeight := availableHeight / 2

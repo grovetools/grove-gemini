@@ -50,7 +50,7 @@ func FetchBillingData(ctx context.Context, projectID, datasetID, tableID string,
 	if err != nil {
 		return nil, fmt.Errorf("failed to create BigQuery client: %w", err)
 	}
-	defer client.Close()
+	defer func() { _ = client.Close() }()
 
 	// Query for daily aggregated data
 	query := fmt.Sprintf(`
@@ -95,7 +95,7 @@ func FetchBillingData(ctx context.Context, projectID, datasetID, tableID string,
 		}
 
 		// Convert civil.Date to time.Time
-		date := time.Date(row.Date.Year, time.Month(row.Date.Month), row.Date.Day, 0, 0, 0, 0, time.UTC)
+		date := time.Date(row.Date.Year, row.Date.Month, row.Date.Day, 0, 0, 0, 0, time.UTC)
 		dateKey := row.Date.String() // Use string representation as map key
 
 		// Aggregate by day
@@ -129,7 +129,7 @@ func FetchBillingData(ctx context.Context, projectID, datasetID, tableID string,
 	}
 
 	// Convert maps to slices
-	var dailySummaries []DailyBillingSummary
+	dailySummaries := make([]DailyBillingSummary, 0, len(dailyMap))
 	for _, summary := range dailyMap {
 		dailySummaries = append(dailySummaries, *summary)
 	}
@@ -178,7 +178,7 @@ func FetchBillingData(ctx context.Context, projectID, datasetID, tableID string,
 	}
 
 	// Calculate SKU percentages and convert to slice
-	var skuBreakdown []SKUCostBreakdown
+	skuBreakdown := make([]SKUCostBreakdown, 0, len(skuTotals))
 	for _, sku := range skuTotals {
 		if totalCost > 0 {
 			sku.Percentage = (sku.TotalCost / totalCost) * 100

@@ -55,10 +55,10 @@ To set up billing export:
 
 	// Only mark as required if no defaults are available
 	if defaultDataset == "" {
-		cmd.MarkFlagRequired("dataset-id")
+		_ = cmd.MarkFlagRequired("dataset-id")
 	}
 	if defaultTable == "" {
-		cmd.MarkFlagRequired("table-id")
+		_ = cmd.MarkFlagRequired("table-id")
 	}
 
 	return cmd
@@ -90,7 +90,7 @@ func runQueryBilling(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create BigQuery client: %w", err)
 	}
-	defer client.Close()
+	defer func() { _ = client.Close() }()
 
 	ulog.Info("Fetching billing data").
 		Field("project_id", billingProjectID).

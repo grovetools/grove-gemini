@@ -10,7 +10,7 @@ import (
 
 func TestNewCacheManager(t *testing.T) {
 	tmpDir := t.TempDir()
-	
+
 	cm := NewCacheManager(tmpDir)
 	if cm == nil {
 		t.Fatal("Expected CacheManager to be created")
@@ -28,7 +28,7 @@ func TestCacheInfo_Structure(t *testing.T) {
 	// Test that CacheInfo can be properly created and serialized
 	now := time.Now()
 	expires := now.Add(24 * time.Hour)
-	
+
 	info := CacheInfo{
 		CacheID:   "test-cache-id",
 		CacheName: "test-cache-name",
@@ -40,7 +40,7 @@ func TestCacheInfo_Structure(t *testing.T) {
 		CreatedAt: now,
 		ExpiresAt: expires,
 	}
-	
+
 	// Verify fields are set correctly
 	if info.CacheID != "test-cache-id" {
 		t.Errorf("Expected CacheID to be test-cache-id, got %s", info.CacheID)
@@ -56,11 +56,11 @@ func TestCacheInfo_Structure(t *testing.T) {
 func TestGetOrCreateCache_WithoutColdContext(t *testing.T) {
 	tmpDir := t.TempDir()
 	cm := NewCacheManager(tmpDir)
-	
+
 	// Test with non-existent cold context file
 	ctx := context.Background()
 	nonExistentFile := filepath.Join(tmpDir, "non-existent.txt")
-	
+
 	// This should return nil without error (no cache to use)
 	cacheInfo, _, err := cm.GetOrCreateCache(ctx, nil, "gemini-pro", nonExistentFile, 24*time.Hour, false, false, false, true)
 	if err != nil {
@@ -74,16 +74,16 @@ func TestGetOrCreateCache_WithoutColdContext(t *testing.T) {
 func TestGetOrCreateCache_SmallFile(t *testing.T) {
 	tmpDir := t.TempDir()
 	cm := NewCacheManager(tmpDir)
-	
+
 	// Create a small file (less than 4096 estimated tokens)
 	smallFile := filepath.Join(tmpDir, "small.txt")
 	smallContent := "This is a small file with very little content."
-	if err := os.WriteFile(smallFile, []byte(smallContent), 0644); err != nil {
+	if err := os.WriteFile(smallFile, []byte(smallContent), 0o600); err != nil { //nolint:gosec // test file
 		t.Fatalf("Failed to create test file: %v", err)
 	}
-	
+
 	ctx := context.Background()
-	
+
 	// This should return nil (file too small for caching)
 	cacheInfo, _, err := cm.GetOrCreateCache(ctx, nil, "gemini-pro", smallFile, 24*time.Hour, false, false, false, true)
 	if err != nil {

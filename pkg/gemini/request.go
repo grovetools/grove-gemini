@@ -9,25 +9,25 @@ import (
 	"strings"
 	"time"
 
-	grovecontext "github.com/grovetools/cx/pkg/context"
 	"github.com/grovetools/core/tui/theme"
+	grovecontext "github.com/grovetools/cx/pkg/context"
 	"github.com/grovetools/grove-gemini/pkg/pretty"
 )
 
 // RequestOptions contains all the parameters for a request
 type RequestOptions struct {
-	Model           string
-	Prompt          string
-	PromptFiles     []string // Paths to files containing prompts (for display purposes)
-	WorkDir         string
-	CacheTTL        time.Duration
-	NoCache         bool
-	RegenerateCtx   bool
-	Recache         bool
-	UseCache        string
-	ContextFiles    []string
+	Model            string
+	Prompt           string
+	PromptFiles      []string // Paths to files containing prompts (for display purposes)
+	WorkDir          string
+	CacheTTL         time.Duration
+	NoCache          bool
+	RegenerateCtx    bool
+	Recache          bool
+	UseCache         string
+	ContextFiles     []string
 	SkipConfirmation bool
-	APIKey          string // Explicitly pass API key to avoid context issues
+	APIKey           string // Explicitly pass API key to avoid context issues
 	// New fields for better logging context
 	Caller   string
 	JobID    string
@@ -58,7 +58,7 @@ func (r *RequestRunner) Run(ctx context.Context, options RequestOptions) (string
 	if options.Prompt == "" {
 		return "", fmt.Errorf("prompt cannot be empty")
 	}
-	
+
 	// Validate cache flags
 	if options.UseCache != "" && options.Recache {
 		return "", fmt.Errorf("UseCache and Recache are mutually exclusive")
@@ -121,7 +121,7 @@ func (r *RequestRunner) Run(ctx context.Context, options RequestOptions) (string
 			r.logger.FoundRulesFileCtx(ctx, rulesPath)
 
 			// Log the rules file content
-			rulesContent, err := os.ReadFile(rulesPath)
+			rulesContent, err := os.ReadFile(rulesPath) //nolint:gosec // rulesPath is from trusted project config
 			if err == nil {
 				r.logger.RulesFileContent(strings.TrimSpace(string(rulesContent)))
 			}
@@ -132,7 +132,7 @@ func (r *RequestRunner) Run(ctx context.Context, options RequestOptions) (string
 
 	// Initialize context manager (ctxMgr already created above for path resolution)
 	if hasRules {
-		
+
 		needsRegeneration := options.RegenerateCtx
 		if !needsRegeneration {
 			// Check if context files exist
@@ -200,7 +200,7 @@ func (r *RequestRunner) Run(ctx context.Context, options RequestOptions) (string
 	// Check for @enable-cache directive in rules file (opt-in model)
 	cachingEnabled := false
 	if hasRules && !options.NoCache {
-		rulesContent, err := os.ReadFile(rulesPath)
+		rulesContent, err := os.ReadFile(rulesPath) //nolint:gosec // rulesPath is from trusted project config
 		if err == nil {
 			// Parse rules line by line to find non-commented @enable-cache directive
 			scanner := bufio.NewScanner(strings.NewReader(string(rulesContent)))
@@ -219,7 +219,7 @@ func (r *RequestRunner) Run(ctx context.Context, options RequestOptions) (string
 			}
 		}
 	}
-	
+
 	// Get cache directives from context manager if available
 	var ignoreChanges, disableExpiration bool
 	if ctxMgr != nil && cachingEnabled {
@@ -277,13 +277,13 @@ func (r *RequestRunner) Run(ctx context.Context, options RequestOptions) (string
 	}
 
 	// Prepare dynamic files
-	var dynamicFiles []string
-	
+	var dynamicFiles []string //nolint:prealloc // conditionally appended
+
 	// Add hot context if it exists
 	if _, err := os.Stat(hotContextFile); err == nil {
 		dynamicFiles = append(dynamicFiles, hotContextFile)
 	}
-	
+
 	// If caching is not enabled, also include cold context as dynamic file
 	if !cachingEnabled && cacheInfo == nil {
 		if _, err := os.Stat(coldContextFile); err == nil {
@@ -320,25 +320,25 @@ func (r *RequestRunner) Run(ctx context.Context, options RequestOptions) (string
 
 	// Make the API request
 	r.logger.ModelCtx(ctx, options.Model)
-	
+
 	caller := "grove-gemini-request" // Default caller
 	if options.Caller != "" {
 		caller = options.Caller
 	}
-	
+
 	opts := &GenerateContentOptions{
-		WorkingDir: workDir,
-		Caller:     caller,
-		IsNewCache: isNewCache,
-		PromptFiles: options.PromptFiles,
-		JobID:       options.JobID,
-		PlanName:    options.PlanName,
+		WorkingDir:      workDir,
+		Caller:          caller,
+		IsNewCache:      isNewCache,
+		PromptFiles:     options.PromptFiles,
+		JobID:           options.JobID,
+		PlanName:        options.PlanName,
 		Temperature:     options.Temperature,
 		TopP:            options.TopP,
 		TopK:            options.TopK,
 		MaxOutputTokens: options.MaxOutputTokens,
 	}
-	
+
 	response, err := geminiClient.GenerateContentWithCacheAndOptions(ctx, options.Model, options.Prompt, cacheID, dynamicFiles, opts)
 	if err != nil {
 		return "", fmt.Errorf("Gemini API request failed: %w", err)

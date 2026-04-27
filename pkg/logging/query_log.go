@@ -16,26 +16,26 @@ import (
 type QueryLog struct {
 	Timestamp        time.Time `json:"timestamp"`
 	RequestID        string    `json:"request_id,omitempty"`
-	Model           string    `json:"model"`
-	Method          string    `json:"method,omitempty"`
-	CachedTokens    int32     `json:"cached_tokens"`
-	PromptTokens    int32     `json:"prompt_tokens"`
+	Model            string    `json:"model"`
+	Method           string    `json:"method,omitempty"`
+	CachedTokens     int32     `json:"cached_tokens"`
+	PromptTokens     int32     `json:"prompt_tokens"`
 	UserPromptTokens int32     `json:"user_prompt_tokens,omitempty"` // Tokens from user's text prompt only
 	CompletionTokens int32     `json:"completion_tokens"`
-	TotalTokens     int32     `json:"total_tokens"`
-	CacheHitRate    float64   `json:"cache_hit_rate"`
-	ResponseTime    float64   `json:"response_time_seconds"`
-	EstimatedCost   float64   `json:"estimated_cost_usd"`
-	Error           string    `json:"error,omitempty"`
-	CacheID         string    `json:"cache_id,omitempty"`
-	Success         bool      `json:"success"`
+	TotalTokens      int32     `json:"total_tokens"`
+	CacheHitRate     float64   `json:"cache_hit_rate"`
+	ResponseTime     float64   `json:"response_time_seconds"`
+	EstimatedCost    float64   `json:"estimated_cost_usd"`
+	Error            string    `json:"error,omitempty"`
+	CacheID          string    `json:"cache_id,omitempty"`
+	Success          bool      `json:"success"`
 
 	// Context information
-	WorkingDir      string `json:"working_dir,omitempty"`
-	GitRepo         string `json:"git_repo,omitempty"`
-	GitBranch       string `json:"git_branch,omitempty"`
-	GitCommit       string `json:"git_commit,omitempty"`
-	Caller          string `json:"caller,omitempty"` // e.g., "grove-flow", "grove-gemini-request", "grove-gemini-count-tokens"
+	WorkingDir string `json:"working_dir,omitempty"`
+	GitRepo    string `json:"git_repo,omitempty"`
+	GitBranch  string `json:"git_branch,omitempty"`
+	GitCommit  string `json:"git_commit,omitempty"`
+	Caller     string `json:"caller,omitempty"` // e.g., "grove-flow", "grove-gemini-request", "grove-gemini-count-tokens"
 }
 
 // QueryLogger handles logging of API queries
@@ -47,7 +47,7 @@ type QueryLogger struct {
 
 var (
 	defaultLogger *QueryLogger
-	once         sync.Once
+	once          sync.Once
 )
 
 // GetLogger returns the singleton query logger instance
@@ -74,7 +74,7 @@ func getLogPath() (string, error) {
 	}
 
 	groveDir := filepath.Join(stateDir, "logs", "gemini")
-	if err := os.MkdirAll(groveDir, 0755); err != nil {
+	if err := os.MkdirAll(groveDir, 0o750); err != nil { //nolint:gosec // grove state directory
 		return "", err
 	}
 
@@ -88,23 +88,23 @@ func (ql *QueryLogger) Log(entry QueryLog) error {
 	if ql.disabled {
 		return nil
 	}
-	
+
 	ql.mu.Lock()
 	defer ql.mu.Unlock()
-	
+
 	// Open file in append mode
-	file, err := os.OpenFile(ql.logFile, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+	file, err := os.OpenFile(ql.logFile, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644) //nolint:gosec // log files need to be readable
 	if err != nil {
 		return fmt.Errorf("failed to open log file: %w", err)
 	}
-	defer file.Close()
-	
+	defer func() { _ = file.Close() }()
+
 	// Write as JSON Lines format (one JSON object per line)
 	encoder := json.NewEncoder(file)
 	if err := encoder.Encode(entry); err != nil {
 		return fmt.Errorf("failed to write log entry: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -113,43 +113,43 @@ func (ql *QueryLogger) ReadLogs(startTime, endTime time.Time) ([]QueryLog, error
 	if ql.disabled {
 		return nil, fmt.Errorf("logging is disabled")
 	}
-	
+
 	ql.mu.Lock()
 	defer ql.mu.Unlock()
-	
+
 	var allLogs []QueryLog
-	
+
 	// Check multiple days if time range spans multiple days
 	// Use date.Before(endTime.AddDate(0, 0, 1)) to include the end date
 	for date := startTime; date.Before(endTime.AddDate(0, 0, 1)); date = date.AddDate(0, 0, 1) {
 		dayStr := date.Format("2006-01-02")
 		logFile := filepath.Join(filepath.Dir(ql.logFile), fmt.Sprintf("query-log-%s.jsonl", dayStr))
-		
+
 		if _, err := os.Stat(logFile); os.IsNotExist(err) {
 			continue
 		}
-		
-		file, err := os.Open(logFile)
+
+		file, err := os.Open(logFile) //nolint:gosec // logFile is constructed from trusted path components
 		if err != nil {
 			continue
 		}
-		
+
 		decoder := json.NewDecoder(file)
 		for decoder.More() {
 			var entry QueryLog
 			if err := decoder.Decode(&entry); err != nil {
 				continue
 			}
-			
+
 			// Filter by time range (inclusive)
 			if !entry.Timestamp.Before(startTime) && !entry.Timestamp.After(endTime) {
 				allLogs = append(allLogs, entry)
 			}
 		}
-		
-		file.Close()
+
+		_ = file.Close()
 	}
-	
+
 	return allLogs, nil
 }
 
@@ -231,7 +231,7 @@ func EstimateCostWithCache(model string, promptTokens, completionTokens, cachedT
 
 	// Legacy patterns for backward compatibility
 	case contains(modelLower, "flash"):
-		inputPrice = 0.10   // Default to 2.0 flash pricing
+		inputPrice = 0.10 // Default to 2.0 flash pricing
 		outputPrice = 0.40
 	case contains(modelLower, "pro"):
 		// Default to short context pricing for Pro

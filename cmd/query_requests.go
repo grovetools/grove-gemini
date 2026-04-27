@@ -23,10 +23,10 @@ func newQueryRequestsCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "requests",
 		Short: "Query individual Gemini API requests from local logs",
-		Long:  `Displays a table of individual Gemini API requests with details like timestamp, method, tokens, latency, and status.
+		Long: `Displays a table of individual Gemini API requests with details like timestamp, method, tokens, latency, and status.
 
 This command reads from local logs since Google doesn't publish individual Gemini API requests to Cloud Logging.`,
-		RunE:  runQueryRequests,
+		RunE: runQueryRequests,
 	}
 
 	cmd.Flags().IntVarP(&requestsHours, "hours", "H", 1, "Number of hours to look back")
@@ -65,36 +65,36 @@ func runQueryRequests(cmd *cobra.Command, args []string) error {
 			Log(ctx)
 		return nil
 	}
-	
+
 	// Filter logs
-	var filteredLogs []logging.QueryLog
+	filteredLogs := make([]logging.QueryLog, 0, len(logs))
 	for _, log := range logs {
 		// Filter by model if specified
 		if requestsModel != "" && !strings.Contains(strings.ToLower(log.Model), strings.ToLower(requestsModel)) {
 			continue
 		}
-		
+
 		// Filter by errors if specified
 		if requestsErrors && log.Success {
 			continue
 		}
-		
+
 		filteredLogs = append(filteredLogs, log)
 	}
-	
+
 	// Sort by timestamp (newest first)
 	sort.Slice(filteredLogs, func(i, j int) bool {
 		return filteredLogs[i].Timestamp.After(filteredLogs[j].Timestamp)
 	})
-	
+
 	// Limit results
 	if len(filteredLogs) > requestsLimit {
 		filteredLogs = filteredLogs[:requestsLimit]
 	}
-	
+
 	// Display table
 	displayRequestsTable(filteredLogs)
-	
+
 	return nil
 }
 
@@ -113,7 +113,7 @@ func displayRequestsTable(logs []logging.QueryLog) {
 	// Rows
 	for _, log := range logs {
 		timestamp := log.Timestamp.Format("01-02 15:04:05.000")
-		
+
 		// Shorten model name
 		model := log.Model
 		if len(model) > 15 {
@@ -122,7 +122,7 @@ func displayRequestsTable(logs []logging.QueryLog) {
 				model = parts[1] + "-" + parts[2] // e.g., "2.0-flash"
 			}
 		}
-		
+
 		method := log.Method
 		if method == "" {
 			method = "Generate"
@@ -130,7 +130,7 @@ func displayRequestsTable(logs []logging.QueryLog) {
 		if len(method) > 8 {
 			method = method[:8]
 		}
-		
+
 		status := theme.IconSuccess
 		if !log.Success {
 			status = theme.IconError
@@ -138,7 +138,7 @@ func displayRequestsTable(logs []logging.QueryLog) {
 				status = theme.IconError + " " + log.Error[:17] + "..."
 			}
 		}
-		
+
 		// Format repo/branch info
 		repoInfo := "-"
 		if log.GitRepo != "" {
@@ -153,15 +153,15 @@ func displayRequestsTable(logs []logging.QueryLog) {
 			if len(repoName) > 20 {
 				repoName = repoName[:18] + ".."
 			}
-			
+
 			branch := log.GitBranch
 			if len(branch) > 8 {
 				branch = branch[:6] + ".."
 			}
-			
+
 			repoInfo = fmt.Sprintf("%s/%s", repoName, branch)
 		}
-		
+
 		caller := log.Caller
 		if caller == "" {
 			caller = "-"

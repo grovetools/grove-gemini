@@ -24,24 +24,24 @@ func APIKeyConfigScenario() *harness.Scenario {
 
 				// Ensure no API key is set
 				oldKey := os.Getenv("GEMINI_API_KEY")
-				os.Unsetenv("GEMINI_API_KEY")
+				_ = os.Unsetenv("GEMINI_API_KEY")
 				defer func() {
 					if oldKey != "" {
-						os.Setenv("GEMINI_API_KEY", oldKey)
+						_ = os.Setenv("GEMINI_API_KEY", oldKey)
 					}
 				}()
 
 				// Ensure tests don't pick up global config by setting HOME to temp dir
 				oldHome := os.Getenv("HOME")
-				os.Setenv("HOME", ctx.RootDir)
+				_ = os.Setenv("HOME", ctx.RootDir)
 				oldXDGConfig := os.Getenv("XDG_CONFIG_HOME")
-				os.Setenv("XDG_CONFIG_HOME", filepath.Join(ctx.RootDir, ".config"))
+				_ = os.Setenv("XDG_CONFIG_HOME", filepath.Join(ctx.RootDir, ".config"))
 				defer func() {
-					os.Setenv("HOME", oldHome)
+					_ = os.Setenv("HOME", oldHome)
 					if oldXDGConfig != "" {
-						os.Setenv("XDG_CONFIG_HOME", oldXDGConfig)
+						_ = os.Setenv("XDG_CONFIG_HOME", oldXDGConfig)
 					} else {
-						os.Unsetenv("XDG_CONFIG_HOME")
+						_ = os.Unsetenv("XDG_CONFIG_HOME")
 					}
 				}()
 
@@ -73,8 +73,8 @@ func APIKeyConfigScenario() *harness.Scenario {
 				}
 
 				// Set a test API key (invalid but should be accepted)
-				os.Setenv("GEMINI_API_KEY", "test-key-from-env")
-				defer os.Unsetenv("GEMINI_API_KEY")
+				_ = os.Setenv("GEMINI_API_KEY", "test-key-from-env")
+				defer func() { _ = os.Unsetenv("GEMINI_API_KEY") }()
 
 				// Run a command that requires the API key
 				// Note: count-tokens doesn't require auth, so we use request instead
@@ -102,10 +102,10 @@ func APIKeyConfigScenario() *harness.Scenario {
 
 				// Ensure no env var is set
 				oldKey := os.Getenv("GEMINI_API_KEY")
-				os.Unsetenv("GEMINI_API_KEY")
+				_ = os.Unsetenv("GEMINI_API_KEY")
 				defer func() {
 					if oldKey != "" {
-						os.Setenv("GEMINI_API_KEY", oldKey)
+						_ = os.Setenv("GEMINI_API_KEY", oldKey)
 					}
 				}()
 
@@ -117,7 +117,7 @@ gemini:
   api_key_command: "echo test-key-from-command"
 `
 				groveYmlPath := filepath.Join(ctx.RootDir, "grove.yml")
-				if err := os.WriteFile(groveYmlPath, []byte(groveYml), 0644); err != nil {
+				if err := os.WriteFile(groveYmlPath, []byte(groveYml), 0o600); err != nil { //nolint:gosec // test config file
 					return fmt.Errorf("failed to write grove.yml: %w", err)
 				}
 
@@ -147,10 +147,10 @@ gemini:
 
 				// Ensure no env var is set
 				oldKey := os.Getenv("GEMINI_API_KEY")
-				os.Unsetenv("GEMINI_API_KEY")
+				_ = os.Unsetenv("GEMINI_API_KEY")
 				defer func() {
 					if oldKey != "" {
-						os.Setenv("GEMINI_API_KEY", oldKey)
+						_ = os.Setenv("GEMINI_API_KEY", oldKey)
 					}
 				}()
 
@@ -163,7 +163,7 @@ gemini:
   api_key: "INVALID_KEY_FORMAT_12345"
 `
 				groveYmlPath := filepath.Join(ctx.RootDir, "grove.yml")
-				if err := os.WriteFile(groveYmlPath, []byte(groveYml), 0644); err != nil {
+				if err := os.WriteFile(groveYmlPath, []byte(groveYml), 0o600); err != nil { //nolint:gosec // test config file
 					return fmt.Errorf("failed to write grove.yml: %w", err)
 				}
 
@@ -193,8 +193,8 @@ gemini:
 				}
 
 				// Set env var
-				os.Setenv("GEMINI_API_KEY", "key-from-env-precedence")
-				defer os.Unsetenv("GEMINI_API_KEY")
+				_ = os.Setenv("GEMINI_API_KEY", "key-from-env-precedence")
+				defer func() { _ = os.Unsetenv("GEMINI_API_KEY") }()
 
 				// Create a grove.yml with different keys
 				groveYml := `name: test-project
@@ -205,7 +205,7 @@ gemini:
   api_key_command: "echo key-from-command-should-be-ignored"
 `
 				groveYmlPath := filepath.Join(ctx.RootDir, "grove.yml")
-				if err := os.WriteFile(groveYmlPath, []byte(groveYml), 0644); err != nil {
+				if err := os.WriteFile(groveYmlPath, []byte(groveYml), 0o600); err != nil { //nolint:gosec // test config file
 					return fmt.Errorf("failed to write grove.yml: %w", err)
 				}
 

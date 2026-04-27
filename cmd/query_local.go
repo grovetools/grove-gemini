@@ -65,7 +65,7 @@ func runQueryLocal(cmd *cobra.Command, args []string) error {
 	}
 
 	// Filter logs
-	var filteredLogs []logging.QueryLog
+	filteredLogs := make([]logging.QueryLog, 0, len(logs))
 	for _, log := range logs {
 		// Filter by model if specified
 		if localModel != "" && !strings.Contains(strings.ToLower(log.Model), strings.ToLower(localModel)) {
@@ -121,7 +121,6 @@ func displayLocalLogsTable(ctx context.Context, logs []logging.QueryLog) {
 				model = parts[1] + "-" + parts[2] // e.g., "2.0-flash"
 			}
 		}
-
 
 		cachedStr := "-"
 		if log.CachedTokens > 0 {
@@ -251,7 +250,7 @@ func displaySummary(ctx context.Context, logs []logging.QueryLog) {
 		// Calculate cache savings
 		avgCacheRate := float64(totalCachedTokens) / float64(totalPromptTokens+totalCachedTokens)
 		savedTokens := float64(totalCachedTokens) * 0.75 // 75% discount on cached tokens
-		savedCost := savedTokens / 1_000_000 * 0.075 // Assuming flash input pricing
+		savedCost := savedTokens / 1_000_000 * 0.075     // Assuming flash input pricing
 		output.WriteString(fmt.Sprintf("Cache Savings: ~$%.6f (%.1f%% avg cache rate)\n", savedCost, avgCacheRate*100))
 	}
 
