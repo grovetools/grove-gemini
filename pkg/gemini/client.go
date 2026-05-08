@@ -62,6 +62,9 @@ type GenerateContentOptions struct {
 	TopP            *float32
 	TopK            *int32
 	MaxOutputTokens *int32
+	// Structured output parameters
+	ResponseMIMEType string
+	ResponseSchema   *genai.Schema
 }
 
 // GenerateContentWithCache generates content using a cached context and dynamic files
@@ -229,6 +232,12 @@ func (c *Client) GenerateContentWithCacheAndOptions(ctx context.Context, model s
 		}
 		if opts.MaxOutputTokens != nil {
 			config.MaxOutputTokens = *opts.MaxOutputTokens
+		}
+		if opts.ResponseMIMEType != "" {
+			config.ResponseMIMEType = opts.ResponseMIMEType
+		}
+		if opts.ResponseSchema != nil {
+			config.ResponseSchema = opts.ResponseSchema
 		}
 	}
 
