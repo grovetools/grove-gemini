@@ -52,7 +52,7 @@ Examples:
   grove-gemini request -f prompt.md
 
   # With specific model and output file
-  grove-gemini request -m gemini-2.0-flash -f prompt.md -o response.md
+  grove-gemini request -m gemini-2.5-flash -f prompt.md -o response.md
 
   # Regenerate context before request
   grove-gemini request --regenerate -p "Review the codebase architecture"
@@ -68,7 +68,7 @@ Examples:
 		RunE: runRequest,
 	}
 
-	cmd.Flags().StringVarP(&requestModel, "model", "m", "gemini-2.0-flash", "Gemini model to use")
+	cmd.Flags().StringVarP(&requestModel, "model", "m", "gemini-2.5-flash", "Gemini model to use")
 	cmd.Flags().StringVarP(&requestPrompt, "prompt", "p", "", "Prompt text")
 	cmd.Flags().StringVarP(&requestPromptFile, "file", "f", "", "Read prompt from file")
 	cmd.Flags().StringVarP(&requestWorkDir, "workdir", "w", "", "Working directory (defaults to current)")
