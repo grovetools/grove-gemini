@@ -33,7 +33,7 @@ This is useful for:
 		RunE: runCountTokens,
 	}
 
-	cmd.Flags().StringVarP(&countTokensModel, "model", "m", "gemini-1.5-flash-latest", "Model to use for token counting")
+	cmd.Flags().StringVarP(&countTokensModel, "model", "m", "gemini-2.5-flash", "Model to use for token counting")
 
 	return cmd
 }
