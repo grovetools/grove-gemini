@@ -28,6 +28,16 @@ type RequestOptions struct {
 	ContextFiles     []string
 	SkipConfirmation bool
 	APIKey           string // Explicitly pass API key to avoid context issues
+	// HotContextFile / ColdContextFile pin the generated/cached context to
+	// explicit absolute paths instead of resolving them from WorkDir. grove-
+	// flow sets these to per-job paths (under <plan>/.artifacts/<job-id>/) so
+	// that concurrently dispatched jobs in one plan upload their OWN context
+	// rather than racing on the shared plan-scoped files. When either is set,
+	// rules-based regeneration is skipped (flow has already generated the
+	// context). Empty values fall back to WorkDir resolution for direct CLI
+	// callers.
+	HotContextFile  string
+	ColdContextFile string
 	// New fields for better logging context
 	Caller   string
 	JobID    string
@@ -92,6 +102,17 @@ func (r *RequestRunner) Run(ctx context.Context, options RequestOptions) (string
 	hotContextFile := ctxMgr.ResolveContextPath()
 	coldContextFile := ctxMgr.ResolveCachedContextPath()
 
+	// Job-scoped overrides from grove-flow take precedence over WorkDir
+	// resolution. When set, flow has already generated the context, so we use
+	// these explicit paths and skip rules-based regeneration below.
+	explicitContext := options.HotContextFile != "" || options.ColdContextFile != ""
+	if options.HotContextFile != "" {
+		hotContextFile = options.HotContextFile
+	}
+	if options.ColdContextFile != "" {
+		coldContextFile = options.ColdContextFile
+	}
+
 	hasRules := false
 	hasContextFiles := false
 	contextGeneratedFromCustomRules := false
@@ -131,7 +152,10 @@ func (r *RequestRunner) Run(ctx context.Context, options RequestOptions) (string
 	}
 
 	// Initialize context manager (ctxMgr already created above for path resolution)
-	if hasRules {
+	// Skip regeneration entirely when flow supplied job-scoped context paths —
+	// regenerating here would write to WorkDir-resolved (plan-scoped) paths and
+	// reintroduce the cross-job race.
+	if hasRules && !explicitContext {
 
 		needsRegeneration := options.RegenerateCtx
 		if !needsRegeneration {
