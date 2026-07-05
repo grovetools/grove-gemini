@@ -71,15 +71,23 @@ type (
 	tickMsg         time.Time
 )
 
-// cacheKeyMap extends keymap.Base with cache-specific bindings
+// cacheKeyMap extends keymap.Base with cache-specific bindings.
+//
+// Refresh is intentionally NOT redefined here: it is identical to
+// keymap.Base.Refresh (ctrl+r, "refresh"), so m.keys.Refresh resolves to the
+// promoted Base field. Redefining it would duplicate the binding signature.
 type cacheKeyMap struct {
 	keymap.Base
 	Inspect   key.Binding
 	Analytics key.Binding
 	Delete    key.Binding
 	Wipe      key.Binding
-	Refresh   key.Binding
 }
+
+// Compile-time guard: cacheKeyMap must satisfy SectionedKeyMap by value
+// (help.New and CacheKeymapInfo both pass it by value). A near-miss Sections()
+// signature would silently fall back to the promoted Base.Sections().
+var _ keymap.SectionedKeyMap = cacheKeyMap{}
 
 func newCacheKeyMap(cfg *config.Config) cacheKeyMap {
 	km := cacheKeyMap{
@@ -100,24 +108,50 @@ func newCacheKeyMap(cfg *config.Config) cacheKeyMap {
 			key.WithKeys("w"),
 			key.WithHelp("w", "wipe local"),
 		),
-		Refresh: key.NewBinding(
-			key.WithKeys("ctrl+r"),
-			key.WithHelp("ctrl+r", "refresh"),
-		),
 	}
 
 	// Apply TUI-specific overrides from config
 	keymap.ApplyTUIOverrides(cfg, "grove-gemini", "gemini-cache", &km)
 
+	// Disable every promoted Base binding this TUI does not handle, so the
+	// help overlay and the keys registry advertise only real keys. The kept
+	// Base bindings are: Up/Down/PageUp/PageDown (delegated to the table &
+	// viewport), Search (/), Confirm/Cancel/Back (dialog + filter blur),
+	// Refresh (ctrl+r), Help, Quit. Navigation via the bubbles table/viewport
+	// default keymaps handles k/j/up/down and ctrl+u/ctrl+d/pgup/pgdown.
+	for _, b := range []*key.Binding{
+		&km.Base.Left, &km.Base.Right, &km.Base.Home, &km.Base.End, &km.Base.Top, &km.Base.Bottom,
+		&km.Base.Edit, &km.Base.Delete, &km.Base.Yank, &km.Base.Rename, &km.Base.CopyPath,
+		&km.Base.SearchNext, &km.Base.SearchPrev, &km.Base.ClearSearch, &km.Base.Grep,
+		&km.Base.SwitchView, &km.Base.NextTab, &km.Base.PrevTab, &km.Base.FocusNext, &km.Base.FocusPrev, &km.Base.TogglePreview,
+		&km.Base.Tab1, &km.Base.Tab2, &km.Base.Tab3, &km.Base.Tab4, &km.Base.Tab5, &km.Base.Tab6, &km.Base.Tab7, &km.Base.Tab8, &km.Base.Tab9,
+		&km.Base.Select, &km.Base.SelectAll, &km.Base.SelectNone,
+		&km.Base.FoldOpen, &km.Base.FoldClose, &km.Base.FoldToggle, &km.Base.FoldOpenAll, &km.Base.FoldCloseAll,
+	} {
+		b.SetEnabled(false)
+	}
+
 	return km
 }
 
+// Sections scopes the help overlay + registry to only the keys this TUI
+// actually handles (see (*cacheTUIModel).Update). It deliberately does NOT
+// append Base.Sections() — that would leak the full generic Base vocabulary.
 func (k cacheKeyMap) Sections() []keymap.Section {
-	return append(k.Base.Sections(),
+	return []keymap.Section{
+		keymap.NavigationSection(k.Up, k.Down, k.PageUp, k.PageDown),
+		keymap.SearchSection(k.Search),
 		keymap.NewSectionWithIcon("Cache Actions", theme.IconArchive,
 			k.Inspect, k.Analytics, k.Delete, k.Wipe, k.Refresh,
 		),
-	)
+		keymap.ActionsSection(k.Confirm, k.Cancel, k.Back),
+		k.Base.SystemSection(),
+	}
+}
+
+// ShortHelp returns the footer bindings for the mini help view.
+func (k cacheKeyMap) ShortHelp() []key.Binding {
+	return []key.Binding{k.Inspect, k.Search, k.Help, k.Quit}
 }
 
 // getStatusStyle returns the appropriate theme style for a given status
@@ -471,6 +505,10 @@ func (m *cacheTUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case key.Matches(msg, m.keys.Cancel), key.Matches(msg, m.keys.Back):
 				m.confirmingDelete = false
 				return m, nil
+			case msg.String() == "n" || msg.String() == "N":
+				// Modal 'n' dismiss so the printed "(y/n)" prompt is truthful.
+				m.confirmingDelete = false
+				return m, nil
 			}
 		}
 
@@ -483,6 +521,10 @@ func (m *cacheTUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				return m, nil
 			case key.Matches(msg, m.keys.Cancel), key.Matches(msg, m.keys.Back):
+				m.confirmingWipe = false
+				return m, nil
+			case msg.String() == "n" || msg.String() == "N":
+				// Modal 'n' dismiss so the printed "(y/n)" prompt is truthful.
 				m.confirmingWipe = false
 				return m, nil
 			}
