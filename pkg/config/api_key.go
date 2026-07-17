@@ -1,14 +1,23 @@
 package config
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	core_config "github.com/grovetools/core/config"
 	core_errors "github.com/grovetools/core/errors"
 )
+
+// apiKeyCommandTimeout bounds how long api_key_command may run. Offline, the
+// typical command (gcloud) retries for tens of seconds; without this bound a
+// single agent launch stalls the whole critical path. Package-level so tests
+// can override it for a fast deadline-expiry check.
+var apiKeyCommandTimeout = 10 * time.Second
 
 //go:generate sh -c "cd ../.. && go run ./tools/schema-generator/"
 
@@ -52,16 +61,7 @@ func ResolveAPIKey() (string, error) {
 
 	// Second priority: Command execution
 	if geminiCfg.APIKeyCommand != "" {
-		cmd := exec.Command("sh", "-c", geminiCfg.APIKeyCommand) //nolint:gosec // command comes from trusted grove.yml config
-		output, err := cmd.Output()
-		if err != nil {
-			return "", fmt.Errorf("failed to execute api_key_command '%s': %w", geminiCfg.APIKeyCommand, err)
-		}
-		apiKey := strings.TrimSpace(string(output))
-		if apiKey == "" {
-			return "", fmt.Errorf("api_key_command '%s' returned empty output", geminiCfg.APIKeyCommand)
-		}
-		return apiKey, nil
+		return runAPIKeyCommand(geminiCfg.APIKeyCommand)
 	}
 
 	// Third priority: Direct API key
@@ -74,4 +74,28 @@ func ResolveAPIKey() (string, error) {
 		"  1. Set GEMINI_API_KEY environment variable\n" +
 		"  2. Add 'gemini.api_key_command' to grove.yml\n" +
 		"  3. Add 'gemini.api_key' to grove.yml")
+}
+
+// runAPIKeyCommand executes the configured api_key_command under a bounded
+// deadline (apiKeyCommandTimeout) and returns its trimmed output. The deadline
+// prevents an offline secrets command (e.g. gcloud retrying its network calls)
+// from stalling the agent-launch critical path for tens of seconds.
+func runAPIKeyCommand(command string) (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), apiKeyCommandTimeout)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "sh", "-c", command) //nolint:gosec // command comes from trusted grove.yml config
+	output, err := cmd.Output()
+	if err != nil {
+		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+			return "", fmt.Errorf("api_key_command '%s' timed out after %s (network offline?): %w", command, apiKeyCommandTimeout, err)
+		}
+		return "", fmt.Errorf("failed to execute api_key_command '%s': %w", command, err)
+	}
+
+	apiKey := strings.TrimSpace(string(output))
+	if apiKey == "" {
+		return "", fmt.Errorf("api_key_command '%s' returned empty output", command)
+	}
+	return apiKey, nil
 }
