@@ -1,6 +1,6 @@
 module github.com/grovetools/grove-gemini
 
-go 1.24.4
+go 1.25.0
 
 require (
 	cloud.google.com/go v0.121.0
@@ -82,6 +82,7 @@ require (
 	go.opentelemetry.io/otel/metric v1.37.0 // indirect
 	go.opentelemetry.io/otel/trace v1.37.0 // indirect
 	golang.org/x/crypto v0.46.0 // indirect
+	golang.org/x/crypto/x509roots/fallback v0.0.0-20260717224146-ff03dafdb03e
 	golang.org/x/exp v0.0.0-20251023183803-a4bb9ffd2546 // indirect
 	golang.org/x/mod v0.31.0 // indirect
 	golang.org/x/net v0.48.0 // indirect
