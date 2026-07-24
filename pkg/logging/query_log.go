@@ -195,6 +195,29 @@ func EstimateCostWithCache(model string, promptTokens, completionTokens, cachedT
 			outputPrice = 12.00
 		}
 
+	// Gemini 3.6 / 3.5 Flash models (flat pricing, no long-context tier).
+	// The "-lite" variants must be tested before their base family, since
+	// "gemini-3.5-flash-lite" also contains "gemini-3.5-flash".
+	case contains(modelLower, "gemini-3.6-flash"):
+		inputPrice = 1.50
+		outputPrice = 7.50
+	case contains(modelLower, "gemini-3.5-flash") && contains(modelLower, "lite"):
+		inputPrice = 0.30
+		outputPrice = 2.50
+	case contains(modelLower, "gemini-3.5-flash"):
+		inputPrice = 1.50
+		outputPrice = 9.00
+
+	// Gemini 3.1 Flash-Lite
+	case contains(modelLower, "gemini-3.1-flash-lite"):
+		inputPrice = 0.25
+		outputPrice = 1.50
+
+	// Gemini Omni Flash (preview)
+	case contains(modelLower, "gemini-omni-flash"):
+		inputPrice = 1.50
+		outputPrice = 9.00
+
 	// Gemini 3 Flash models
 	case contains(modelLower, "gemini-3-flash"):
 		inputPrice = 0.50

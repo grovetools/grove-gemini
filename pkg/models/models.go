@@ -33,15 +33,63 @@ func Models() []Model {
 			Output:   12.00, // $12.00 <=200k, $18.00 >200k
 			Legacy:   false,
 		},
+		// Gemini 3.6 / 3.5 models (GA)
+		{
+			ID:       "gemini-3.6-flash",
+			Alias:    "",
+			Provider: "Google",
+			Note:     "Latest fast multimodal model",
+			Input:    1.50,
+			Output:   7.50,
+			Legacy:   false,
+		},
+		{
+			ID:       "gemini-3.5-flash",
+			Alias:    "",
+			Provider: "Google",
+			Note:     "Fast multimodal model",
+			Input:    1.50, // global rate; non-global regions bill $1.65
+			Output:   9.00, // global rate; non-global regions bill $9.90
+			Legacy:   false,
+		},
+		{
+			ID:       "gemini-3.5-flash-lite",
+			Alias:    "",
+			Provider: "Google",
+			Note:     "Cost-efficient, high throughput",
+			Input:    0.30, // global rate; non-global regions bill $0.33
+			Output:   2.50, // global rate; non-global regions bill $2.75
+			Legacy:   false,
+		},
+		// Gemini 3.1 models
+		{
+			ID:       "gemini-3.1-flash-lite",
+			Alias:    "",
+			Provider: "Google",
+			Note:     "Cheapest model for high-volume work",
+			Input:    0.25, // global rate; non-global regions bill $0.275
+			Output:   1.50, // global rate; non-global regions bill $1.65
+			Legacy:   false,
+		},
+		// Gemini Omni (preview)
+		{
+			ID:       "gemini-omni-flash-preview",
+			Alias:    "",
+			Provider: "Google",
+			Note:     "Omni-modal fast model with video/audio output",
+			Input:    1.50,
+			Output:   9.00,
+			Legacy:   false,
+		},
 		// Gemini 3 models (preview)
 		{
 			ID:       "gemini-3-pro-preview",
 			Alias:    "",
 			Provider: "Google",
-			Note:     "Most intelligent multimodal and agentic model",
+			Note:     "Gemini 3 Pro preview (superseded by gemini-3.1-pro-preview)",
 			Input:    2.00,  // $2.00 <=200k, $4.00 >200k
 			Output:   12.00, // $12.00 <=200k, $18.00 >200k
-			Legacy:   false,
+			Legacy:   true,
 		},
 		{
 			ID:       "gemini-3-flash-preview",
@@ -81,6 +129,15 @@ func Models() []Model {
 			Legacy:   false,
 		},
 		// Embedding models
+		{
+			ID:       "gemini-embedding-2",
+			Alias:    "",
+			Provider: "Google",
+			Note:     "Latest text/multimodal embedding model",
+			Input:    0.00, // billed per embedding, not per token
+			Output:   0.00,
+			Legacy:   false,
+		},
 		{
 			ID:       "gemini-embedding-001",
 			Alias:    "",
