@@ -41,6 +41,20 @@ func (k queryTuiKeyMap) FullHelp() [][]key.Binding {
 	return append(baseHelp, customKeys)
 }
 
+// Namespaces returns the which-key chord namespaces for the query TUI, built
+// from the NAMED struct fields (never inline) so MakeTUIInfo resolves them back
+// to stable snake_case ConfigKeys and ApplyTUIOverrides rebindings flow through
+// — see core/tui/keymap/namespace.go. Single member: `tm` (canon 60 §4.2).
+//
+// The d/w/m time-frame keys deliberately stay FLAT: gemini-query is a
+// period-browser and those are its subject matter (canon 60 §5.4), recorded as
+// deviations rather than folded into t….
+func (k queryTuiKeyMap) Namespaces() []keymap.Namespace {
+	return []keymap.Namespace{
+		{Prefix: "t", Label: "Toggle", Bindings: []key.Binding{k.ToggleMetric}},
+	}
+}
+
 // Sections returns grouped sections of key bindings for the full help view.
 // Only includes sections that the query TUI actually implements.
 func (k queryTuiKeyMap) Sections() []keymap.Section {
@@ -48,6 +62,7 @@ func (k queryTuiKeyMap) Sections() []keymap.Section {
 	nav := k.Base.NavigationSection()
 	nav.Bindings = []key.Binding{k.Up, k.Down, k.PageUp, k.PageDown, k.Top, k.Bottom}
 
+	ns := k.Namespaces()
 	return []keymap.Section{
 		nav,
 		{
@@ -58,10 +73,8 @@ func (k queryTuiKeyMap) Sections() []keymap.Section {
 			Name:     "Period Navigation",
 			Bindings: []key.Binding{k.PrevPeriod, k.NextPeriod},
 		},
-		{
-			Name:     "Display",
-			Bindings: []key.Binding{k.ToggleMetric},
-		},
+		// Toggle (t…) namespace section (tm), rendered via Namespace.Section().
+		ns[0].Section(),
 		k.Base.SystemSection(),
 	}
 }
@@ -79,9 +92,13 @@ type queryTuiModel struct {
 	plotMetric string // "cost" or "tokens"
 	keys       queryTuiKeyMap
 	help       help.Model
-	err        error
-	width      int
-	height     int
+	// whichKey is the shared chord/which-key mixin (core/tui/keymap): it arms
+	// the t… namespace, runs the popup show-delay, and renders the
+	// bottom-anchored overlay.
+	whichKey keymap.WhichKeyHost
+	err      error
+	width    int
+	height   int
 }
 
 // Message for when logs are loaded
@@ -121,9 +138,12 @@ func newQueryTuiKeyMap(cfg *config.Config) queryTuiKeyMap {
 			key.WithKeys("m"),
 			key.WithHelp("m", "monthly view"),
 		),
+		// canon 60 §4.2 RULE T + §10: flat `t` was a reserved-prefix squatter;
+		// the metric toggle moves into the t… namespace as `tm`. Chord-only
+		// (E4) — no flat alias is retained.
 		ToggleMetric: key.NewBinding(
-			key.WithKeys("t"),
-			key.WithHelp("t", "toggle metric"),
+			key.WithKeys("tm"),
+			key.WithHelp("tm", "toggle metric"),
 		),
 		PrevPeriod: key.NewBinding(
 			key.WithKeys("left", "h"),
@@ -168,6 +188,7 @@ func initialModel() queryTuiModel {
 		table:      tbl,
 		keys:       keys,
 		help:       helpModel,
+		whichKey:   keymap.NewWhichKeyHost(cfg, keys.Namespaces()...),
 	}
 }
 
@@ -192,6 +213,32 @@ func (m queryTuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, tea.Quit
 			}
 			return m, nil
+		}
+
+		// Chord seam via the reusable which-key host. Flat tier: no page or
+		// pane guard is needed — the help overlay above is the only modal, and
+		// it early-returns. A completed chord is re-synthesized as its literal
+		// key ("tm") and falls through to the flat switch below, which resolves
+		// it via key.Matches because chord-only bindings (E4) make Keys()[0]
+		// the chord itself.
+		res, matched, chordCmd := m.whichKey.ProcessChord(msg)
+		switch res {
+		case keymap.ChordPending:
+			// The t… prefix is armed; chordCmd is the show-delay tick.
+			return m, chordCmd
+		case keymap.ChordConsumed:
+			// esc dismissed the popup, or a stray key closed an armed menu.
+			return m, nil
+		case keymap.ChordMatched:
+			// The !key.Matches guard matters only if a binding ever retains a
+			// flat key alongside its chord: Keys()[0] would then be the chord
+			// and blind rewriting would destroy the flat press. ToggleMetric is
+			// chord-only (E4), so it is belt-and-braces.
+			if len(matched.Keys()) > 0 && !key.Matches(msg, matched) {
+				msg = tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(matched.Keys()[0])}
+			}
+		case keymap.ChordNone:
+			// Not a chord — fall through to the flat dispatch below.
 		}
 
 		switch {
@@ -378,13 +425,19 @@ func (m queryTuiModel) View() string {
 	helpView := m.help.View()
 
 	// Ultra-compact layout - no borders, no blank lines
-	return lipgloss.JoinVertical(lipgloss.Left,
+	frame := lipgloss.JoinVertical(lipgloss.Left,
 		header,
 		summaryView,
 		plotView,
 		tableView,
 		helpView,
 	)
+
+	// Composite the bottom-anchored which-key popup onto the assembled frame
+	// while the t… prefix is armed past the show-delay; returns the frame
+	// unchanged otherwise. Bottom-anchored, never centered. availH is m.height
+	// because this frame is a bare content block, shorter than the viewport.
+	return m.whichKey.RenderOverlayAvail(frame, lipgloss.Width(frame), m.height, *theme.DefaultTheme)
 }
 
 func runQueryTUI() error {

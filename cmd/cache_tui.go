@@ -53,6 +53,7 @@ type cacheTUIModel struct {
 	filterInput      textinput.Model
 	help             help.Model
 	keys             cacheKeyMap
+	whichKey         keymap.WhichKeyHost // v… chord namespace + which-key popup
 	currentView      viewState
 	isLoading        bool
 	err              error
@@ -96,9 +97,13 @@ func newCacheKeyMap(cfg *config.Config) cacheKeyMap {
 			key.WithKeys("i", "enter"),
 			key.WithHelp("i", "inspect"),
 		),
+		// canon 60 §4.1 + §10: analytics is a different rendering of the current
+		// thing, so it moves into the v… view namespace as `va`. Chord-only
+		// (E4) — the flat `a` is dropped, which also frees `a` for the Ring-1
+		// "create the primary noun" sense (canon 60 §5.1).
 		Analytics: key.NewBinding(
-			key.WithKeys("a"),
-			key.WithHelp("a", "analytics"),
+			key.WithKeys("va"),
+			key.WithHelp("va", "analytics"),
 		),
 		Delete: key.NewBinding(
 			key.WithKeys("d"),
@@ -109,6 +114,14 @@ func newCacheKeyMap(cfg *config.Config) cacheKeyMap {
 			key.WithHelp("w", "wipe local"),
 		),
 	}
+
+	// canon 60 §5.6 + §10: drop the flat `y` confirm alias inherited from
+	// keymap.Base (its keys are "enter","y"). `y` must stay unbound in a list
+	// TUI so the canonical `yy` yank can ever arm; `enter` is retained on the
+	// same binding, so nothing is lost. Applied BEFORE ApplyTUIOverrides so an
+	// explicit user override still wins. Note the delete/wipe confirm prompts
+	// print "(y/n)" — see the footerView note below.
+	km.Base.Confirm.SetKeys("enter")
 
 	// Apply TUI-specific overrides from config
 	keymap.ApplyTUIOverrides(cfg, "grove-gemini", "gemini-cache", &km)
@@ -134,16 +147,29 @@ func newCacheKeyMap(cfg *config.Config) cacheKeyMap {
 	return km
 }
 
+// Namespaces returns the which-key chord namespaces for the cache TUI, built
+// from the NAMED struct fields (never inline) so MakeTUIInfo resolves them back
+// to stable snake_case ConfigKeys and ApplyTUIOverrides rebindings flow through
+// — see core/tui/keymap/namespace.go. Single member: `va` (canon 60 §4.1).
+func (k cacheKeyMap) Namespaces() []keymap.Namespace {
+	return []keymap.Namespace{
+		{Prefix: "v", Label: "View", Bindings: []key.Binding{k.Analytics}},
+	}
+}
+
 // Sections scopes the help overlay + registry to only the keys this TUI
 // actually handles (see (*cacheTUIModel).Update). It deliberately does NOT
 // append Base.Sections() — that would leak the full generic Base vocabulary.
 func (k cacheKeyMap) Sections() []keymap.Section {
+	ns := k.Namespaces()
 	return []keymap.Section{
 		keymap.NavigationSection(k.Up, k.Down, k.PageUp, k.PageDown),
 		keymap.SearchSection(k.Search),
 		keymap.NewSectionWithIcon("Cache Actions", theme.IconArchive,
-			k.Inspect, k.Analytics, k.Delete, k.Wipe, k.Refresh,
+			k.Inspect, k.Delete, k.Wipe, k.Refresh,
 		),
+		// View (v…) namespace section (va), rendered via Namespace.Section().
+		ns[0].Section(),
 		keymap.ActionsSection(k.Confirm, k.Cancel, k.Back),
 		k.Base.SystemSection(),
 	}
@@ -248,6 +274,7 @@ func newCacheTUIModel() (*cacheTUIModel, error) {
 		inspectViewport: vp,
 		help:            helpModel,
 		keys:            keys,
+		whichKey:        keymap.NewWhichKeyHost(cfg, keys.Namespaces()...),
 		isLoading:       true,
 		workDir:         workDir,
 		currentView:     listView,
@@ -484,6 +511,37 @@ func (m *cacheTUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Batch(fetchCachesCmd(m.client, m.workDir), tickCmd())
 
 	case tea.KeyMsg:
+		// Chord seam via the reusable which-key host. The mode/pane guard runs
+		// FIRST (sign-off E3, "namespaces arm top-level only"): a v… prefix may
+		// only arm on the top-level list with no focused filter and no confirm
+		// dialog up. Once armed, the continuation key must still reach the
+		// engine, hence the Armed() clause. A completed chord is re-synthesized
+		// as its literal key ("va") and falls through to the flat switch below,
+		// which resolves it via key.Matches (chord-only, E4).
+		topLevel := m.currentView == listView && !m.filterInput.Focused() &&
+			!m.confirmingDelete && !m.confirmingWipe
+		if topLevel || m.whichKey.Armed() {
+			res, matched, chordCmd := m.whichKey.ProcessChord(msg)
+			switch res {
+			case keymap.ChordPending:
+				return m, chordCmd
+			case keymap.ChordConsumed:
+				return m, nil
+			case keymap.ChordMatched:
+				// The !key.Matches guard matters only if a binding ever retains
+				// a flat key alongside its chord: Keys()[0] would then be the
+				// chord and blind rewriting would destroy the flat press.
+				// Analytics is chord-only (E4), so it is belt-and-braces —
+				// note Inspect ("i","enter") is NOT a namespace member, so it
+				// never reaches this branch.
+				if len(matched.Keys()) > 0 && !key.Matches(msg, matched) {
+					msg = tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(matched.Keys()[0])}
+				}
+			case keymap.ChordNone:
+				// Not a chord — fall through to the flat dispatch below.
+			}
+		}
+
 		if m.filterInput.Focused() {
 			if key.Matches(msg, m.keys.Confirm) || key.Matches(msg, m.keys.Back) {
 				m.filterInput.Blur()
@@ -636,7 +694,12 @@ func (m *cacheTUIModel) View() string {
 	s.WriteString("\n")
 	s.WriteString(m.footerView())
 
-	return s.String()
+	// Composite the bottom-anchored which-key popup onto the assembled frame
+	// while the v… prefix is armed past the show-delay; returns the frame
+	// unchanged otherwise. Bottom-anchored, never centered. availH is m.height
+	// because this frame is a bare content block, shorter than the viewport.
+	frame := s.String()
+	return m.whichKey.RenderOverlayAvail(frame, lipgloss.Width(frame), m.height, *theme.DefaultTheme)
 }
 
 // renderTableWithArrow renders the table with an arrow indicator on the left side
@@ -675,17 +738,19 @@ func (m *cacheTUIModel) renderTableWithArrow() string {
 }
 
 func (m *cacheTUIModel) footerView() string {
+	// The prompts advertise enter/n, not y/n: canon 60 §5.6 dropped the flat
+	// `y` confirm alias (see newCacheKeyMap), so `enter` is the only confirm.
 	if m.confirmingDelete {
 		if len(m.filteredCaches) > 0 {
 			selectedCache := m.filteredCaches[m.table.Cursor()]
-			return theme.DefaultTheme.Warning.Render(fmt.Sprintf("Delete cache '%s' from GCP? (y/n)", selectedCache.Name))
+			return theme.DefaultTheme.Warning.Render(fmt.Sprintf("Delete cache '%s' from GCP? (enter/n)", selectedCache.Name))
 		}
 	}
 
 	if m.confirmingWipe {
 		if len(m.filteredCaches) > 0 {
 			selectedCache := m.filteredCaches[m.table.Cursor()]
-			return theme.DefaultTheme.Error.Render(fmt.Sprintf("%s  Wipe local file for '%s'? This cannot be undone! (y/n)", theme.IconWarning, selectedCache.Name))
+			return theme.DefaultTheme.Error.Render(fmt.Sprintf("%s  Wipe local file for '%s'? This cannot be undone! (enter/n)", theme.IconWarning, selectedCache.Name))
 		}
 	}
 
