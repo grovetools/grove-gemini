@@ -115,14 +115,6 @@ func newCacheKeyMap(cfg *config.Config) cacheKeyMap {
 		),
 	}
 
-	// canon 60 §5.6 + §10: drop the flat `y` confirm alias inherited from
-	// keymap.Base (its keys are "enter","y"). `y` must stay unbound in a list
-	// TUI so the canonical `yy` yank can ever arm; `enter` is retained on the
-	// same binding, so nothing is lost. Applied BEFORE ApplyTUIOverrides so an
-	// explicit user override still wins. Note the delete/wipe confirm prompts
-	// print "(y/n)" — see the footerView note below.
-	km.Base.Confirm.SetKeys("enter")
-
 	// Apply TUI-specific overrides from config
 	keymap.ApplyTUIOverrides(cfg, "grove-gemini", "gemini-cache", &km)
 
